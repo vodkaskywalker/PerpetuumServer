@@ -218,6 +218,11 @@ namespace Perpetuum.Bootstrapper
             m.Shutdown(delay);
         }
 
+        public IContainer GetContainer()
+        {
+            return _container;
+        }
+
         public void WaitForStop()
         {
             var are = new AutoResetEvent(false);
@@ -283,7 +288,7 @@ namespace Perpetuum.Bootstrapper
             CorporationData.CorporationManager = _container.Resolve<ICorporationManager>();
 
             Character.CharacterFactory = _container.Resolve<CharacterFactory>();
-            Character.CharacterCache = _container.Resolve<Func<string, ObjectCache>>().Invoke("CharacterCache");
+            Character.CharacterCache = _container.Resolve<Func<string, ObjectCache>>().Invoke("CharacterCache");            
 
             MissionHelper.Init(_container.Resolve<MissionDataCache>(), _container.Resolve<IStandingHandler>());
             MissionHelper.MissionProcessor = _container.Resolve<MissionProcessor>();
@@ -349,6 +354,12 @@ namespace Perpetuum.Bootstrapper
 
             DefaultCorporationDataCache.LoadAll();
             _container.Resolve<MissionDataCache>().CacheMissionData();
+            // initialize our markets.
+            // this is dependent on all zones being loaded.
+            _container.Resolve<MarketHelper>().Init();
+            _container.Resolve<MarketHandler>().Init();
+
+
         }
 
         public bool TryInitUpnp(out bool success)
@@ -554,7 +565,7 @@ namespace Perpetuum.Bootstrapper
 
             _builder.RegisterType<LootService>().As<ILootService>().SingleInstance().OnActivated(e => e.Instance.Init());
             _builder.RegisterType<ItemPriceHelper>().SingleInstance();
-            _builder.RegisterType<PriceCalculator>().SingleInstance();
+            _builder.RegisterType<PriceCalculator>(); // this doesn't appear to be something that should be a singleton.
 
 
             _builder.RegisterType<CharacterExtensions>().As<ICharacterExtensions>().SingleInstance();
@@ -1511,12 +1522,9 @@ namespace Perpetuum.Bootstrapper
         }
 
         private void InitRelayManager()
-        {
-            _builder.RegisterType<MarketHelper>().SingleInstance().OnActivated(e => e.Instance.Init());
-            _builder.RegisterType<MarketHandler>().OnActivated(e =>
-            {
-                e.Instance.Init();
-            }).SingleInstance();
+        {            
+            _builder.RegisterType<MarketHelper>().SingleInstance();
+            _builder.RegisterType<MarketHandler>().SingleInstance();
 
             _builder.RegisterType<MarketOrder>();
             _builder.RegisterType<MarketOrderRepository>().As<IMarketOrderRepository>();
@@ -1577,7 +1585,7 @@ namespace Perpetuum.Bootstrapper
 
             _builder.RegisterType<TradeService>().SingleInstance().As<ITradeService>();
 
-            _builder.RegisterType<HostShutDownManager>();
+            _builder.RegisterType<HostShutDownManager>().SingleInstance();
 
             _builder.RegisterType<HighScoreService>().As<IHighScoreService>();
             _builder.RegisterType<CorporationHandler>();
@@ -2349,6 +2357,8 @@ namespace Perpetuum.Bootstrapper
             RegisterZone<PveZone>(ZoneType.Pve);
             RegisterZone<PvpZone>(ZoneType.Pvp);
             RegisterZone<TrainingZone>(ZoneType.Training);
+            RegisterZone<StrongHoldZone>(ZoneType.Stronghold);
+
 
             _builder.RegisterType<SettingsLoader>();
             _builder.RegisterType<PlantRuleLoader>();
