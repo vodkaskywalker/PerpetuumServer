@@ -39,7 +39,7 @@ namespace Perpetuum.RequestHandlers.AdminTools
             catch
             {
                 //TODO: Client Fixme - Client needs good error code for bad-email input
-                throw new PerpetuumException(ErrorCodes.InvalidAttribute);
+                throw new PerpetuumException(ErrorCodes.BadEmail);
             }
 
             var account = new Account
