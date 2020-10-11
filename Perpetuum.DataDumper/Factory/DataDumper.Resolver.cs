@@ -55,7 +55,7 @@ namespace Perpetuum.DataDumper {
                 int itemId = (int)categoryItem["definition"];
 
                 try {
-                    object currentObject = entityFactory.CreateForData(itemName, EntityIDGenerator.Random);
+                    object currentObject = entityFactory.Create(itemName, EntityIDGenerator.Random);
 
                     
                     if (typeof(T) == typeof(ModuleWeaponDataView)) {
@@ -77,7 +77,9 @@ namespace Perpetuum.DataDumper {
                             currentView = NewModuleArmorHardenerDataView(currentObject as ActiveModule) as T;
                         } else {
                             currentView = NewModuleArmorHardenerDataView(currentObject as Module) as T;
-                        } 
+                        }
+                    } else if (typeof(T) == typeof(ModuleDrillerDataView)) {
+                        currentView = NewModuleDrillerDataView(currentObject as DrillerModule) as T;
                     } else {
                         continue;
                     }

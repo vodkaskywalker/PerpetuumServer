@@ -28,6 +28,9 @@ namespace Perpetuum.DataDumper
 {
     public partial class DataDumper
     {
+        private string serverRoot;
+        private string dictionaryPath;
+
         private IContainer container;
         EntityFactory entityFactory;
         IEntityServices entityServices;
@@ -52,8 +55,12 @@ namespace Perpetuum.DataDumper
             
         };
 
-        public DataDumper(IContainer container)
+        public DataDumper(IContainer container, string serverRoot, string dictionaryPath)
         {
+            this.serverRoot = serverRoot;
+
+            this.dictionaryPath = dictionaryPath;
+
             this.container = container;
 
             entityFactory = container.Resolve<EntityFactory>(); 
@@ -74,36 +81,41 @@ namespace Perpetuum.DataDumper
             // var testRobot = productionDataReader.ProductionComponents[193]; 
             // var testRobot2 = productionDataReader.ProductionComponents[208];
 
-            itemNames = new Dictionary<string, string>();
+            var itemNames = new Dictionary<string, string>();
 
-            var dataLines = System.IO.File.ReadAllLines(@"C:\Users\derek\Desktop\projects\Perpetuum\dictionary.tsv");
+            var dataLines = System.IO.File.ReadAllText(dictionaryPath);
 
-            foreach (var line in dataLines)
-            {
-                var parts = line.Split(new char[] { '\t' });
-                itemNames.Add(parts[0], parts[1]);
-            }
+            var dictionaryText = GenXY.GenxyConverter.Deserialize(dataLines);
 
-            // Now read the names from JSON files
-            var jsonFiles = System.IO.Directory.GetFiles(@"C:\Users\derek\Desktop\projects\Perpetuum\OPDB\Patches", "0.json", System.IO.SearchOption.AllDirectories);
-            var sortedFiles = jsonFiles.ToList();
-            sortedFiles.Sort();
-                        
-            foreach (var jsonFilePath in sortedFiles) {
-                var fileLines = System.IO.File.ReadAllText(jsonFilePath);
+            if (dictionaryText.ContainsKey("dictionary")) {
+                var sourceDict = (Dictionary<string, object>)dictionaryText["dictionary"];
 
-                var jsonData = JsonConvert.DeserializeObject<IDictionary<string, string>>(fileLines);
-          
-                foreach (var item in jsonData) {
-                    if (itemNames.ContainsKey(item.Key)) {
-                        itemNames[item.Key] = item.Value;
-                    } else {
-                        itemNames.Add(item.Key, item.Value);
-                    }
+                foreach (var item in sourceDict) {
+                    itemNames.Add(item.Key, item.Value.ToString());
                 }
 
+            } else {
+                throw new Exception("Dictionary file is invalid");
             }
 
+            //foreach (var line in dataLines)
+            //{
+            //    var parts = line.Split(new char[] { '\t' });
+            //    itemNames.Add(parts[0], parts[1]);
+            //}
+
+            // Now read the names from JSON files
+            string dictionaryLocation = System.IO.Path.Combine(serverRoot, @"customDictionary\0.json");
+
+            var jsonData = JsonConvert.DeserializeObject<IDictionary<string, string>>(System.IO.File.ReadAllText(dictionaryLocation));
+
+            foreach (var item in jsonData) {
+                if (itemNames.ContainsKey(item.Key)) {
+                    itemNames[item.Key] = item.Value;
+                } else {
+                    itemNames.Add(item.Key, item.Value);
+                }
+            }
 
             Console.WriteLine($"{dataLines.Length} dictionary names loaded");
         }
@@ -249,7 +261,7 @@ namespace Perpetuum.DataDumper
                 try
                 {
                     // var currentDefaults = defaultReader.GetByName(itemName);
-                    var currentObject = entityFactory.CreateForData(itemName, EntityIDGenerator.Random);
+                    var currentObject = entityFactory.Create(itemName, EntityIDGenerator.Random);
 
                     var dictionaryData = currentObject.ToDictionary();
 
@@ -455,7 +467,9 @@ namespace Perpetuum.DataDumper
                 string botName = botData["definitionname"].ToString();
                 try
                 {
-                    var currentBot = entityFactory.CreateForData(botName, EntityIDGenerator.Random);
+                    var currentBot = (Robot)entityFactory.Create(botName, EntityIDGenerator.Random);
+
+                    currentBot.Unpack();
 
                     botDataList.Add(currentBot);
 

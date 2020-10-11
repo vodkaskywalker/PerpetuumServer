@@ -2,7 +2,7 @@
 
 namespace Perpetuum.Modules
 {
-    /// Doc - These are powers of 8
+    /// Doc - These are powers of 2
     /// <summary>
     /// Types for module slots
     /// </summary>

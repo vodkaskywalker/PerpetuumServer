@@ -93,6 +93,7 @@
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="Factory\DataDumper.ModuleArmorHardener.cs" />
     <Compile Include="Factory\DataDumper.ModuleERP.cs" />
+    <Compile Include="Factory\DataDumper.ModuleDriller.cs" />
     <Compile Include="Factory\DataDumper.ModuleShieldGenerator.cs" />
     <Compile Include="Factory\DataDumper.ModuleRemoteArmorRepair.cs" />
     <Compile Include="Factory\DataDumper.ModuleArmorPlate.cs" />
@@ -111,6 +112,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RobotDataView.cs" />
+    <Compile Include="Views\ModuleDrillerDataView.cs" />
     <Compile Include="Views\ModuleResistancePlatingDataView.cs" />
     <Compile Include="Views\ModuleArmorHardenerDataView.cs" />
     <Compile Include="Views\ModuleERPDataView.cs" />

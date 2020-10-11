@@ -20,7 +20,6 @@ namespace Perpetuum.DataDumper {
             newView.module_hp = module.GetBasePropertyModifier(AggregateField.armor_max).Value;
             newView.module_demob_resist = module.GetBasePropertyModifier(AggregateField.massiveness).Value * 100;
             newView.module_surface_hit = module.GetBasePropertyModifier(AggregateField.signature_radius).Value;
-            // module.GetBasePropertyModifier(AggregateField.heal)
 
             return newView;
         }

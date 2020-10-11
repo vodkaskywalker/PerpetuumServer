@@ -13,12 +13,11 @@ using static Perpetuum.DataDumper.DataDumper;
 
 namespace Perpetuum.DataDumper { 
     public partial class DataDumper {
-        public ModuleRemoteArmorRepairerDataView NewModuleRemoteArmorRepairerDataView(ActiveModule module) {
-            var newView = new ModuleRemoteArmorRepairerDataView();
+        public ModuleDrillerDataView NewModuleDrillerDataView(DrillerModule module) {
+            var newView = new ModuleDrillerDataView();
             InitActiveModuleView(newView, module);
 
-            newView.module_optimal_range = module.GetBasePropertyModifier(AggregateField.optimal_range).Value * 10;
-            newView.module_repair_amount = module.GetBasePropertyModifier(AggregateField.armor_repair_amount).Value;
+            newView.module_mining_modifier = module.GetBasePropertyModifier(AggregateField.mining_amount_modifier).Value;
 
             return newView;
         }

@@ -66,43 +66,5 @@ namespace Perpetuum.EntityFramework
 
             return entity;
         }
-        public Entity CreateForData(string definitionName, IIDGenerator<long> idGenerator) {
-            bool forData = true;
-
-            EntityDefault entityDefault = _defaultReader.GetByName(definitionName);
-
-            var entity = _factory(entityDefault);
-            entity.Eid = idGenerator.GetNextID();
-
-
-            if (entity is Item item) {
-                var modifiers = _defaultPropertyModifierReader.GetByDefinition(entityDefault.Definition);
-                item.BasePropertyModifiers = new PropertyModifierCollection(modifiers);
-
-                if (item is Module module) {
-                    module.PropertyModifiers = _modulePropertyModifiersReader.GetModifiers(module);
-
-                    if (forData == true) {
-                        module.IsRepackaged = false;
-                    }
-                }
-
-                if (item is Robot robot) {
-                    robot.Template = _robotTemplateFactory(entityDefault.Definition);
-
-                    if (forData == true) {
-                        robot.IsRepackaged = false;
-                    }
-
-                    if (!robot.IsRepackaged) {
-                        robot.CreateComponents();
-                    }
-                }
-
-                item.Initialize();
-            }
-
-            return entity;
-        }
     }
 }

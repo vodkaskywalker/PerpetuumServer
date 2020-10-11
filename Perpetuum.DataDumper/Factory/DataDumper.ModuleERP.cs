@@ -21,7 +21,6 @@ namespace Perpetuum.DataDumper {
             newView.module_recovery_kinetic = module.GetBasePropertyModifier(AggregateField.kinetic_damage_to_core_modifier).Value * 100;
             newView.module_recovery_seismic = module.GetBasePropertyModifier(AggregateField.explosive_damage_to_core_modifier).Value * 100;
             newView.module_recovery_thermal = module.GetBasePropertyModifier(AggregateField.thermal_damage_to_core_modifier).Value * 100;
-            // module.GetBasePropertyModifier(AggregateField.heal)
 
             return newView;
         }

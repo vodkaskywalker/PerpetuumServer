@@ -18,9 +18,9 @@ namespace Perpetuum.DataDumper {
 
         public DataDumper Dumper;
 
-        public void InitDumper()
+        public void InitDumper(string serverRoot, string dictionaryPath)
         {
-            Dumper = new DataDumper(GetContainer());
+            Dumper = new DataDumper(GetContainer(), serverRoot, dictionaryPath);
         }
 
     }

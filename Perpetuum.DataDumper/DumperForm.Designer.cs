@@ -31,6 +31,11 @@
             this.clearTypesButton = new System.Windows.Forms.Button();
             this.serverPathTextbox = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.dictionaryPathTextbox = new System.Windows.Forms.TextBox();
+            this.saveSettingsButton = new System.Windows.Forms.Button();
+            this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
             // StartButton
@@ -48,15 +53,15 @@
             this.mappingSelectList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
             this.mappingSelectList.FormattingEnabled = true;
-            this.mappingSelectList.Location = new System.Drawing.Point(12, 78);
+            this.mappingSelectList.Location = new System.Drawing.Point(12, 63);
             this.mappingSelectList.Name = "mappingSelectList";
-            this.mappingSelectList.Size = new System.Drawing.Size(306, 364);
+            this.mappingSelectList.Size = new System.Drawing.Size(306, 379);
             this.mappingSelectList.TabIndex = 3;
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(13, 56);
+            this.label2.Location = new System.Drawing.Point(12, 42);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(62, 13);
             this.label2.TabIndex = 4;
@@ -86,7 +91,7 @@
             // 
             // serverPathTextbox
             // 
-            this.serverPathTextbox.Location = new System.Drawing.Point(151, 14);
+            this.serverPathTextbox.Location = new System.Drawing.Point(109, 23);
             this.serverPathTextbox.Name = "serverPathTextbox";
             this.serverPathTextbox.Size = new System.Drawing.Size(167, 20);
             this.serverPathTextbox.TabIndex = 7;
@@ -95,19 +100,59 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(105, 17);
+            this.label3.Location = new System.Drawing.Point(11, 26);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(32, 13);
+            this.label3.Size = new System.Drawing.Size(92, 13);
             this.label3.TabIndex = 8;
-            this.label3.Text = "Path:";
+            this.label3.Text = "Server Data Path:";
+            // 
+            // groupBox1
+            // 
+            this.groupBox1.Controls.Add(this.saveSettingsButton);
+            this.groupBox1.Controls.Add(this.label1);
+            this.groupBox1.Controls.Add(this.dictionaryPathTextbox);
+            this.groupBox1.Controls.Add(this.label3);
+            this.groupBox1.Controls.Add(this.serverPathTextbox);
+            this.groupBox1.Location = new System.Drawing.Point(331, 12);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(285, 100);
+            this.groupBox1.TabIndex = 9;
+            this.groupBox1.TabStop = false;
+            this.groupBox1.Text = "Settings";
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(13, 52);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(79, 13);
+            this.label1.TabIndex = 10;
+            this.label1.Text = "Dictionary Path";
+            // 
+            // dictionaryPathTextbox
+            // 
+            this.dictionaryPathTextbox.Location = new System.Drawing.Point(111, 49);
+            this.dictionaryPathTextbox.Name = "dictionaryPathTextbox";
+            this.dictionaryPathTextbox.Size = new System.Drawing.Size(167, 20);
+            this.dictionaryPathTextbox.TabIndex = 9;
+            this.dictionaryPathTextbox.TextChanged += new System.EventHandler(this.dictionaryPathTextbox_TextChanged);
+            // 
+            // saveSettingsButton
+            // 
+            this.saveSettingsButton.Location = new System.Drawing.Point(7, 71);
+            this.saveSettingsButton.Name = "saveSettingsButton";
+            this.saveSettingsButton.Size = new System.Drawing.Size(58, 23);
+            this.saveSettingsButton.TabIndex = 11;
+            this.saveSettingsButton.Text = "Save";
+            this.saveSettingsButton.UseVisualStyleBackColor = true;
+            this.saveSettingsButton.Click += new System.EventHandler(this.saveSettingsButton_Click);
             // 
             // DumperForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(327, 488);
-            this.Controls.Add(this.label3);
-            this.Controls.Add(this.serverPathTextbox);
+            this.ClientSize = new System.Drawing.Size(627, 488);
+            this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.clearTypesButton);
             this.Controls.Add(this.allTypesButton);
             this.Controls.Add(this.label2);
@@ -117,6 +162,8 @@
             this.Name = "DumperForm";
             this.Text = "Perpetuum Data Dumper";
             this.Load += new System.EventHandler(this.Form1_Load);
+            this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -131,6 +178,10 @@
         private System.Windows.Forms.Button clearTypesButton;
         private System.Windows.Forms.TextBox serverPathTextbox;
         private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.GroupBox groupBox1;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.TextBox dictionaryPathTextbox;
+        private System.Windows.Forms.Button saveSettingsButton;
     }
 }
 

@@ -32,6 +32,7 @@ namespace Perpetuum.DataDumper {
                                 // These universal ones are strange because they're stored in a different category
                                 // even though in the game UI they're the same thing and they have basically the same stats
                                 // Also the univeral one is a regular module while the others are Active
+                                new DataExportMapping("ModuleDrillerStatus", typeof(ModuleDrillerDataView), "cf_drillers"),
                                 new DataExportMapping("ModuleArmorHardenerStats", typeof(ModuleArmorHardenerDataView), "cf_armor_hardeners"),
                                 new DataExportMapping("ModuleShieldGeneratorStats", typeof(ModuleShieldGeneratorDataView), "cf_shield_generators"),
                                 new DataExportMapping("ModuleERPStats", typeof(ModuleERPDataView), "cf_kers"),
@@ -43,10 +44,9 @@ namespace Perpetuum.DataDumper {
                                 new DataExportMapping("WeaponStats", typeof(ModuleWeaponDataView), "cf_weapons")
                             };
 
-        private string serverRoot = @"C:\PerpetuumServer\data";
-
         private void Form1_Load(object sender, EventArgs e) {
-            serverPathTextbox.Text = serverRoot;
+            serverPathTextbox.Text = Properties.Settings.Default.ServerPath;
+            dictionaryPathTextbox.Text = Properties.Settings.Default.DictionaryPath;
 
             foreach (var item in mappings) {
                 mappingSelectList.Items.Add(item, true);
@@ -57,15 +57,17 @@ namespace Perpetuum.DataDumper {
         private void StartButton_Click(object sender, EventArgs e) {
             var tableGroupings = mappingSelectList.CheckedItems.Cast<DataExportMapping>().GroupBy(x => x.TableName).ToList();
 
-            if (!System.IO.Directory.Exists(serverRoot)) {
-                MessageBox.Show("Server path doesn't exist: " + serverRoot);
+            if (!System.IO.Directory.Exists(Properties.Settings.Default.ServerPath)) {
+                MessageBox.Show("Server path doesn't exist: " + Properties.Settings.Default.ServerPath);
             }
 
             bootstrapper = new PerpetuumLightBootstrapper();
 
-            bootstrapper.Init(serverRoot);
+            bootstrapper.Init(Properties.Settings.Default.ServerPath);
 
-            bootstrapper.InitDumper();
+            bootstrapper.InitDumper(Properties.Settings.Default.ServerPath, Properties.Settings.Default.DictionaryPath);
+
+            bootstrapper.Dumper.GetRobotData("robot.csv");
 
             IWorkbook workbook = new XSSFWorkbook();
 
@@ -127,7 +129,16 @@ namespace Perpetuum.DataDumper {
         }
 
         private void serverPathTextbox_TextChanged(object sender, EventArgs e) {
-            serverRoot = serverPathTextbox.Text;
+            Properties.Settings.Default.ServerPath = serverPathTextbox.Text;
         }
+        private void dictionaryPathTextbox_TextChanged(object sender, EventArgs e) {
+            Properties.Settings.Default.DictionaryPath = dictionaryPathTextbox.Text;
+        }
+
+        private void saveSettingsButton_Click(object sender, EventArgs e) {
+            Properties.Settings.Default.Save();
+        }
+
+       
     }
 }
