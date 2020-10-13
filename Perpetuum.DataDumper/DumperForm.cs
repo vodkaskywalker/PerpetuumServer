@@ -28,27 +28,11 @@ namespace Perpetuum.DataDumper {
 
         PerpetuumLightBootstrapper bootstrapper;
 
-        private static List<DataExportMapping> mappings = new List<DataExportMapping>() {
-                                // These universal ones are strange because they're stored in a different category
-                                // even though in the game UI they're the same thing and they have basically the same stats
-                                // Also the univeral one is a regular module while the others are Active
-                                new DataExportMapping("ModuleDrillerStatus", typeof(ModuleDrillerDataView), "cf_drillers"),
-                                new DataExportMapping("ModuleArmorHardenerStats", typeof(ModuleArmorHardenerDataView), "cf_armor_hardeners"),
-                                new DataExportMapping("ModuleShieldGeneratorStats", typeof(ModuleShieldGeneratorDataView), "cf_shield_generators"),
-                                new DataExportMapping("ModuleERPStats", typeof(ModuleERPDataView), "cf_kers"),
-                                new DataExportMapping("ModuleRemArmorRepairerStats", typeof(ModuleRemoteArmorRepairerDataView), "cf_remote_armor_repairers"),
-                                new DataExportMapping("ModuleArmorPlateStats", typeof(ModuleArmorPlateDataView), "cf_armor_plates"),
-                                new DataExportMapping("SparkStats", typeof(SparkDataView), ""),
-                                new DataExportMapping("ModuleArmorRepairerStats", typeof(ModuleArmorRepairerDataView), "cf_armor_repair_systems"),
-                                new DataExportMapping("AmmoWeaponStats", typeof(AmmoWeaponDataView), "cf_ammo"),
-                                new DataExportMapping("WeaponStats", typeof(ModuleWeaponDataView), "cf_weapons")
-                            };
-
         private void Form1_Load(object sender, EventArgs e) {
             serverPathTextbox.Text = Properties.Settings.Default.ServerPath;
             dictionaryPathTextbox.Text = Properties.Settings.Default.DictionaryPath;
 
-            foreach (var item in mappings) {
+            foreach (var item in DataExportMapping.Mappings) {
                 mappingSelectList.Items.Add(item, true);
             }
         }
@@ -66,8 +50,6 @@ namespace Perpetuum.DataDumper {
             bootstrapper.Init(Properties.Settings.Default.ServerPath);
 
             bootstrapper.InitDumper(Properties.Settings.Default.ServerPath, Properties.Settings.Default.DictionaryPath);
-
-            bootstrapper.Dumper.GetRobotData("robot.csv");
 
             IWorkbook workbook = new XSSFWorkbook();
 
@@ -117,13 +99,13 @@ namespace Perpetuum.DataDumper {
         }
 
         private void allTypesButton_Click(object sender, EventArgs e) {
-            for (int i = 0; i < mappings.Count; i++) {
+            for (int i = 0; i < DataExportMapping.Mappings.Count; i++) {
                 mappingSelectList.SetItemChecked(i, true);
             }
         }
 
         private void clearTypesButton_Click(object sender, EventArgs e) {
-            for (int i = 0; i < mappings.Count; i++) {
+            for (int i = 0; i < DataExportMapping.Mappings.Count; i++) {
                 mappingSelectList.SetItemChecked(i, false);
             }
         }

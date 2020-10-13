@@ -86,34 +86,26 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CargoTypeAttribute.cs" />
+    <Compile Include="Base Views\ActiveModuleDataView.cs" />
+    <Compile Include="Base Views\EntityDataView.cs" />
+    <Compile Include="Helpers\CargoTypeAttribute.cs" />
     <Compile Include="DataDumper.cs" />
     <Compile Include="DataExportMapping.cs" />
-    <Compile Include="EnumHelper.cs" />
-    <Compile Include="ExtensionMethods.cs" />
-    <Compile Include="Factory\DataDumper.ModuleArmorHardener.cs" />
-    <Compile Include="Factory\DataDumper.ModuleERP.cs" />
-    <Compile Include="Factory\DataDumper.ModuleDriller.cs" />
-    <Compile Include="Factory\DataDumper.ModuleShieldGenerator.cs" />
-    <Compile Include="Factory\DataDumper.ModuleRemoteArmorRepair.cs" />
-    <Compile Include="Factory\DataDumper.ModuleArmorPlate.cs" />
-    <Compile Include="Factory\DataDumper.Spark.cs" />
-    <Compile Include="Factory\DataDumper.ModuleArmorRepair.cs" />
-    <Compile Include="Factory\DataDumper.ModuleWeapon.cs" />
-    <Compile Include="Factory\DataDumper.AmmoWeapon.cs" />
-    <Compile Include="Factory\DataDumper.Resolver.cs" />
+    <Compile Include="Helpers\EnumHelper.cs" />
+    <Compile Include="Helpers\ExtensionMethods.cs" />
     <Compile Include="DumperForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="DumperForm.Designer.cs">
       <DependentUpon>DumperForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Base Views\ItemDataView.cs" />
+    <Compile Include="Base Views\ModuleDataView.cs" />
     <Compile Include="PerpetuumLightServer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RobotDataView.cs" />
+    <Compile Include="Views\RobotDataView.cs" />
     <Compile Include="Views\ModuleDrillerDataView.cs" />
-    <Compile Include="Views\ModuleResistancePlatingDataView.cs" />
     <Compile Include="Views\ModuleArmorHardenerDataView.cs" />
     <Compile Include="Views\ModuleERPDataView.cs" />
     <Compile Include="Views\ModuleShieldGeneratorDataView.cs" />
@@ -168,5 +160,6 @@
       <Name>Perpetuum</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

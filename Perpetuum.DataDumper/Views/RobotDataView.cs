@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Perpetuum.DataDumper {
     class RobotDataView {
-        // Main Status
+        // Main Stats
         public double Speed { get; set; }
         public double Armor { get; set; }
         public double Accumulator { get; set; }
