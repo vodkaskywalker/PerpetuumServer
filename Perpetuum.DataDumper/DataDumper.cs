@@ -157,43 +157,58 @@ namespace Perpetuum.DataDumper {
         }
 
         public void InitItemView(ItemDataView view, Entity entity) {
-            view.item_name = GetLocalizedName(entity.ED.Name);
-            view.item_key = entity.ED.Name;
-            view.item_categories = entity.ED.CategoryFlags.GetCategoryFlagsTree().Where(x=> x.ToString() != "undefined").Select(x => x.ToString()).ToList();
-            view.item_mass = entity.Mass;
-            view.item_volume_packed = entity.ED.CalculateVolume(true, 1);
-            view.item_volume = entity.ED.CalculateVolume(false, 1);
+            view.ItemName = GetLocalizedName(entity.ED.Name);
+            view.ItemKey = entity.ED.Name;
+            view.ItemCategories = entity.ED.CategoryFlags.GetCategoryFlagsTree().Where(x=> x.ToString() != "undefined").Select(x => x.ToString()).ToList();
+            view.ItemMass = entity.Mass;
+            view.ItemVolumePacked = entity.ED.CalculateVolume(true, 1);
+            view.ItemVolume = entity.ED.CalculateVolume(false, 1);
         }
 
         public void InitModuleView(ModuleDataView view, Modules.Module module) {
             InitItemView(view, module);
 
-            view.module_tier = module.ED.GameTierString();
-            view.module_cpu = module.CpuUsage;
-            view.module_reactor = module.PowerGridUsage;
+            view.ModuleTier = module.ED.GameTierString();
+            view.ModuleCpu = module.CpuUsage;
+            view.ModuleReactor = module.PowerGridUsage;
 
-            view.module_extensions_required = new List<string>();
+            view.ExtensionsRequired = new List<string>();
 
             foreach (var extension in module.ED.EnablerExtensions.Keys) {
-                view.module_extensions_required.Add(GetLocalizedName(ExtensionReader.GetExtensionName(extension.id)) + "(" + extension.level + ")");
+                view.ExtensionsRequired.Add(GetLocalizedName(ExtensionReader.GetExtensionName(extension.id)) + "(" + extension.level + ")");
             }
         }
 
         public void InitActiveModuleView(ActiveModuleDataView view, ActiveModule module) {
             InitModuleView(view, module);
 
-            view.module_accumulator = module.CoreUsage;
-            view.module_cycle = module.CycleTime.TotalSeconds;
+            view.ModuleAccumulator = module.CoreUsage;
+            view.ModuleCycle = module.CycleTime.TotalSeconds;
+
+            var range = module.GetBasePropertyModifier(AggregateField.optimal_range);
+
+            if (range.HasValue) {
+                view.ModuleOptimalRange = range.Value * 10;
+            }
         }
 
         public static string GetModifierString(ItemPropertyModifier mod) {
             var returnValue = "";
             if (mod.HasValue) {
-                returnValue = ((mod.Value - 1) * 100) + "%";
+                if (mod.ToString().Contains("Formula: Add")) {
+                    returnValue =  mod.Value * 100 + "%";
 
-                if (mod.Value - 1 > 0) {
-                    returnValue = "+" + returnValue;
+                    if (mod.Value > 0) {
+                        returnValue = "+" + returnValue;
+                    }
+                } else {
+                    returnValue = ((mod.Value - 1) * 100) + "%";
+
+                    if (mod.Value - 1 > 0) {
+                        returnValue = "+" + returnValue;
+                    }
                 }
+                
             }
 
             return returnValue;
@@ -338,6 +353,12 @@ namespace Perpetuum.DataDumper {
             }
             return returnItems;
 
+        }
+
+        public object GenerateItem(string itemName) {
+            var result = entityFactory.Create(itemName, EntityIDGenerator.Random);
+
+            return result;
         }
 
     }

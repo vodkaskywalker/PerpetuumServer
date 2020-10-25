@@ -10,13 +10,13 @@ using System.Threading.Tasks;
 using static Perpetuum.DataDumper.DataDumper;
 
 namespace Perpetuum.DataDumper.Views {
-    public class ModuleDrillerDataView : ActiveModuleDataView {
-        public double module_mining_modifier { get; set; }
-
-        public ModuleDrillerDataView(DrillerModule item, DataDumper dumper) {
+    public class ModuleEnergyInjectorDataView : ActiveModuleDataView {
+        public int AmmoCapacity { get; set; }
+        public ModuleEnergyInjectorDataView(ActiveModule item, DataDumper dumper) {
             dumper.InitActiveModuleView(this, item);
 
-            module_mining_modifier = item.GetBasePropertyModifier(AggregateField.mining_amount_modifier).Value;
+            AmmoCapacity = item.AmmoCapacity;
+
         }
     }
 }

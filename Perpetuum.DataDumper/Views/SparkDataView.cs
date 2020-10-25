@@ -23,9 +23,9 @@ namespace Perpetuum.DataDumper.Views {
 
         public SparkDataView(Spark spark, DataDumper dumper) {
 
-            item_name = dumper.GetLocalizedName(spark.sparkName);
-            item_key = spark.sparkName;
-            item_categories = new List<string>(); // No categories
+            ItemName = dumper.GetLocalizedName(spark.sparkName);
+            ItemKey = spark.sparkName;
+            ItemCategories = new List<string>(); // No categories
             price_equip = spark.changePrice;
             price_purchase = spark.unlockPrice;
             required_standing = spark.standingLimit * 100;

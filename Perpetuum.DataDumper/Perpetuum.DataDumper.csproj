@@ -104,8 +104,16 @@
     <Compile Include="PerpetuumLightServer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Views\ModuleAuxAccumulator.cs" />
+    <Compile Include="Views\ModuleDemobilizerDataView.cs" />
+    <Compile Include="Views\ModuleEnergyInjectorDataView.cs" />
+    <Compile Include="Views\ModuleEnergyNeutralizerDataView.cs" />
+    <Compile Include="Views\ModuleEnergyDrainerDataView.cs" />
+    <Compile Include="Views\ModuleEnergyTransfererDataView.cs" />
+    <Compile Include="Views\ModuleNexusDataView.cs" />
+    <Compile Include="Views\ModuleHarvesterDataView.cs" />
     <Compile Include="Views\RobotDataView.cs" />
-    <Compile Include="Views\ModuleDrillerDataView.cs" />
+    <Compile Include="Views\ModuleMinerDataView.cs" />
     <Compile Include="Views\ModuleArmorHardenerDataView.cs" />
     <Compile Include="Views\ModuleERPDataView.cs" />
     <Compile Include="Views\ModuleShieldGeneratorDataView.cs" />

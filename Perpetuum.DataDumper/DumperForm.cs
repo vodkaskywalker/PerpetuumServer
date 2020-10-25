@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -32,7 +33,7 @@ namespace Perpetuum.DataDumper {
             serverPathTextbox.Text = Properties.Settings.Default.ServerPath;
             dictionaryPathTextbox.Text = Properties.Settings.Default.DictionaryPath;
 
-            foreach (var item in DataExportMapping.Mappings) {
+            foreach (var item in DataExportMapping.Mappings.OrderBy(x=> x.TableName).ToList()) {
                 mappingSelectList.Items.Add(item, true);
             }
         }
@@ -63,7 +64,7 @@ namespace Perpetuum.DataDumper {
 
             // We need to group by the Cargo Table because we may have multipler
             // definitions writing into the same table.
-            
+
             foreach (var tableGroup in tableGroupings) {
                 // Write the definition for the group
 
@@ -94,7 +95,11 @@ namespace Perpetuum.DataDumper {
 
             workbook.Write(new FileStream(filePath, FileMode.CreateNew));
 
-            MessageBox.Show($"File exported to:\n{filePath}");
+            var result = MessageBox.Show($"File exported to:\n{filePath}\n\nWould you like to open it?", "Export finished", MessageBoxButtons.YesNo);
+
+            if (result == DialogResult.Yes) {
+                Process.Start(filePath);
+            }
 
         }
 

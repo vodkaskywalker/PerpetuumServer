@@ -10,14 +10,13 @@ using System.Threading.Tasks;
 using static Perpetuum.DataDumper.DataDumper;
 
 namespace Perpetuum.DataDumper.Views {
-    public class ModuleArmorRepairerDataView : ActiveModuleDataView {       
-        public double ModuleRepairAmount { get; set; }
+    public class ModuleEnergyTransfererDataView : ActiveModuleDataView {
+        public double ModuleEnergyTransfer { get; set; }
 
-        public ModuleArmorRepairerDataView(ArmorRepairModule item, DataDumper dumper) {
+        public ModuleEnergyTransfererDataView(ActiveModule item, DataDumper dumper) {
             dumper.InitActiveModuleView(this, item);
 
-            ModuleRepairAmount = item.GetBasePropertyModifier(AggregateField.armor_repair_amount).Value;
-
+            ModuleEnergyTransfer = item.GetBasePropertyModifier(AggregateField.energy_transfer_amount).Value;
         }
     }
 }

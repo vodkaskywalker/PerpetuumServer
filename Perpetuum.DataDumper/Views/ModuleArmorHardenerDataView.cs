@@ -12,17 +12,17 @@ using static Perpetuum.DataDumper.DataDumper;
 namespace Perpetuum.DataDumper.Views {
     public class ModuleArmorHardenerDataView : ActiveModuleDataView {
 
-        public double module_resist_active_chemical { get; set; }
-        public double module_resist_passive_chemical { get; set; }
-        public double module_resist_active_kinetic { get; set; }
-        public double module_resist_passive_kinetic { get; set; }
-        public double module_resist_active_seismic { get; set; }
-        public double module_resist_passive_seismic { get; set; }
-        public double module_resist_active_thermal { get; set; }
-        public double module_resist_passive_thermal { get; set; }
-        public string module_resist_type { get; set; }
-        public double module_resist_passive { get; set; }
-        public double module_resist_active { get; set; }
+        public double ModuleResistActiveChemical { get; set; }
+        public double ModuleResistPassiveChemical { get; set; }
+        public double ModuleResistActiveKinetic { get; set; }
+        public double ModuleResistPassiveKinetic { get; set; }
+        public double ModuleResistActiveSeismic { get; set; }
+        public double ModuleResistPassiveSeismic { get; set; }
+        public double ModuleResistActiveThermal { get; set; }
+        public double ModuleResistPassiveThermal { get; set; }
+        public string ModuleResistType { get; set; }
+        public double ModuleResistPassive { get; set; }
+        public double ModuleResistActive { get; set; }
 
         public ModuleArmorHardenerDataView(ActiveModule item, DataDumper dumper) {
             dumper.InitActiveModuleView(this, item);
@@ -37,30 +37,30 @@ namespace Perpetuum.DataDumper.Views {
         }
 
         private void FillModuleData(Module module) {
-            module_resist_active_chemical = module.GetBasePropertyModifier(AggregateField.effect_resist_chemical).Value;
-            module_resist_passive_chemical = module.GetBasePropertyModifier(AggregateField.resist_chemical).Value;
-            module_resist_active_kinetic = module.GetBasePropertyModifier(AggregateField.effect_resist_kinetic).Value;
-            module_resist_passive_kinetic = module.GetBasePropertyModifier(AggregateField.resist_kinetic).Value;
-            module_resist_active_seismic = module.GetBasePropertyModifier(AggregateField.effect_resist_explosive).Value;
-            module_resist_passive_seismic = module.GetBasePropertyModifier(AggregateField.resist_explosive).Value;
-            module_resist_active_thermal = module.GetBasePropertyModifier(AggregateField.effect_resist_thermal).Value;
-            module_resist_passive_thermal = module.GetBasePropertyModifier(AggregateField.resist_thermal).Value;
+            ModuleResistActiveChemical = module.GetBasePropertyModifier(AggregateField.effect_resist_chemical).Value;
+            ModuleResistPassiveChemical = module.GetBasePropertyModifier(AggregateField.resist_chemical).Value;
+            ModuleResistActiveKinetic = module.GetBasePropertyModifier(AggregateField.effect_resist_kinetic).Value;
+            ModuleResistPassiveKinetic = module.GetBasePropertyModifier(AggregateField.resist_kinetic).Value;
+            ModuleResistActiveSeismic = module.GetBasePropertyModifier(AggregateField.effect_resist_explosive).Value;
+            ModuleResistPassiveSeismic = module.GetBasePropertyModifier(AggregateField.resist_explosive).Value;
+            ModuleResistActiveThermal = module.GetBasePropertyModifier(AggregateField.effect_resist_thermal).Value;
+            ModuleResistPassiveThermal = module.GetBasePropertyModifier(AggregateField.resist_thermal).Value;
 
             var passives = new List<Tuple<double, double, string>> {
-                                            new Tuple<double, double, string>(module_resist_passive_chemical,module_resist_active_chemical, "Chemical"),
-                                            new Tuple<double, double, string>(module_resist_passive_kinetic, module_resist_active_kinetic, "Kinetic"),
-                                            new Tuple<double, double, string>(module_resist_passive_seismic, module_resist_active_seismic, "Seismic"),
-                                            new Tuple<double, double, string>(module_resist_passive_thermal, module_resist_active_thermal, "Thermal")
+                                            new Tuple<double, double, string>(ModuleResistPassiveChemical,ModuleResistActiveChemical, "Chemical"),
+                                            new Tuple<double, double, string>(ModuleResistPassiveKinetic, ModuleResistActiveKinetic, "Kinetic"),
+                                            new Tuple<double, double, string>(ModuleResistPassiveSeismic, ModuleResistActiveSeismic, "Seismic"),
+                                            new Tuple<double, double, string>(ModuleResistPassiveThermal, ModuleResistActiveThermal, "Thermal")
                                         };
 
             if (passives.Where(x => x.Item1 != 0).Count() > 1) {
-                module_resist_type = "All";
-                module_resist_passive = module.GetBasePropertyModifier(AggregateField.resist_chemical).Value;
+                ModuleResistType = "All";
+                ModuleResistPassive = module.GetBasePropertyModifier(AggregateField.resist_chemical).Value;
             } else {
                 var activeType = passives.Where(x => x.Item1 != 0).Single();
-                module_resist_type = activeType.Item3;
-                module_resist_passive = activeType.Item1;
-                module_resist_active = activeType.Item2;
+                ModuleResistType = activeType.Item3;
+                ModuleResistPassive = activeType.Item1;
+                ModuleResistActive = activeType.Item2;
             }
         }
     }

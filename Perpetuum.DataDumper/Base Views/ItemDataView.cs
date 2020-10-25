@@ -2,9 +2,9 @@
     public partial class DataDumper
     {
         public class ItemDataView : EntityDataView {
-            public double item_mass { get; set; }
-            public double item_volume { get; set; }
-            public double item_volume_packed { get; set; }
+            public double ItemMass { get; set; }
+            public double ItemVolume { get; set; }
+            public double ItemVolumePacked { get; set; }
 
         }
 
