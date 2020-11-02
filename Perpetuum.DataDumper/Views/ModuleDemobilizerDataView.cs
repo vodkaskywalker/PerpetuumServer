@@ -11,12 +11,12 @@ using static Perpetuum.DataDumper.DataDumper;
 
 namespace Perpetuum.DataDumper.Views {
     public class ModuleDemobilizerDataView : ActiveModuleDataView {
-        public double ModuleTopSpeedModifier { get; set; }
+        public string ModuleTopSpeedModifier { get; set; }
 
         public ModuleDemobilizerDataView(ActiveModule item, DataDumper dumper) {
             dumper.InitActiveModuleView(this, item);
 
-            ModuleTopSpeedModifier = item.GetBasePropertyModifier(AggregateField.effect_massivness_speed_max_modifier).Value * 100;
+            ModuleTopSpeedModifier = GetModifierString(item.GetBasePropertyModifier(AggregateField.effect_massivness_speed_max_modifier));
         }
     }
 }
