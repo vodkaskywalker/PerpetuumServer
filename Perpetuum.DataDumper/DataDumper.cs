@@ -40,10 +40,10 @@ namespace Perpetuum.DataDumper {
         ISparkRepository sparkRepository;
 
         // Some static lists for helpers
-        public static SlotFlags[] sizeFlags = new SlotFlags[] { SlotFlags.small, SlotFlags.medium, SlotFlags.large };
-        public static SlotFlags[] typeFlags = new SlotFlags[] { SlotFlags.turret, SlotFlags.missile, SlotFlags.melee, SlotFlags.industrial, SlotFlags.ew_and_engineering };
-        public static SlotFlags[] locationFlags = new SlotFlags[] { SlotFlags.head, SlotFlags.chassis, SlotFlags.leg };
-        public static List<CategoryFlags> ammoWeaponCategories = new List<CategoryFlags> {
+        public static SlotFlags[] SLOT_SIZE_FLAGS = new SlotFlags[] { SlotFlags.small, SlotFlags.medium, SlotFlags.large };
+        public static SlotFlags[] SLOT_TYPE_FLAGS = new SlotFlags[] { SlotFlags.turret, SlotFlags.missile, SlotFlags.melee, SlotFlags.industrial, SlotFlags.ew_and_engineering };
+        public static SlotFlags[] SLOT_LOCATION_FLAGS = new SlotFlags[] { SlotFlags.head, SlotFlags.chassis, SlotFlags.leg };
+        public static List<CategoryFlags> CATEGORIES_AMMO_WEAPON = new List<CategoryFlags> {
                                                                 CategoryFlags.cf_railgun_ammo,
                                                                 CategoryFlags.cf_laser_ammo,
                                                                 CategoryFlags.cf_missile_ammo,
@@ -332,6 +332,22 @@ namespace Perpetuum.DataDumper {
 
                 return returnItems;
 
+            }
+
+            if(mapping.ViewType == typeof(RobotDataView)) {
+                var robotDefinitions = defaultReader.GetAll().GetByCategoryFlags(CategoryFlags.cf_robots);
+
+                foreach (var robotDefinition in robotDefinitions) {
+                    object currentObject = entityFactory.Create(robotDefinition.Name, EntityIDGenerator.Random);
+
+                    ((Robot)currentObject).Unpack();
+
+                    dynamic currentView = Activator.CreateInstance(mapping.ViewType, currentObject, this);
+
+                    returnItems.Add(currentView);
+                }
+
+                return returnItems;
             }
 
             var categoryData = GetDataByItemCategoryName(mapping.Category);

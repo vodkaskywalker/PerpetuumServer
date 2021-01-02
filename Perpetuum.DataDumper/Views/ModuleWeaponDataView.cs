@@ -29,19 +29,19 @@ namespace Perpetuum.DataDumper.Views {
         }
         public string slot_type {
             get {
-                return slot_flag_values.Intersect(typeFlags).SingleOrDefault().ToString();
+                return slot_flag_values.Intersect(SLOT_TYPE_FLAGS).SingleOrDefault().ToString();
             }
         }
 
         public string slot_size {
             get {
-                return slot_flag_values.Intersect(sizeFlags).SingleOrDefault().ToString();
+                return slot_flag_values.Intersect(SLOT_SIZE_FLAGS).SingleOrDefault().ToString();
             }
         }
 
         public string slot_location {
             get {
-                return slot_flag_values.Intersect(locationFlags).SingleOrDefault().ToString();
+                return slot_flag_values.Intersect(SLOT_LOCATION_FLAGS).SingleOrDefault().ToString();
             }
         }
 
