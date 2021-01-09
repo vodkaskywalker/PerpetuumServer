@@ -24,6 +24,7 @@ using Perpetuum.Reactive;
 using Perpetuum.Robots;
 using Perpetuum.Services.Looting;
 using Perpetuum.Services.Sessions;
+using Perpetuum.Services.Weather;
 using Perpetuum.Timers;
 using Perpetuum.Units;
 using Perpetuum.Zones.Beams;
@@ -234,18 +235,19 @@ namespace Perpetuum.Zones
         [Conditional("DEBUG")]
         private void LogGenxyException(Packet packet, PerpetuumException gex)
         {
+            var playerInfo = _player != null ? _player.InfoString : null;
             var e = new LogEvent
             {
                 LogType = LogType.Error,
                 Tag = "ZPACKET",
-                Message = $"command:{packet.Command} zone:{_zone.Id} player:{_player.InfoString} ex:{gex}"
+                Message = $"command:{packet.Command} zone:{_zone.Id} player:{playerInfo} ex:{gex}"
             };
 
             Logger.Log(e);
         }
 
         private BeamsMonitor _beamsMonitor;
-        private Observer<Packet> _weatherMonitor;
+        private WeatherMonitor _weatherMonitor;
 
         private void HandleAuth(Packet packet)
         {
@@ -255,6 +257,14 @@ namespace Perpetuum.Zones
 
             var character = ZoneTicket.GetCharacterFromEncryptedTicket(encrypted);
             character.ThrowIfEqual(null, ErrorCodes.WTFErrorMedicalAttentionSuggested);
+
+            var characterSession = _sessionManager.GetByCharacter(character);
+
+            if (characterSession == null || !characterSession.IsAuthenticated ||
+                !characterSession.RemoteEndPoint.Address.Equals(_connection.RemoteEndPoint.Address)) {
+                throw new PerpetuumException(ErrorCodes.WTFErrorMedicalAttentionSuggested);
+            }
+
             Logger.Info($"Socket authentication successful. zone: {_zone.Id} character: {character.Id}");
             Character = character;
             AccessLevel = character.AccessLevel;
@@ -271,8 +281,8 @@ namespace Perpetuum.Zones
             _beamsMonitor = new BeamsMonitor(this);
             _beamsMonitor.Subscribe(_zone.Beams);
 
-            _weatherMonitor = Observer<Packet>.Create(OnWeatherUpdated);
-            _zone.Weather.Subscribe(_weatherMonitor);
+            _weatherMonitor = new WeatherMonitor(OnWeatherUpdated);
+            _weatherMonitor.Subscribe(_zone.Weather);
             
             _terrainUpdateNotifier = CreateTerrainNotifier(player);
 
@@ -284,9 +294,9 @@ namespace Perpetuum.Zones
             _player = player;
         }
 
-        private void OnWeatherUpdated(Packet weatherUpdatePacket)
+        private void OnWeatherUpdated(WeatherInfo weather)
         {
-            SendPacket(weatherUpdatePacket);
+            SendPacket(weather.CreateUpdatePacket());
         }
 
         private TerrainUpdateNotifier CreateTerrainNotifier(Player player)

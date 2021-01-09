@@ -78,8 +78,12 @@ using Perpetuum.RequestHandlers.Zone.StatsMapDrawing;
 using Perpetuum.Robots;
 using Perpetuum.Services;
 using Perpetuum.Services.Channels;
+using Perpetuum.Services.Channels.ChatCommands;
+using Perpetuum.Services.Daytime;
 using Perpetuum.Services.EventServices;
+using Perpetuum.Services.EventServices.EventMessages;
 using Perpetuum.Services.EventServices.EventProcessors;
+using Perpetuum.Services.EventServices.EventProcessors.NpcSpawnEventHandlers;
 using Perpetuum.Services.ExtensionService;
 using Perpetuum.Services.HighScores;
 using Perpetuum.Services.Insurance;
@@ -111,6 +115,7 @@ using Perpetuum.Services.Standing;
 using Perpetuum.Services.Steam;
 using Perpetuum.Services.TechTree;
 using Perpetuum.Services.Trading;
+using Perpetuum.Services.Weather;
 using Perpetuum.Threading.Process;
 using Perpetuum.Units;
 using Perpetuum.Units.DockingBases;
@@ -535,6 +540,8 @@ namespace Perpetuum.Bootstrapper
                 return configuration;
             }).SingleInstance();
 
+            _builder.RegisterType<AdminCommandRouter>().SingleInstance();
+
             _builder.RegisterType<Gang>();
             _builder.RegisterType<GangRepository>().As<IGangRepository>();
             _builder.RegisterType<GangManager>().As<IGangManager>().SingleInstance();
@@ -648,8 +655,13 @@ namespace Perpetuum.Bootstrapper
         {
             _builder.RegisterType<EffectBuilder>();
 
-            _builder.RegisterType<ZoneEffectRepository>().As<IZoneEffectRepository>().SingleInstance();
-            _builder.RegisterType<ZoneEffectHandler>().As<IZoneEffectHandler>().SingleInstance();
+            _builder.RegisterType<ZoneEffectHandler>().As<IZoneEffectHandler>();
+
+            _builder.Register<Func<IZone, IZoneEffectHandler>>(x =>
+            {
+                var ctx = x.Resolve<IComponentContext>();
+                return zone => new ZoneEffectHandler(zone);
+            });
 
             _builder.RegisterType<InvulnerableEffect>().Keyed<Effect>(EffectType.effect_invulnerable);
             _builder.RegisterType<CoTEffect>().Keyed<Effect>(EffectType.effect_eccm);
@@ -1695,12 +1707,20 @@ namespace Perpetuum.Bootstrapper
             _builder.RegisterType<ChatEcho>();
             _builder.RegisterType<NpcChatEcho>();
             _builder.RegisterType<AffectOutpostStability>();
-            _builder.RegisterType<OreNpcSpawner>();
+            _builder.RegisterType<OreNpcSpawner>().As<NpcSpawnEventHandler<OreNpcSpawnMessage>>();
+            _builder.RegisterType<NpcReinforcementSpawner>().As<NpcSpawnEventHandler<NpcReinforcementsMessage>>();
             _builder.RegisterType<EventListenerService>().SingleInstance().OnActivated(e =>
             {
                 e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromSeconds(0.75)));
                 e.Instance.AttachListener(e.Context.Resolve<ChatEcho>());
                 e.Instance.AttachListener(e.Context.Resolve<NpcChatEcho>());
+                var obs = new GameTimeObserver(e.Instance);
+                obs.Subscribe(e.Context.Resolve<IGameTimeService>());
+            });
+
+            _builder.RegisterType<GameTimeService>().As<IGameTimeService>().SingleInstance().OnActivated(e =>
+            {
+                e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromMinutes(1.5)));
             });
 
             // OPP: InterzoneNPCManager
@@ -2474,6 +2494,28 @@ namespace Perpetuum.Bootstrapper
                 e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromMinutes(5)));
             }).As<IWeatherService>();
 
+            _builder.RegisterType<WeatherMonitor>();
+            _builder.RegisterType<WeatherEventListener>();
+            _builder.Register<Func<IZone, WeatherEventListener>>(x =>
+            {
+                var ctx = x.Resolve<IComponentContext>();
+                return zone =>
+                {
+                    return new WeatherEventListener(ctx.Resolve<EventListenerService>(), zone);
+                };
+            });
+
+            _builder.Register<Func<IZone, EnvironmentalEffectHandler>>(x =>
+            {
+                var ctx = x.Resolve<IComponentContext>();
+                return zone =>
+                {
+                    var listener = new EnvironmentalEffectHandler(zone);
+                    ctx.Resolve<EventListenerService>().AttachListener(listener);
+                    return listener;
+                };
+            });
+
             _builder.RegisterType<DefaultZoneUnitRepository>().AsSelf().As<IZoneUnitRepository>();
             _builder.RegisterType<UserZoneUnitRepository>().AsSelf().As<IZoneUnitRepository>();
 
@@ -2507,7 +2549,6 @@ namespace Perpetuum.Bootstrapper
             RegisterZone<TrainingZone>(ZoneType.Training);
             RegisterZone<StrongHoldZone>(ZoneType.Stronghold);
 
-
             _builder.RegisterType<SettingsLoader>();
             _builder.RegisterType<PlantRuleLoader>();
 
@@ -2519,6 +2560,7 @@ namespace Perpetuum.Bootstrapper
                     var zone = ctx.ResolveKeyed<Zone>(configuration.Type);
                     zone.Configuration = configuration;
                     zone.Listener = new TcpListener(new IPEndPoint(IPAddress.Any, configuration.ListenerPort));
+                    zone.ZoneEffectHandler = ctx.Resolve<Func<IZone, IZoneEffectHandler>>().Invoke(zone);
                     zone.UnitService = ctx.Resolve<ZoneUnitServiceFactory>().Invoke(zone);
                     zone.Weather = ctx.Resolve<IWeatherService>();
                     zone.Beams = ctx.Resolve<IBeamService>();
@@ -2543,6 +2585,10 @@ namespace Perpetuum.Bootstrapper
                         zone.TerraformHandler = ctx.Resolve<TerraformHandler.Factory>().Invoke(zone);
                     }
 
+                    ctx.Resolve<EventListenerService>().AttachListener(new NpcReinforcementSpawner(zone, ctx.Resolve<INpcReinforcementsRepository>()));
+                    var listener = ctx.Resolve<Func<IZone, WeatherEventListener>>().Invoke(zone);
+                    listener.Subscribe(zone.Weather);
+
                     zone.LoadUnits();
                     return zone;
                 };
@@ -2555,6 +2601,8 @@ namespace Perpetuum.Bootstrapper
                 {
                     var zoneFactory = e.Context.Resolve<Func<ZoneConfiguration, IZone>>();
                     var zone = zoneFactory(c);
+
+                    e.Context.Resolve<Func<IZone, EnvironmentalEffectHandler>>().Invoke(zone);
 
                     Logger.Info("------------------");
                     Logger.Info("--");
