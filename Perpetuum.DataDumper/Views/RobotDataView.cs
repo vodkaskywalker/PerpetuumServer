@@ -83,8 +83,17 @@ namespace Perpetuum.DataDumper.Views {
             Cargo = (double) inventory.GetCapacityInfo()["capacity"];
             Cpu = input.Cpu;
             // The Max property is what we want, but it's not public and since this is a fake robot it will equal max
-            Reactor = input.PowerGrid; 
-            SlopeCapacity = input.Slope; // TODO: Find multiplier for this
+            Reactor = input.PowerGrid;
+            
+            if (input.Slope == 4) {
+                SlopeCapacity = 45;
+            } else if (input.Slope == 5) {
+                SlopeCapacity= 51;
+            } else if (input.Slope == 6) {
+                SlopeCapacity= 56;
+            } else {
+                SlopeCapacity = input.Slope;
+            }
 
             // Slots
             SlotsHead = head.MaxSlots;
@@ -101,7 +110,7 @@ namespace Perpetuum.DataDumper.Views {
             ResistanceKinetic = input.GetPropertyModifier(AggregateField.resist_kinetic).Value;
             ResistanceSeismic = input.GetPropertyModifier(AggregateField.resist_explosive).Value;
             ResistanceThermal = input.GetPropertyModifier(AggregateField.resist_thermal).Value;
-            ResistanceDemobilizer = input.GetPropertyModifier(AggregateField.effect_massivness_speed_max_modifier).Value; // TODO: Check this
+            ResistanceDemobilizer = 0; // input.GetPropertyModifier(AggregateField.effect_massivness_speed_max_modifier).Value;
 
 
             // Targeting
@@ -116,12 +125,18 @@ namespace Perpetuum.DataDumper.Views {
 
             // Misc
             AccumulatorRecharge = input.CoreRechargeTime.TotalSeconds;
-            AccumulatorStability = input.ReactorRadiation; // TODO: Find this
+            AccumulatorStability = input.ReactorRadiation;
             InterferenceEmission = input.GetPropertyModifier(AggregateField.blob_emission).Value; // Same as input.BlobEmission but it's not public
             InterferenceRadius = input.GetPropertyModifier(AggregateField.blob_emission_radius).Value * 10;  // Same as input.BlobEmissionRadius but it's not public
             InterferenceMin = input.GetPropertyModifier(AggregateField.blob_level_low).Value;
             InterferenceMax = input.GetPropertyModifier(AggregateField.blob_level_high).Value;
-            
+
+            // Required Extensions
+            var testExt = input.ExtensionBonusEnablerExtensions.ToList();
+            var test2 = input.ED.EnablerExtensions; // Extensions required (Extension + Level)
+            var test3 = input.RobotComponents.SelectMany(component => component.ExtensionBonuses).ToList(); // Bonuses from extension
+
+            // Extension Bonuses
         }
     }
 }
