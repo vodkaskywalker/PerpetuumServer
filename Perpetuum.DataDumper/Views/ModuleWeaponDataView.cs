@@ -10,38 +10,37 @@ using static Perpetuum.DataDumper.DataDumper;
 
 namespace Perpetuum.DataDumper.Views {
     public class ModuleWeaponDataView : ActiveModuleDataView {
-        public string ammo_type { get; set; }
-        public int ammo_capacity { get; set; }
-        public double module_damage { get; set; }
-        public double module_falloff { get; set; }
-        public double module_hit_dispersion { get; set; }
-        public double module_optimal_range { get; set; }
-        public string missile_optimal_range { get; set; }
+        public string AmmoType { get; set; }
+        public int AmmoCapacity { get; set; }
+        public double ModuleDamage { get; set; }
+        public double ModuleFalloff { get; set; }
+        public double ModuleHitDispersion { get; set; }
+        public string MissileOptimalRange { get; set; }
         
-        private List<SlotFlags> slot_flag_values;
-        public string slot_flags {
+        private List<SlotFlags> SlotFlagValues;
+        public string SlotFlags {
             get {
-                return String.Join(";", slot_flag_values.Select(x => x.ToString()));
+                return String.Join(";", SlotFlagValues.Select(x => x.ToString()));
             }
             set {
-                slot_flag_values = EnumHelper<SlotFlags>.MaskToList((SlotFlags)Convert.ToInt64(value)).ToList();
+                SlotFlagValues = EnumHelper<SlotFlags>.MaskToList((SlotFlags)Convert.ToInt64(value)).ToList();
             }
         }
-        public string slot_type {
+        public string SlotType {
             get {
-                return slot_flag_values.Intersect(SLOT_TYPE_FLAGS).SingleOrDefault().ToString();
-            }
-        }
-
-        public string slot_size {
-            get {
-                return slot_flag_values.Intersect(SLOT_SIZE_FLAGS).SingleOrDefault().ToString();
+                return SlotFlagValues.Intersect(SLOT_TYPE_FLAGS).SingleOrDefault().ToString();
             }
         }
 
-        public string slot_location {
+        public string SlotSize {
             get {
-                return slot_flag_values.Intersect(SLOT_LOCATION_FLAGS).SingleOrDefault().ToString();
+                return SlotFlagValues.Intersect(SLOT_SIZE_FLAGS).SingleOrDefault().ToString();
+            }
+        }
+
+        public string SlotLocation {
+            get {
+                return SlotFlagValues.Intersect(SLOT_LOCATION_FLAGS).SingleOrDefault().ToString();
             }
         }
 
@@ -52,13 +51,12 @@ namespace Perpetuum.DataDumper.Views {
 
             dictionaryData["ammoCategoryFlags"] = (CategoryFlags)dictionaryData["ammoCategoryFlags"];
 
-            ammo_type = dumper.GetLocalizedName(((CategoryFlags)dictionaryData["ammoCategoryFlags"]).ToString()).Replace(";undefined", "");
-            slot_flags = item.ModuleFlag.ToString();
-            ammo_capacity = item.AmmoCapacity;
-            module_damage = item.DamageModifier.Value * 100;
-            module_falloff = item.Properties.Single(x => x.Field == AggregateField.falloff).Value * 10;
-            module_hit_dispersion = item.Accuracy.Value;
-            module_optimal_range = item.OptimalRange * 10;
+            AmmoType = dumper.GetLocalizedName(((CategoryFlags)dictionaryData["ammoCategoryFlags"]).ToString()).Replace(";undefined", "");
+            SlotFlags = item.ModuleFlag.ToString();
+            AmmoCapacity = item.AmmoCapacity;
+            ModuleDamage = item.DamageModifier.Value * 100;
+            ModuleFalloff = item.Properties.Single(x => x.Field == AggregateField.falloff).Value * 10;
+            ModuleHitDispersion = item.Accuracy.Value;
 
             var rangeModifierProperty = item.GetBasePropertyModifier(AggregateField.module_missile_range_modifier);
 
@@ -69,7 +67,7 @@ namespace Perpetuum.DataDumper.Views {
                     directionSymbol = "-";
                 }
 
-                missile_optimal_range = directionSymbol + (rangeModifierProperty.Value - 1) * 100 + "%";
+                MissileOptimalRange = directionSymbol + (rangeModifierProperty.Value - 1) * 100 + "%";
 
             }
         }
