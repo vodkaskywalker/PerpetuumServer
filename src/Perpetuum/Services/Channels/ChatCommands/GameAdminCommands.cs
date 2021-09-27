@@ -34,6 +34,7 @@ namespace Perpetuum.Services.Channels.ChatCommands
             var b_isAdmin = IsAdmin(sender);
             if (b_isAdmin)
             {
+                channel.SendMessageToAll(_sessionManager, sender, text); //in the future, it will be displayed only in the secure channel
                 WriteLogToDb(sender, text, b_isAdmin); //enhancement todo: put the log in the next part to be able to log all the admin details
                 ParseAdminCommand(sender, text, request, channel, channelManager);
             }
