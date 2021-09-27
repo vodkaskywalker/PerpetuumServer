@@ -266,9 +266,17 @@ namespace Perpetuum.Services.Channels
             channel.Logger.LogMessage(sender, message);
 
             m.CanTalk.ThrowIfFalse(ErrorCodes.CharacterIsMuted);
-            channel.SendMessageToAll(_sessionManager, sender, message);
 
-            _adminCommand.TryParseAdminCommand(sender, message, request, channel, this);
+            //check if it's an admin command and don't display it until later in _adminCommand
+            if (_adminCommand.IsAdminCommand(message))
+            {
+                _adminCommand.TryParseAdminCommand(sender, message, request, channel, this);
+            }
+                else
+            {
+                channel.SendMessageToAll(_sessionManager, sender, message);
+            }
+
         }
 
         public void Announcement(string channelName, Character sender, string message)
