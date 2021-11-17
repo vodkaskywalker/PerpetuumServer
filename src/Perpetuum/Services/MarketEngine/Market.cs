@@ -796,13 +796,45 @@ namespace Perpetuum.Services.MarketEngine
                 .ExecuteNonQuery().ThrowIfEqual(0, ErrorCodes.SQLInsertError);
         }
 
+        public void InsertVendorSellOrder(int definition, double price, long vendorEid = 0)
+        {
+            const string query = @"INSERT dbo.marketitems (
+	marketeid,
+	itemdefinition,
+	submittereid,
+	duration,
+	isSell,
+	price,
+	quantity,
+	isvendoritem
+) VALUES ( 
+	@marketEid,
+	@definition,
+	@vendorEid,
+	0,
+	1,
+	@price,
+	-1,
+	1
+) ";
+            Db.Query().CommandText(query)
+                .SetParameter("@marketEid", Eid)
+                .SetParameter("@price", price)
+                .SetParameter("@definition", definition)
+                .SetParameter("@vendorEid", vendorEid)
+                .ExecuteNonQuery().ThrowIfEqual(0, ErrorCodes.SQLInsertError);
+        }
+
         public void AddOtherStuffToGammaMarket()
         {
-            //5373 5375
+            //5373 5375 5 
             //def_ammo_mining_probe_energymineral_direction
             //def_ammo_mining_probe_energymineral_tile
+            //def_noobbot
             InsertVendorBuyOrder(5373,45);
             InsertVendorBuyOrder(5375,45);
+            InsertVendorBuyOrder(5, 100);
+            InsertVendorSellOrder(5, 10000);
 
             //5376	def_gate_capsule
             InsertVendorBuyOrder(5376, 250000);
