@@ -16,7 +16,7 @@ namespace Perpetuum.RequestHandlers.Zone
 
                 foreach (var unit in pbsObjectsOnZone)
                 {
-                    request.Zone.CleanEnvironmentByUnit(unit);
+                    request.Zone.CleanEnvironmentByUnitIfExistsInStaging(unit);
                     request.Zone.DrawEnvironmentByUnitFromStaging(unit);
                 }
 

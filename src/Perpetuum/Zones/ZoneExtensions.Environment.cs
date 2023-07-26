@@ -114,6 +114,18 @@ namespace Perpetuum.Zones
             CleanEnvironmentWithMirrorAndTurns(zone, unit.CurrentPosition, description, turns, false, false);
         }
 
+        public static void CleanEnvironmentByUnitIfExistsInStaging(this IZone zone, Unit unit)
+        {
+            if (!EntityEnvironment.IsEnvironmentInStagingSql(unit.Definition))
+            {
+                return;
+            }
+
+            var description = EntityEnvironment.LoadEnvironmentSql(unit.Definition);
+            var turns = (int)(Math.Round(unit.Orientation, 2) / 0.25);
+            CleanEnvironmentWithMirrorAndTurns(zone, unit.CurrentPosition, description, turns, false, false);
+        }
+
         public static void DrawEnvironmentForDecor(this IZone zone, Position position, EntityEnvironmentDescription description, int rotationTurns, bool flipX, bool flipY)
         {
             DrawEnvironmentWithMirrorAndTurns(zone, position, description, rotationTurns, flipX, flipY, BlockingFlags.Decor);

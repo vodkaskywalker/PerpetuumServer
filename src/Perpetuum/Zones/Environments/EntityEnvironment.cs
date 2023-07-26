@@ -37,6 +37,16 @@ namespace Perpetuum.Zones.Environments
             return ConvertFromString(descriptionString);
         }
 
+        public static bool IsEnvironmentInStagingSql(int definition)
+        {
+            var descriptionString = Db.Query()
+                .CommandText("select descriptionstring from environmentdescriptionstaging where definition=@definition")
+                .SetParameter("@definition", definition)
+                .ExecuteScalar<string>();
+
+            return descriptionString != null;
+        }
+
         private static EntityEnvironmentDescription ConvertFromString(string descriptionString )
         {
             var nativeDescription = new EntityEnvironmentDescription();
