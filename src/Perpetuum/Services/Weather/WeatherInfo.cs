@@ -10,6 +10,9 @@ namespace Perpetuum.Services.Weather
         private const int BAD_WEATHER = 200;
         private const int GOOD_WEATHER = 100;
 
+        public const int WORST_WEATHER = 254;
+        public const int BEST_WEATHER = 0;
+
         public readonly int Current;
         public readonly int Next;
 

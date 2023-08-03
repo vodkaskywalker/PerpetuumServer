@@ -6,7 +6,8 @@ namespace Perpetuum.Services.Weather
 {
     public class WeatherService : Process, IWeatherService
     {
-        private static readonly byte[] _weatherLookUp = new byte[320];
+        private const int FULL_WEATHER = WeatherInfo.WORST_WEATHER - WeatherInfo.BEST_WEATHER + 1;
+        private static readonly byte[] _weatherLookUp = new byte[FULL_WEATHER];
 
         private readonly TimeRange _updateInterval;
         private readonly Observable<WeatherInfo> _observable;
@@ -16,9 +17,9 @@ namespace Perpetuum.Services.Weather
         static WeatherService()
         {
             //the full cycle
-            for (var i = 0; i < _weatherLookUp.Length; i++)
+            for (var i = WeatherInfo.BEST_WEATHER; i < _weatherLookUp.Length; i++)
             {
-                _weatherLookUp[i] = (byte)i.Min(255);
+                _weatherLookUp[i] = (byte)i.Min(WeatherInfo.WORST_WEATHER);
             }
         }
 
