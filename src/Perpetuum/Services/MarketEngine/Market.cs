@@ -796,16 +796,77 @@ namespace Perpetuum.Services.MarketEngine
                 .ExecuteNonQuery().ThrowIfEqual(0, ErrorCodes.SQLInsertError);
         }
 
+        public void InsertVendorSellOrder(int definition, double price, long vendorEid = 0)
+        {
+            const string query = @"INSERT dbo.marketitems (
+	marketeid,
+	itemdefinition,
+	submittereid,
+	duration,
+	isSell,
+	price,
+	quantity,
+	isvendoritem
+) VALUES ( 
+	@marketEid,
+	@definition,
+	@vendorEid,
+	0,
+	1,
+	@price,
+	-1,
+	1
+) ";
+            Db.Query().CommandText(query)
+                .SetParameter("@marketEid", Eid)
+                .SetParameter("@price", price)
+                .SetParameter("@definition", definition)
+                .SetParameter("@vendorEid", vendorEid)
+                .ExecuteNonQuery().ThrowIfEqual(0, ErrorCodes.SQLInsertError);
+        }
+
         public void AddOtherStuffToGammaMarket()
         {
-            //5373 5375
-            //def_ammo_mining_probe_energymineral_direction
-            //def_ammo_mining_probe_energymineral_tile
-            InsertVendorBuyOrder(5373,45);
-            InsertVendorBuyOrder(5375,45);
+            //229 898 899 900 901 902 5844 5375 5134 5137 tile charges      
+            InsertVendorSellOrder(229,90);
+            InsertVendorSellOrder(898, 90);
+            InsertVendorSellOrder(899, 90);
+            InsertVendorSellOrder(900, 90);
+            InsertVendorSellOrder(901, 90);
+            InsertVendorSellOrder(902, 90);
+            InsertVendorSellOrder(5844, 270);
+            InsertVendorSellOrder(5375, 90);
+            InsertVendorSellOrder(5134, 90);
+            InsertVendorSellOrder(5137, 90);
 
-            //5376	def_gate_capsule
-            InsertVendorBuyOrder(5376, 250000);
+            //5152 5153 5154 5155 5156 5157 5159 5160 5373 5845 direction charges
+            InsertVendorSellOrder(5152, 90);
+            InsertVendorSellOrder(5153, 90);
+            InsertVendorSellOrder(5154, 90);
+            InsertVendorSellOrder(5155, 90);
+            InsertVendorSellOrder(5156, 90);
+            InsertVendorSellOrder(5157, 90);
+            InsertVendorSellOrder(5159, 90);
+            InsertVendorSellOrder(5160, 90);
+            InsertVendorSellOrder(5373, 90);
+            InsertVendorSellOrder(5845, 270);
+
+            //1147 universal
+            //2932 3253 3254 artifact charges
+            InsertVendorSellOrder(1147, 30);
+            InsertVendorSellOrder(2932, 600);
+            InsertVendorSellOrder(3253, 1800);
+            InsertVendorSellOrder(3254, 3000);
+
+            //others
+            //1478 field container
+            //5163 concrete layer
+            //5188 syn-sec container
+            //4734 decon block
+            InsertVendorSellOrder(1478, 4011);
+            InsertVendorSellOrder(5163, 75000);
+            InsertVendorSellOrder(5188, 1000);
+            InsertVendorSellOrder(4734, 10000);
         }
 
         public long GetVendorEid()
