@@ -72,18 +72,18 @@ namespace Perpetuum.Services.ProductionEngine
             foreach (var productionInProgress in _pipRepository.GetAll())
             {
 #if DEBUG
-                if (!IsFacilityExists(productionInProgress.facilityEID))
+                if (!IsFacilityExists(productionInProgress.FacilityEID))
                 {
                     //facility not cached, skip loading the production
                     //speed up server start
-                    Logger.Info("facility is not cached, skipping production load. production ID:" + productionInProgress.ID + " facilityEID:" + productionInProgress.facilityEID);
+                    Logger.Info("facility is not cached, skipping production load. production ID:" + productionInProgress.ID + " facilityEID:" + productionInProgress.FacilityEID);
                     continue;
                 }
 #endif
 
                 productionInProgress.LoadReservedItems();
 
-                var facility = GetFacility(productionInProgress.facilityEID);
+                var facility = GetFacility(productionInProgress.FacilityEID);
                 if (facility != null)
                 {
                     AddToRunningProductions(productionInProgress);
@@ -91,10 +91,10 @@ namespace Perpetuum.Services.ProductionEngine
                 }
                 else
                 {
-                    Logger.Error("facility not found, production cancelled. characterID:" + productionInProgress.character.Id + " ID:" + productionInProgress.ID + " facilityEID:" + productionInProgress.facilityEID);
+                    Logger.Error("facility not found, production cancelled. characterID:" + productionInProgress.Character.Id + " ID:" + productionInProgress.ID + " facilityEID:" + productionInProgress.FacilityEID);
                     try
                     {
-                        CancelProduction(productionInProgress.character, productionInProgress.ID);
+                        CancelProduction(productionInProgress.Character, productionInProgress.ID);
                         canceled++;
                     }
                     catch (Exception ex)
@@ -186,7 +186,7 @@ namespace Perpetuum.Services.ProductionEngine
         private void ForceEndProduction(ProductionFacility productionFacility)
         {
             //force end all found productions
-            var foundProductions = RunningProductions.Where(pip => pip.facilityEID == productionFacility.Eid).ToList();
+            var foundProductions = RunningProductions.Where(pip => pip.FacilityEID == productionFacility.Eid).ToList();
             EndProductions(foundProductions);
         }
 
@@ -212,10 +212,10 @@ namespace Perpetuum.Services.ProductionEngine
         {
             Logger.Info("ending production. " + productionInProgress);
 
-            var facility = GetFacility(productionInProgress.facilityEID);
+            var facility = GetFacility(productionInProgress.FacilityEID);
             if (facility == null)
             {
-                Logger.Error("facility not found in endProduction. facility EID:" + productionInProgress.facilityEID);
+                Logger.Error("facility not found in endProduction. facility EID:" + productionInProgress.FacilityEID);
 
                 _pipRepository.Delete(productionInProgress);
                 RemoveFromRunningProductions(productionInProgress);
@@ -237,7 +237,7 @@ namespace Perpetuum.Services.ProductionEngine
 
                     var ep =CalculateEp(facility, productionInProgress);
 
-                    productionInProgress.character.AddExtensionPointsBoostAndLog( EpForActivityType.Production, ep);
+                    productionInProgress.Character.AddExtensionPointsBoostAndLog( EpForActivityType.Production, ep);
 
 
                     if (replyDict != null)
@@ -248,12 +248,12 @@ namespace Perpetuum.Services.ProductionEngine
                             //if the player is online we report the facility load
                             replyDict.Add(k.production, productionInProgress.ToDictionary());
 
-                            var facilityInfo = facility.GetFacilityInfo(productionInProgress.character);
+                            var facilityInfo = facility.GetFacilityInfo(productionInProgress.Character);
                             replyDict.Add(k.facility, facilityInfo);
 
                             Message.Builder.SetCommand(Commands.ProductionFinished)
                                 .WithData(replyDict)
-                                .ToCharacter(productionInProgress.character)
+                                .ToCharacter(productionInProgress.Character)
                                 .Send();
                         });
 
@@ -301,7 +301,7 @@ namespace Perpetuum.Services.ProductionEngine
 
         public int GetRunningProductionsCountByFacility(long facilityEid)
         {
-            return RunningProductions.Count(p => p.facilityEID == facilityEid);
+            return RunningProductions.Count(p => p.FacilityEID == facilityEid);
         }
 
         public Dictionary<string, object> GetProductionsByFacilityAndCharacterToDictionary(Character character, long facilityEID)
@@ -485,7 +485,7 @@ namespace Perpetuum.Services.ProductionEngine
 
             pip.HasAccess(character).ThrowIfError();
 
-            var facility = GetFacility(pip.facilityEID).ThrowIfNull(ErrorCodes.ItemNotFound);
+            var facility = GetFacility(pip.FacilityEID).ThrowIfNull(ErrorCodes.ItemNotFound);
 
             //lehet-e cancelezni olyan facilityben ami zarva van? - lehessen
 
@@ -511,7 +511,7 @@ namespace Perpetuum.Services.ProductionEngine
 
                 Message.Builder.SetCommand(Commands.ProductionCancel)
                     .WithData(replyDict)
-                    .ToCharacter(pip.character)
+                    .ToCharacter(pip.Character)
                     .Send();
             });
         }
@@ -577,7 +577,7 @@ namespace Perpetuum.Services.ProductionEngine
         private void ProcessProductions()
         {
             var now = DateTime.Now;
-            var productionInProgress = RunningProductions.Where(p => p.finishTime < now && !p.paused).ToArray();
+            var productionInProgress = RunningProductions.Where(p => p.FinishTime < now && !p.Paused).ToArray();
 
             EndProductions(productionInProgress);
         }
@@ -938,7 +938,7 @@ namespace Perpetuum.Services.ProductionEngine
 
         public static void InformProductionEvent(ProductionInProgress productionInProgress, Command command)
         {
-            if (!productionInProgress.useCorporationWallet)
+            if (!productionInProgress.UseCorporationWallet)
                 return;
 
             var replyDict = new Dictionary<string, object>();
@@ -948,13 +948,13 @@ namespace Perpetuum.Services.ProductionEngine
             const CorporationRole roleMask = CorporationRole.CEO | CorporationRole.DeputyCEO | CorporationRole.ProductionManager | CorporationRole.Accountant;
             Message.Builder.SetCommand(command)
                 .WithData(replyDict)
-                .ToCorporation(productionInProgress.character.CorporationEid, roleMask)
+                .ToCorporation(productionInProgress.Character.CorporationEid, roleMask)
                 .Send();
         }
 
         public void RemovePBSDockingBase(long baseEid)
         {
-            var inprogress = RunningProductions.Where(p => p.baseEID == baseEid).ToArray();
+            var inprogress = RunningProductions.Where(p => p.BaseEID == baseEid).ToArray();
             var removedRunningProduction = inprogress.Count(RemoveFromRunningProductions);
 
             Logger.Info(removedRunningProduction + " production in progress out of " + inprogress.Length + " were removed from production. base eid: " + baseEid);
@@ -1048,7 +1048,7 @@ namespace Perpetuum.Services.ProductionEngine
 
         public void AbortProductionsForOneCharacter(Character character)
         {
-            foreach (var productionInProgress in RunningProductions.Where(pip => pip.character.Equals(character)))
+            foreach (var productionInProgress in RunningProductions.Where(pip => pip.Character.Equals(character)))
             {
                 Logger.Info("force removing production " + productionInProgress);
                 _pipRepository.Delete(productionInProgress);

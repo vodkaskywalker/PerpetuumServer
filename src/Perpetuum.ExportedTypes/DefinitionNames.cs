@@ -4992,6 +4992,5 @@ namespace Perpetuum.ExportedTypes
  		 public const string ZMALL_RAILG00N = "def_zmall_railg00n";
  		 public const string ZONE_STORAGE = "def_zone_storage";
  		 public const string ZUPALIGHT = "def_zupalight";
-
 	}
 }

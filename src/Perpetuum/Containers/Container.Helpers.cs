@@ -1,6 +1,7 @@
 ﻿using Perpetuum.Accounting.Characters;
 using Perpetuum.EntityFramework;
 using Perpetuum.Items;
+using Perpetuum.Items.Helpers;
 using Perpetuum.Units.DockingBases;
 using Perpetuum.Units.FieldTerminals;
 
@@ -88,16 +89,16 @@ namespace Perpetuum.Containers
 
     public class ContainerHelper
     {
-        private readonly ItemHelper _itemHelper;
+        private readonly ItemHelper itemHelper;
 
         public ContainerHelper(ItemHelper itemHelper)
         {
-            _itemHelper = itemHelper;
+            this.itemHelper = itemHelper;
         }
 
         public PublicContainer GetFromStructure(long strucureEid)
         {
-            var entity = _itemHelper.LoadItem(strucureEid);
+            var entity = itemHelper.LoadItem(strucureEid);
 
             if (entity is DockingBase dockingBase)
             {

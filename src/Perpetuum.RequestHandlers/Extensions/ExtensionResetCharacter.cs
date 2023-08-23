@@ -43,6 +43,7 @@ namespace Perpetuum.RequestHandlers.Extensions
 
                 (character.IsDocked).ThrowIfFalse(ErrorCodes.CharacterHasToBeDocked);
 
+                /*
                 var product = _mtProductHelper.GetByAccountTransactionType(AccountTransactionType.ExtensionReset);
                 var wallet = _accountManager.GetWallet(account,AccountTransactionType.ExtensionReset);
 
@@ -53,10 +54,11 @@ namespace Perpetuum.RequestHandlers.Extensions
                     Credit = wallet.Balance, 
                     CreditChange = -product.price
                 };
-
+                
                 _accountManager.LogTransaction(e);
 
                 _accountRepository.Update(account);
+                */
 
                 //current extensions
                 var extensionCollection = character.GetExtensions();

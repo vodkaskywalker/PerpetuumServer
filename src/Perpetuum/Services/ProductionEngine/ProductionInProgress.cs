@@ -11,6 +11,7 @@ using Perpetuum.ExportedTypes;
 
 using Perpetuum.Groups.Corporations;
 using Perpetuum.Items;
+using Perpetuum.Items.Helpers;
 using Perpetuum.Log;
 using Perpetuum.Services.ProductionEngine.Facilities;
 using Perpetuum.Units.DockingBases;
@@ -31,22 +32,22 @@ namespace Perpetuum.Services.ProductionEngine
 
         public static IEnumerable<ProductionInProgress> GetCorporationPaidProductionsByFacililtyAndCharacter(this IEnumerable<ProductionInProgress> productions,Character character, long facilityEid)
         {
-            return productions.GetRunningProductionsByFacilityAndCharacter(character, facilityEid).Where(pip => pip.useCorporationWallet);
+            return productions.GetRunningProductionsByFacilityAndCharacter(character, facilityEid).Where(pip => pip.UseCorporationWallet);
         }
 
         public static IEnumerable<ProductionInProgress> GetRunningProductionsByFacilityAndCharacter(this IEnumerable<ProductionInProgress> productions, Character character, long facilityEid)
         {
-            return productions.GetByCharacter(character).Where(pip => pip.facilityEID == facilityEid);
+            return productions.GetByCharacter(character).Where(pip => pip.FacilityEID == facilityEid);
         }
 
         public static IEnumerable<ProductionInProgress> GetCorporationPaidProductionsByCharacter(this IEnumerable<ProductionInProgress> productions,Character character)
         {
-            return productions.GetByCharacter(character).Where(pip => pip.useCorporationWallet);
+            return productions.GetByCharacter(character).Where(pip => pip.UseCorporationWallet);
         }
         
         public static IEnumerable<ProductionInProgress> GetByCharacter(this IEnumerable<ProductionInProgress> productions, Character character)
         {
-            return productions.Where(pip => pip.character == character);
+            return productions.Where(pip => pip.Character == character);
         }
     }
 
@@ -96,66 +97,82 @@ namespace Perpetuum.Services.ProductionEngine
         {
             var pip = _pipFactory();
             pip.ID = record.GetValue<int>("id");
-            pip.character = Character.Get(record.GetValue<int>("characterID"));
-            pip.resultDefinition = record.GetValue<int>("resultDefinition");
-            pip.type = (ProductionInProgressType) record.GetValue<int>("type");
-            pip.startTime = record.GetValue<DateTime>("startTime");
-            pip.finishTime = record.GetValue<DateTime>("finishTime");
-            pip.facilityEID = record.GetValue<long>("facilityEID");
-            pip.totalProductionTimeSeconds = record.GetValue<int>("totalProductionTime");
-            pip.baseEID = record.GetValue<long>("baseEID");
-            pip.creditTaken = record.GetValue<double>("creditTaken");
-            pip.pricePerSecond = record.GetValue<double>("pricePerSecond");
-            pip.useCorporationWallet = record.GetValue<bool>("useCorporationWallet");
-            pip.amountOfCycles = record.GetValue<int>("amountOfCycles");
-            pip.paused = record.GetValue<bool>("paused");
-            pip.pauseTime = record.GetValue<DateTime?>("pausetime");
+            pip.Character = Character.Get(record.GetValue<int>("characterID"));
+            pip.ResultDefinition = record.GetValue<int>("resultDefinition");
+            pip.Type = (ProductionInProgressType) record.GetValue<int>("type");
+            pip.StartTime = record.GetValue<DateTime>("startTime");
+            pip.FinishTime = record.GetValue<DateTime>("finishTime");
+            pip.FacilityEID = record.GetValue<long>("facilityEID");
+            pip.TotalProductionTimeSeconds = record.GetValue<int>("totalProductionTime");
+            pip.BaseEID = record.GetValue<long>("baseEID");
+            pip.CreditTaken = record.GetValue<double>("creditTaken");
+            pip.PricePerSecond = record.GetValue<double>("pricePerSecond");
+            pip.UseCorporationWallet = record.GetValue<bool>("useCorporationWallet");
+            pip.AmountOfCycles = record.GetValue<int>("amountOfCycles");
+            pip.Paused = record.GetValue<bool>("paused");
+            pip.PauseTime = record.GetValue<DateTime?>("pausetime");
             return pip;
         }
     }
 
     public class ProductionInProgress
     {
-        private readonly ItemHelper _itemHelper;
-        private readonly DockingBaseHelper _dockingBaseHelper;
-        public int ID;
-        public Character character;
-        public int resultDefinition;
-        public ProductionInProgressType type;
-        public DateTime startTime;
-        public DateTime finishTime;
-        public long facilityEID;
-        public int totalProductionTimeSeconds;
-        public long baseEID;
-        public double creditTaken;
-        public double pricePerSecond;
-        public int amountOfCycles;
-        public bool useCorporationWallet;
-        public bool paused;
-        public DateTime? pauseTime;
+        private readonly ItemHelper itemHelper;
 
-        public long[] ReservedEids;
+        private readonly DockingBaseHelper dockingBaseHelper;
 
-        public TimeSpan TotalProductionTime => TimeSpan.FromSeconds(totalProductionTimeSeconds);
+        public int ID { get; set; }
+
+        public Character Character { get; set; }
+
+        public int ResultDefinition { get; set; }
+
+        public ProductionInProgressType Type { get; set; }
+
+        public DateTime StartTime { get; set; }
+
+        public DateTime FinishTime { get; set; }
+
+        public long FacilityEID { get; set; }
+
+        public int TotalProductionTimeSeconds { get; set; }
+
+        public long BaseEID { get; set; }
+
+        public double CreditTaken { get; set; }
+
+        public double PricePerSecond { get; set; }
+
+        public int AmountOfCycles { get; set; }
+
+        public bool UseCorporationWallet { get; set; }
+
+        public bool Paused { get; set; }
+
+        public DateTime? PauseTime { get; set; }
+
+        public long[] ReservedEids { get; set; }
+
+        public TimeSpan TotalProductionTime => TimeSpan.FromSeconds(TotalProductionTimeSeconds);
 
         public delegate ProductionInProgress Factory();
 
         public ProductionInProgress(ItemHelper itemHelper,DockingBaseHelper dockingBaseHelper)
         {
-            _itemHelper = itemHelper;
-            _dockingBaseHelper = dockingBaseHelper;
+            this.itemHelper = itemHelper;
+            this.dockingBaseHelper = dockingBaseHelper;
         }
 
         public void WriteLog()
         {
-            ProductionHelper.ProductionLogInsert(character, resultDefinition, GetResultingAmount(), type, CalculateDurationSeconds(), Price, useCorporationWallet);
+            ProductionHelper.ProductionLogInsert(Character, ResultDefinition, GetResultingAmount(), Type, CalculateDurationSeconds(), Price, UseCorporationWallet);
         }
 
         public IEnumerable<Item> GetReservedItems()
         {
             foreach (var reservedEid in ReservedEids)
             {
-                var item = _itemHelper.LoadItem(reservedEid);
+                var item = itemHelper.LoadItem(reservedEid);
                 if (item != null)
                     yield return item;
             }
@@ -172,20 +189,18 @@ namespace Perpetuum.Services.ProductionEngine
 
         private int CalculateDurationSeconds()
         {
-            return (int)finishTime.Subtract(startTime).TotalSeconds;
+            return (int)FinishTime.Subtract(StartTime).TotalSeconds;
         }
 
 
         private int GetResultingAmount()
         {
-
-            EntityDefault ed;
-            if (!EntityDefault.TryGet(resultDefinition, out ed))
+            if (!EntityDefault.TryGet(ResultDefinition, out EntityDefault ed))
             {
-                Logger.Error("consistency error! definition was not found for productioninprogress withdrawcredit. definition: " + resultDefinition);
+                Logger.Error("consistency error! definition was not found for productioninprogress withdrawcredit. definition: " + ResultDefinition);
             }
 
-            var resultingAmount = amountOfCycles * ed.Quantity;
+            var resultingAmount = AmountOfCycles * ed.Quantity;
 
             return resultingAmount;
         }
@@ -200,16 +215,15 @@ namespace Perpetuum.Services.ProductionEngine
                     return 0;
                 }
 
-                switch (type)
+                switch (Type)
                 {
 
                     case ProductionInProgressType.massProduction:
-                        return totalProductionTimeSeconds  * pricePerSecond;
+                        return TotalProductionTimeSeconds  * PricePerSecond;
 
                     default:
-                        return totalProductionTimeSeconds  * pricePerSecond;
+                        return TotalProductionTimeSeconds  * PricePerSecond;
                 }
-
             }
         }
 
@@ -217,7 +231,7 @@ namespace Perpetuum.Services.ProductionEngine
         {
             get
             {
-                var resultEd = EntityDefault.Get(resultDefinition);
+                var resultEd = EntityDefault.Get(ResultDefinition);
 
                 if (resultEd.CategoryFlags.IsCategory(CategoryFlags.cf_random_items) ||
                     resultEd.CategoryFlags.IsCategory(CategoryFlags.cf_random_calibration_programs))
@@ -232,30 +246,30 @@ namespace Perpetuum.Services.ProductionEngine
 
         public Dictionary<string, object> ToDictionary()
         {
-            var resultQuantity = amountOfCycles;
+            var resultQuantity = AmountOfCycles;
             EntityDefault resultEd;
-            if (EntityDefault.TryGet(resultDefinition, out resultEd))
+            if (EntityDefault.TryGet(ResultDefinition, out resultEd))
             {
                 resultQuantity *= resultEd.Quantity;
             }
 
             var tmpDict = new Dictionary<string, object>
                               {
-                                  {k.definition, resultDefinition},
-                                  {k.startTime, startTime},
-                                  {k.finishTime, finishTime},
+                                  {k.definition, ResultDefinition},
+                                  {k.startTime, StartTime},
+                                  {k.finishTime, FinishTime},
                                   {k.ID, ID},
-                                  {k.facility, facilityEID},
-                                  {k.productionTime, totalProductionTimeSeconds},
-                                  {k.timeLeft, (int) finishTime.Subtract(DateTime.Now).TotalSeconds},
-                                  {k.type, (int) type},
-                                  {k.baseEID, baseEID},
+                                  {k.facility, FacilityEID},
+                                  {k.productionTime, TotalProductionTimeSeconds},
+                                  {k.timeLeft, (int) FinishTime.Subtract(DateTime.Now).TotalSeconds},
+                                  {k.type, (int) Type},
+                                  {k.baseEID, BaseEID},
                                   {k.cycle, resultQuantity},
                                   {k.price, Price},
-                                  {k.characterID, character.Id},
-                                  {k.useCorporationWallet, useCorporationWallet},
-                                  {k.paused, paused},
-                                  {k.pauseTime, pauseTime},
+                                  {k.characterID, Character.Id},
+                                  {k.useCorporationWallet, UseCorporationWallet},
+                                  {k.paused, Paused},
+                                  {k.pauseTime, PauseTime},
                               };
 
             return tmpDict;
@@ -264,7 +278,7 @@ namespace Perpetuum.Services.ProductionEngine
 
         public override string ToString()
         {
-            return string.Format("ID:{0} characterID:{1} characterEID:{2} resultDefinition:{3} {9} type:{4} facilityEID:{5} baseEID:{6} price:{7} amountOfCycles:{8}", ID, character.Id, character.Eid, resultDefinition, type, facilityEID, baseEID, Price, amountOfCycles, EntityDefault.Get(resultDefinition).Name);
+            return string.Format("ID:{0} characterID:{1} characterEID:{2} resultDefinition:{3} {9} type:{4} facilityEID:{5} baseEID:{6} price:{7} amountOfCycles:{8}", ID, Character.Id, Character.Eid, ResultDefinition, Type, FacilityEID, BaseEID, Price, AmountOfCycles, EntityDefault.Get(ResultDefinition).Name);
         }
 
 
@@ -277,7 +291,7 @@ namespace Perpetuum.Services.ProductionEngine
             Logger.Info("withdrawing credit for: " + this);
 
             var transactionType = TransactionType.ProductionManufacture;
-            switch (type)
+            switch (Type)
             {
                 case ProductionInProgressType.licenseCreate:
                 case ProductionInProgressType.manufacture:
@@ -285,7 +299,7 @@ namespace Perpetuum.Services.ProductionEngine
                 case ProductionInProgressType.patentNofRunsDevelop:
                 case ProductionInProgressType.patentTimeEfficiencyDevelop:
                 {
-                    Logger.Error("consistency error! outdated production type. " + type);
+                    Logger.Error("consistency error! outdated production type. " + Type);
                     throw new PerpetuumException(ErrorCodes.ServerError);
                 }
 
@@ -312,9 +326,9 @@ namespace Perpetuum.Services.ProductionEngine
             }
 
             //take his money
-            creditTaken = Price; //safety for the cancel
+            CreditTaken = Price; //safety for the cancel
             
-            var wallet = character.GetWallet(useCorporationWallet,transactionType);
+            var wallet = Character.GetWallet(UseCorporationWallet,transactionType);
 
             if (wallet.Balance < Price)
                 return false;
@@ -325,8 +339,8 @@ namespace Perpetuum.Services.ProductionEngine
                                        .SetTransactionType(transactionType)
                                        .SetCreditBalance(wallet.Balance)
                                        .SetCreditChange(-Price)
-                                       .SetCharacter(character)
-                                       .SetItem(resultDefinition, GetResultingAmount());
+                                       .SetCharacter(Character)
+                                       .SetItem(ResultDefinition, GetResultingAmount());
             var corpWallet = wallet as CorporationWallet;
             if (corpWallet != null)
             {
@@ -335,10 +349,10 @@ namespace Perpetuum.Services.ProductionEngine
             }
             else
             {
-                character.LogTransaction(b);
+                Character.LogTransaction(b);
             }
 
-            _dockingBaseHelper.GetDockingBase(baseEID).AddCentralBank(transactionType, Price);
+            dockingBaseHelper.GetDockingBase(BaseEID).AddCentralBank(transactionType, Price);
             return true;
         }
 
@@ -346,7 +360,7 @@ namespace Perpetuum.Services.ProductionEngine
         {
             if (isPaused)
             {
-                if (!paused)
+                if (!Paused)
                 {
                     // >> to paused state
                     PauseProduction();
@@ -354,7 +368,7 @@ namespace Perpetuum.Services.ProductionEngine
             }
             else
             {
-                if (paused)
+                if (Paused)
                 {
                     // >> to unpause state
                     ResumeProduction();
@@ -365,29 +379,29 @@ namespace Perpetuum.Services.ProductionEngine
 
         private void ResumeProduction()
         {
-            if (!paused)
+            if (!Paused)
             {
                 Logger.Warning("production already running: " + this);
                 return;
             }
 
-            paused = false;
+            Paused = false;
 
-            if (pauseTime == null)
+            if (PauseTime == null)
             {
                 Logger.Error("wtf pause time is null. " + this);
                 return;
             }
 
-            var pauseMoment = (DateTime) pauseTime;
+            var pauseMoment = (DateTime) PauseTime;
 
-            var doneBackThen = pauseMoment.Subtract(startTime);
+            var doneBackThen = pauseMoment.Subtract(StartTime);
 
-            startTime = DateTime.Now.Subtract(doneBackThen);
-            finishTime = startTime.AddSeconds(totalProductionTimeSeconds);
+            StartTime = DateTime.Now.Subtract(doneBackThen);
+            FinishTime = StartTime.AddSeconds(TotalProductionTimeSeconds);
 
             var res =
-                Db.Query().CommandText("update runningproduction set starttime=@startTime,finishtime=@finishTime,paused=0,pauseTime=null where id=@id").SetParameter("@startTime", startTime).SetParameter("@finishTime", finishTime).SetParameter("@id", ID)
+                Db.Query().CommandText("update runningproduction set starttime=@startTime,finishtime=@finishTime,paused=0,pauseTime=null where id=@id").SetParameter("@startTime", StartTime).SetParameter("@finishTime", FinishTime).SetParameter("@id", ID)
                     .ExecuteNonQuery();
 
             if (res != 1)
@@ -398,17 +412,17 @@ namespace Perpetuum.Services.ProductionEngine
 
         private void PauseProduction()
         {
-            if (paused)
+            if (Paused)
             {
                 Logger.Warning("production already paused: " + this);
                 return;
             }
 
-            paused = true;
-            pauseTime = DateTime.Now;
+            Paused = true;
+            PauseTime = DateTime.Now;
 
             var res=
-            Db.Query().CommandText("update runningproduction set paused=1,pausetime=@pauseTime where id=@id").SetParameter("@pauseTime", pauseTime).SetParameter("@id", ID)
+            Db.Query().CommandText("update runningproduction set paused=1,pausetime=@pauseTime where id=@id").SetParameter("@pauseTime", PauseTime).SetParameter("@id", ID)
                 .ExecuteNonQuery();
 
             if (res != 1)
@@ -419,7 +433,7 @@ namespace Perpetuum.Services.ProductionEngine
 
         public ErrorCodes HasAccess(Character issuerCharacter)
         {
-            return character == issuerCharacter ? ErrorCodes.NoError : ErrorCodes.AccessDenied;
+            return Character == issuerCharacter ? ErrorCodes.NoError : ErrorCodes.AccessDenied;
         }
 
         /// <summary>
@@ -429,7 +443,7 @@ namespace Perpetuum.Services.ProductionEngine
         /// <param name="command"></param>
         private void SendProductionEventToCorporationMembers(Command command)
         {
-            if (!useCorporationWallet)
+            if (!UseCorporationWallet)
                 return;
 
             var replyDict = new Dictionary<string, object> {{k.production, ToDictionary()}};
@@ -437,7 +451,7 @@ namespace Perpetuum.Services.ProductionEngine
             const CorporationRole roleMask = CorporationRole.CEO | CorporationRole.DeputyCEO | CorporationRole.ProductionManager | CorporationRole.Accountant;
             Message.Builder.SetCommand(command)
                 .WithData(replyDict)
-                .ToCorporation(character.CorporationEid, roleMask)
+                .ToCorporation(Character.CorporationEid, roleMask)
                 .Send();
         }
 
@@ -452,19 +466,19 @@ namespace Perpetuum.Services.ProductionEngine
             var id = Db.Query().CommandText(@"insert runningproduction (characterID,characterEID,resultDefinition,type,startTime,finishTime,facilityEID,totalProductionTime,baseEID,creditTaken,pricePerSecond,amountofcycles,useCorporationWallet) values
 								(@characterID,@characterEID,@resultDefinition,@type,@startTime,@finishTime,@facilityEID,@totalProductionTime,@baseEID,@creditTaken,@pricePerSecond,@amountOfCycles,@useCorporationWallet);
 								select cast(scope_identity() as int)")
-                .SetParameter("@characterID", character.Id)
-                .SetParameter("@characterEID", character.Eid)
-                .SetParameter("@resultDefinition", resultDefinition)
-                .SetParameter("@type", (int) type)
-                .SetParameter("@startTime", startTime)
-                .SetParameter("@finishTime", finishTime)
-                .SetParameter("@facilityEID", facilityEID)
-                .SetParameter("@totalProductionTime", totalProductionTimeSeconds)
-                .SetParameter("@baseEID", baseEID)
-                .SetParameter("@creditTaken", creditTaken)
-                .SetParameter("@pricePerSecond", pricePerSecond)
-                .SetParameter("@amountOfCycles", amountOfCycles)
-                .SetParameter("@useCorporationWallet", useCorporationWallet)
+                .SetParameter("@characterID", Character.Id)
+                .SetParameter("@characterEID", Character.Eid)
+                .SetParameter("@resultDefinition", ResultDefinition)
+                .SetParameter("@type", (int) Type)
+                .SetParameter("@startTime", StartTime)
+                .SetParameter("@finishTime", FinishTime)
+                .SetParameter("@facilityEID", FacilityEID)
+                .SetParameter("@totalProductionTime", TotalProductionTimeSeconds)
+                .SetParameter("@baseEID", BaseEID)
+                .SetParameter("@creditTaken", CreditTaken)
+                .SetParameter("@pricePerSecond", PricePerSecond)
+                .SetParameter("@amountOfCycles", AmountOfCycles)
+                .SetParameter("@useCorporationWallet", UseCorporationWallet)
                 .ExecuteScalar<int>().ThrowIfEqual(0, ErrorCodes.SQLInsertError);
 
             //save reserved EIDs

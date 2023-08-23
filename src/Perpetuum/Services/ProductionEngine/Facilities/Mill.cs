@@ -265,18 +265,18 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
             }
 
             var newProduction = ProductionInProgressFactory();
-            newProduction.startTime = DateTime.Now;
-            newProduction.finishTime = DateTime.Now.AddSeconds(productionTimeSeconds);
-            newProduction.type = ProductionInProgressType.massProduction;
-            newProduction.character = character;
-            newProduction.facilityEID = Eid;
-            newProduction.resultDefinition = productionLine.TargetDefinition;
-            newProduction.totalProductionTimeSeconds = productionTimeSeconds;
-            newProduction.baseEID = Parent;
-            newProduction.pricePerSecond = cprg.IsMissionRelated ? 0.0 : GetPricePerSecond(productionLine.TargetDefinition);
+            newProduction.StartTime = DateTime.Now;
+            newProduction.FinishTime = DateTime.Now.AddSeconds(productionTimeSeconds);
+            newProduction.Type = ProductionInProgressType.massProduction;
+            newProduction.Character = character;
+            newProduction.FacilityEID = Eid;
+            newProduction.ResultDefinition = productionLine.TargetDefinition;
+            newProduction.TotalProductionTimeSeconds = productionTimeSeconds;
+            newProduction.BaseEID = Parent;
+            newProduction.PricePerSecond = cprg.IsMissionRelated ? 0.0 : GetPricePerSecond(productionLine.TargetDefinition);
             newProduction.ReservedEids = reservedEids;
-            newProduction.amountOfCycles = cycles;
-            newProduction.useCorporationWallet = useCorporationWallet;
+            newProduction.AmountOfCycles = cycles;
+            newProduction.UseCorporationWallet = useCorporationWallet;
 
             if (!newProduction.TryWithdrawCredit())
             {
@@ -394,32 +394,32 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
             //delete the used items
             foreach (var item in productionInProgress.GetReservedItems())
             {
-                productionInProgress.character.LogTransaction(TransactionLogEvent.Builder()
+                productionInProgress.Character.LogTransaction(TransactionLogEvent.Builder()
                                                                    .SetTransactionType(TransactionType.MassProductionDeleted)
-                                                                   .SetCharacter(productionInProgress.character)
+                                                                   .SetCharacter(productionInProgress.Character)
                                                                    .SetItem(item));
                 Repository.Delete(item);
             }
 
             //pick the output defintion---------------------------------------------------
 
-            var outputDefinition = productionInProgress.resultDefinition;
+            var outputDefinition = productionInProgress.ResultDefinition;
 
             //load container
             var container = (PublicContainer)Container.GetOrThrow(PublicContainerEid);
 
-            container.ReloadItems(productionInProgress.character);
+            container.ReloadItems(productionInProgress.Character);
 
             var outputDefault = EntityDefault.Get(outputDefinition).ThrowIfEqual(EntityDefault.None, ErrorCodes.DefinitionNotSupported);
 
             //create item
             var resultItem = container.CreateAndAddItem(outputDefinition, false, item =>
             {
-                item.Owner = productionInProgress.character.Eid;
-                item.Quantity = outputDefault.Quantity * productionInProgress.amountOfCycles;
+                item.Owner = productionInProgress.Character.Eid;
+                item.Quantity = outputDefault.Quantity * productionInProgress.AmountOfCycles;
             });
 
-            productionInProgress.character.WriteItemTransactionLog(TransactionType.MassProductionCreated, resultItem);
+            productionInProgress.Character.WriteItemTransactionLog(TransactionType.MassProductionCreated, resultItem);
 
             CalibrationProgram calibrationProgram;
             var wasLineDead = false;
@@ -438,7 +438,7 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
                         //do production rounds
                         //ThreadPoolHelper.ScheduledTask(3000, () => TryNextRound(productionInProgress.character, affectedProductionLine.ID, productionInProgress.amountOfCycles, productionInProgress.useCorporationWallet));
 
-                        var nrp = new NextRoundProduction(ProductionProcessor, productionInProgress.character, affectedProductionLine.Id, productionInProgress.amountOfCycles, productionInProgress.useCorporationWallet, Eid);
+                        var nrp = new NextRoundProduction(ProductionProcessor, productionInProgress.Character, affectedProductionLine.Id, productionInProgress.AmountOfCycles, productionInProgress.UseCorporationWallet, Eid);
 
                         ProductionProcessor.EnqueueNextRoundProduction(nrp);
                     }
@@ -462,7 +462,7 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
             container.Save();
 
             //get list in order to return
-            var linesList = GetLinesList(productionInProgress.character);
+            var linesList = GetLinesList(productionInProgress.Character);
 
             Logger.Info("Mass Production created an item: " + resultItem + " production:" + productionInProgress);
 
@@ -473,7 +473,7 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
                 {k.lineCount, linesList.Count}
             };
 
-            ProductionProcessor.EnqueueProductionMissionTarget(MissionTargetType.massproduce, productionInProgress.character, MyMissionLocationId(), resultItem.Definition, resultItem.Quantity);
+            ProductionProcessor.EnqueueProductionMissionTarget(MissionTargetType.massproduce, productionInProgress.Character, MyMissionLocationId(), resultItem.Definition, resultItem.Quantity);
             return replyDict;
         }
 
@@ -570,7 +570,7 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
             var replyDict = ReturnReservedItems(productionInProgress);
 
             //return list
-            var linesList = GetLinesList(productionInProgress.character);
+            var linesList = GetLinesList(productionInProgress.Character);
             replyDict.Add(k.lines, linesList);
             replyDict.Add(k.lineCount, linesList.Count);
             return replyDict;
@@ -581,7 +581,7 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
         {
             cprg = null;
 
-            var productionLine = ProductionLine.LoadByProductionId(productionInProgress.character, productionInProgress.ID);
+            var productionLine = ProductionLine.LoadByProductionId(productionInProgress.Character, productionInProgress.ID);
             if (productionLine == null)
             {
                 Logger.Error("DecalibrateLine: productionline was not found. a production in progress exists without related productionline. " + productionInProgress);
@@ -632,17 +632,17 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
 
                 var info = new Dictionary<string, object>
                 {
-                    {k.facility, GetFacilityInfo(productionInProgress.character)},
+                    {k.facility, GetFacilityInfo(productionInProgress.Character)},
                     {k.line, productionLine.ToDictionary()}
                 };
 
                 Message.Builder.SetCommand(Commands.ProductionLineDead)
                     .WithData(info)
-                    .ToCharacter(productionInProgress.character)
+                    .ToCharacter(productionInProgress.Character)
                     .Send();
             }
 
-            ProductionLine.PostMassProduction(productionInProgress.character, productionLine.Id, newTimeEfficiency, newMaterialEfficiency);
+            ProductionLine.PostMassProduction(productionInProgress.Character, productionLine.Id, newTimeEfficiency, newMaterialEfficiency);
 
             return productionLine;
         }

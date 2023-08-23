@@ -908,6 +908,18 @@ namespace Perpetuum
             }
         };
 
+        public static readonly Command SendMessageToCharacter = new Command
+        {
+            Text = "sendMessageToCharacter",
+            Arguments =
+            {
+                new Argument<string>(k.message),
+                new Argument<int>(k.type),
+                new Argument<int>(k.recipients),
+                new Argument<int>(k.translate)
+            }
+        };
+
         public static readonly Command UpdateMoodMessage = new Command
         {
             Text = "update_moodMessage",

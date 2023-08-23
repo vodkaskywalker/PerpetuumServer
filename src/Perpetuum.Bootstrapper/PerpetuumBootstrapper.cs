@@ -186,6 +186,7 @@ using Perpetuum.Services.Strongholds;
 using Perpetuum.Zones.NpcSystem.Presences.RandomExpiringPresence;
 using Perpetuum.Zones.NpcSystem.Presences.ExpiringStaticPresence;
 using Perpetuum.Zones.NpcSystem.Presences.GrowingPresences;
+using Perpetuum.Items.Helpers;
 
 namespace Perpetuum.Bootstrapper
 {
@@ -213,41 +214,46 @@ namespace Perpetuum.Bootstrapper
 
     public class PerpetuumBootstrapper
     {
-        private ContainerBuilder _builder;
-        private IContainer _container;
+        private ContainerBuilder builder;
+        private IContainer container;
 
         public void Start()
         {
-            var s = _container.Resolve<IHostStateService>();
+            var s = container.Resolve<IHostStateService>();
+
             s.State = HostState.Starting;
         }
 
         public void Stop()
         {
-            var s = _container.Resolve<IHostStateService>();
+            var s = container.Resolve<IHostStateService>();
+
             s.State = HostState.Stopping;
         }
 
         public void Stop(TimeSpan delay)
         {
-            var m = _container.Resolve<HostShutDownManager>();
+            var m = container.Resolve<HostShutDownManager>();
+
             m.Shutdown(delay);
         }
 
         public IContainer GetContainer()
         {
-            return _container;
+            return container;
         }
 
         public void WaitForStop()
         {
             var are = new AutoResetEvent(false);
+            var s = container.Resolve<IHostStateService>();
 
-            var s = _container.Resolve<IHostStateService>();
             s.StateChanged += (sender, state) =>
             {
                 if (state == HostState.Off)
+                {
                     are.Set();
+                }
             };
 
             are.WaitOne();
@@ -272,94 +278,97 @@ namespace Perpetuum.Bootstrapper
 
         public void Init(string gameRoot)
         {
-            _builder = new ContainerBuilder();
+            builder = new ContainerBuilder();
             InitContainer(gameRoot);
-            _container = _builder.Build();
-            Logger.Current = _container.Resolve<ILogger<LogEvent>>();
+            container = builder.Build();
+            Logger.Current = container.Resolve<ILogger<LogEvent>>();
 
-            var config = _container.Resolve<GlobalConfiguration>();
-            _container.Resolve<IHostStateService>().State = HostState.Init;
+            var config = container.Resolve<GlobalConfiguration>();
 
+            container.Resolve<IHostStateService>().State = HostState.Init;
 
             Logger.Info($"Game root: {config.GameRoot}");
             Logger.Info($"GC isServerGC: {GCSettings.IsServerGC}");
             Logger.Info($"GC Latency mode: {GCSettings.LatencyMode}");
             Logger.Info($"Vector is hardware accelerated: {Vector.IsHardwareAccelerated}");
 
-            Db.DbQueryFactory = _container.Resolve<Func<DbQuery>>();
+            Db.DbQueryFactory = container.Resolve<Func<DbQuery>>();
 
-            using (var connection = _container.Resolve<DbConnectionFactory>()()) { Logger.Info($"Database: {connection.Database}"); }
+            using (var connection = container.Resolve<DbConnectionFactory>()())
+            {
+                Logger.Info($"Database: {connection.Database}");
+            }
 
-            InitGame(_container);
+            InitGame(container);
 
-            EntityDefault.Reader = _container.Resolve<IEntityDefaultReader>();
-            Entity.Services = _container.Resolve<IEntityServices>();
+            EntityDefault.Reader = container.Resolve<IEntityDefaultReader>();
+            Entity.Services = container.Resolve<IEntityServices>();
 
             GenxyConverter.RegisterConverter<Character>((writer, character) =>
             {
                 GenxyConverter.ConvertInt(writer, character.Id);
             });
 
-            CorporationData.CorporationManager = _container.Resolve<ICorporationManager>();
+            CorporationData.CorporationManager = container.Resolve<ICorporationManager>();
 
-            Character.CharacterFactory = _container.Resolve<CharacterFactory>();
-            Character.CharacterCache = _container.Resolve<Func<string, ObjectCache>>().Invoke("CharacterCache");            
+            Character.CharacterFactory = container.Resolve<CharacterFactory>();
+            Character.CharacterCache = container.Resolve<Func<string, ObjectCache>>().Invoke("CharacterCache");            
 
-            MissionHelper.Init(_container.Resolve<MissionDataCache>(), _container.Resolve<IStandingHandler>());
-            MissionHelper.MissionProcessor = _container.Resolve<MissionProcessor>();
-            MissionHelper.EntityServices = _container.Resolve<IEntityServices>();
+            MissionHelper.Init(container.Resolve<MissionDataCache>(), container.Resolve<IStandingHandler>());
+            MissionHelper.MissionProcessor = container.Resolve<MissionProcessor>();
+            MissionHelper.EntityServices = container.Resolve<IEntityServices>();
 
-            Mission.Init(_container.Resolve<MissionDataCache>());
-            MissionInProgress.Init(_container.Resolve<MissionDataCache>());
-            MissionAgent.Init(_container.Resolve<MissionDataCache>());
-            MissionStandingChangeCalculator.Init(_container.Resolve<MissionDataCache>());
-            ZoneMissionInProgress.Init(_container.Resolve<MissionDataCache>());
-            MissionSpot.Init(_container.Resolve<MissionDataCache>());
-            MissionSpot.ZoneManager = _container.Resolve<IZoneManager>();
-            MissionLocation.Init(_container.Resolve<MissionDataCache>());
-            MissionLocation.ZoneManager = _container.Resolve<IZoneManager>();
-            MissionTarget.missionDataCache = _container.Resolve<MissionDataCache>();
-            MissionTarget.ProductionDataAccess = _container.Resolve<IProductionDataAccess>();
-            MissionTarget.RobotTemplateRelations = _container.Resolve<IRobotTemplateRelations>();
-            MissionTarget.MissionTargetInProgressFactory = _container.Resolve<MissionTargetInProgress.Factory>();
+            Mission.Init(container.Resolve<MissionDataCache>());
+            MissionInProgress.Init(container.Resolve<MissionDataCache>());
+            MissionAgent.Init(container.Resolve<MissionDataCache>());
+            MissionStandingChangeCalculator.Init(container.Resolve<MissionDataCache>());
+            ZoneMissionInProgress.Init(container.Resolve<MissionDataCache>());
+            MissionSpot.Init(container.Resolve<MissionDataCache>());
+            MissionSpot.ZoneManager = container.Resolve<IZoneManager>();
+            MissionLocation.Init(container.Resolve<MissionDataCache>());
+            MissionLocation.ZoneManager = container.Resolve<IZoneManager>();
+            MissionTarget.missionDataCache = container.Resolve<MissionDataCache>();
+            MissionTarget.ProductionDataAccess = container.Resolve<IProductionDataAccess>();
+            MissionTarget.RobotTemplateRelations = container.Resolve<IRobotTemplateRelations>();
+            MissionTarget.MissionTargetInProgressFactory = container.Resolve<MissionTargetInProgress.Factory>();
 
-            MissionTargetRewardCalculator.Init(_container.Resolve<MissionDataCache>());
-            MissionTargetSuccessInfoGenerator.Init(_container.Resolve<MissionDataCache>());
-            MissionBonus.Init(_container.Resolve<MissionDataCache>());
-            ZoneMissionTarget.MissionProcessor = _container.Resolve<MissionProcessor>();
-            ZoneMissionTarget.PresenceFactory = _container.Resolve<PresenceFactory>();
+            MissionTargetRewardCalculator.Init(container.Resolve<MissionDataCache>());
+            MissionTargetSuccessInfoGenerator.Init(container.Resolve<MissionDataCache>());
+            MissionBonus.Init(container.Resolve<MissionDataCache>());
+            ZoneMissionTarget.MissionProcessor = container.Resolve<MissionProcessor>();
+            ZoneMissionTarget.PresenceFactory = container.Resolve<PresenceFactory>();
 
-            MissionResolveTester.Init(_container.Resolve<MissionDataCache>());
-            TransportAssignment.EntityServices = _container.Resolve<IEntityServices>();
-            ProductionLine.ProductionLineFactory = _container.Resolve<ProductionLine.Factory>();
-            MissionInProgress.MissionInProgressFactory = _container.Resolve<MissionInProgress.Factory>();
-            MissionInProgress.MissionProcessor = _container.Resolve<MissionProcessor>();
-            PriceCalculator.PriceCalculatorFactory = _container.Resolve<PriceCalculator.Factory>();
+            MissionResolveTester.Init(container.Resolve<MissionDataCache>());
+            TransportAssignment.EntityServices = container.Resolve<IEntityServices>();
+            ProductionLine.ProductionLineFactory = container.Resolve<ProductionLine.Factory>();
+            MissionInProgress.MissionInProgressFactory = container.Resolve<MissionInProgress.Factory>();
+            MissionInProgress.MissionProcessor = container.Resolve<MissionProcessor>();
+            PriceCalculator.PriceCalculatorFactory = container.Resolve<PriceCalculator.Factory>();
 
-            Message.MessageBuilderFactory = _container.Resolve<MessageBuilder.Factory>();
+            Message.MessageBuilderFactory = container.Resolve<MessageBuilder.Factory>();
 
-            PBSHelper.ProductionDataAccess = _container.Resolve<IProductionDataAccess>();
-            PBSHelper.ProductionManager = _container.Resolve<ProductionManager>();
-            PBSHelper.ItemDeployerHelper = _container.Resolve<ItemDeployerHelper>();
+            PBSHelper.ProductionDataAccess = container.Resolve<IProductionDataAccess>();
+            PBSHelper.ProductionManager = container.Resolve<ProductionManager>();
+            PBSHelper.ItemDeployerHelper = container.Resolve<ItemDeployerHelper>();
 
-            ProductionComponentCollector.ProductionComponentCollectorFactory = _container.Resolve<ProductionComponentCollector.Factory>();
+            ProductionComponentCollector.ProductionComponentCollectorFactory = container.Resolve<ProductionComponentCollector.Factory>();
 
-            CorporationData.InfoCache = _container.Resolve<Func<string, ObjectCache>>().Invoke("CorporationInfoCache");
+            CorporationData.InfoCache = container.Resolve<Func<string, ObjectCache>>().Invoke("CorporationInfoCache");
 
-            _container.Resolve<IHostStateService>().StateChanged += (sender, state) =>
+            container.Resolve<IHostStateService>().StateChanged += (sender, state) =>
             {
                 switch (state)
                 {
                     case HostState.Stopping:
                     {
-                        _container.Resolve<IProcessManager>().Stop();
+                        container.Resolve<IProcessManager>().Stop();
                         NatDiscoverer.ReleaseAll();
                         sender.State = HostState.Off;
                         break;
                     }
                     case HostState.Starting:
                     {
-                        _container.Resolve<IProcessManager>().Start();
+                        container.Resolve<IProcessManager>().Start();
                         sender.State = HostState.Online;
                         break;
                     }
@@ -367,28 +376,30 @@ namespace Perpetuum.Bootstrapper
             };
 
             DefaultCorporationDataCache.LoadAll();
-            _container.Resolve<MissionDataCache>().CacheMissionData();
+            container.Resolve<MissionDataCache>().CacheMissionData();
             // initialize our markets.
             // this is dependent on all zones being loaded.
-            _container.Resolve<MarketHelper>().Init();
-            _container.Resolve<MarketHandler>().Init();
-
-
+            container.Resolve<MarketHelper>().Init();
+            container.Resolve<MarketHandler>().Init();
         }
 
         public bool TryInitUpnp(out bool success)
         {
             success = false;
-            var config = _container.Resolve<GlobalConfiguration>();
+            var config = container.Resolve<GlobalConfiguration>();
             if (!config.EnableUpnp)
+            {
                 return false;
+            }
 
             try
             {
                 var discoverer = new NatDiscoverer();
+
                 NatDiscoverer.ReleaseAll();
 
                 var natDevice = discoverer.DiscoverDeviceAsync().Result;
+
                 if (natDevice == null)
                 {
                     Logger.Error("[UPNP] NAT device not found!");
@@ -406,7 +417,7 @@ namespace Perpetuum.Bootstrapper
 
                 Map(config.ListenerPort);
 
-                foreach (var zone in _container.Resolve<IZoneManager>().Zones)
+                foreach (var zone in container.Resolve<IZoneManager>().Zones)
                 {
                     Map(zone.Configuration.ListenerPort);
                 }
@@ -427,12 +438,17 @@ namespace Perpetuum.Bootstrapper
         private static void InitGame(IComponentContext container)
         {
             //the current host has to clean up things in the onlinehost table, and other runtime tables
-            Db.Query().CommandText("initServer").ExecuteNonQuery();
+            Db.Query()
+                .CommandText("initServer")
+                .ExecuteNonQuery();
 
             var globalConfiguration = container.Resolve<GlobalConfiguration>();
+
             if (!string.IsNullOrEmpty(globalConfiguration.PersonalConfig))
             {
-                Db.Query().CommandText(globalConfiguration.PersonalConfig).ExecuteNonQuery();
+                Db.Query()
+                    .CommandText(globalConfiguration.PersonalConfig)
+                    .ExecuteNonQuery();
                 Logger.Info("Personal sp executed:" + globalConfiguration.PersonalConfig);
             }
 
@@ -441,7 +457,7 @@ namespace Perpetuum.Bootstrapper
 
         private IRegistrationBuilder<T, ConcreteReflectionActivatorData, SingleRegistrationStyle> RegisterAutoActivate<T>(TimeSpan interval) where T : IProcess
         {
-            return _builder.RegisterType<T>().SingleInstance().AutoActivate().OnActivated(e =>
+            return builder.RegisterType<T>().SingleInstance().AutoActivate().OnActivated(e =>
             {
                 e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync().AsTimed(interval));
             });
@@ -451,9 +467,7 @@ namespace Perpetuum.Bootstrapper
         {
             RegisterAutoActivate<HostOnlineStateWriter>(TimeSpan.FromSeconds(7));
             RegisterAutoActivate<ServerInfoService>(TimeSpan.FromMinutes(5));
-            //RegisterAutoActivate<CleanUpPayingCustomersService>(TimeSpan.FromHours(10));
             RegisterAutoActivate<MarketCleanUpService>(TimeSpan.FromHours(1));
-//            RegisterAutoActivate<AccountCreditHandler>(TimeSpan.FromSeconds(10));
             RegisterAutoActivate<SessionCountWriter>(TimeSpan.FromMinutes(5));
             RegisterAutoActivate<VolunteerCEOProcessor>(TimeSpan.FromMinutes(10));
             RegisterAutoActivate<GiveExtensionPointsService>(TimeSpan.FromMinutes(10));
@@ -464,16 +478,20 @@ namespace Perpetuum.Bootstrapper
         {
             foreach (var command in GetCommands())
             {
-                _builder.RegisterInstance(command).As<Command>().Keyed<Command>(command.Text.ToUpper());
+                builder.RegisterInstance(command).As<Command>().Keyed<Command>(command.Text.ToUpper());
             }
 
-            _builder.Register<Func<string, Command>>(x =>
+            builder.Register<Func<string, Command>>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
+
                 return (commandText =>
                 {
                     commandText = commandText.ToUpper();
-                    return ctx.IsRegisteredWithKey<Command>(commandText) ? ctx.ResolveKeyed<Command>(commandText) : null;
+
+                    return ctx.IsRegisteredWithKey<Command>(commandText)
+                        ? ctx.ResolveKeyed<Command>(commandText)
+                        : null;
                 });
             });
         }
@@ -498,143 +516,177 @@ namespace Perpetuum.Bootstrapper
             RegisterZones();
             RegisterPBS();
 
-            _builder.Register<Func<string, ObjectCache>>(x =>
+            builder.Register<Func<string, ObjectCache>>(x =>
             {
                 return name => new MemoryCache(name);
             });
 
-            _builder.RegisterType<CharacterProfileRepository>().AsSelf().As<ICharacterProfileRepository>();
-            _builder.Register(c =>
-            {
-                var cache = new MemoryCache("CharacterProfiles");
-                return new CachedReadOnlyRepository<int, CharacterProfile>(cache, c.Resolve<CharacterProfileRepository>());
-            }).AsSelf().As<IReadOnlyRepository<int,CharacterProfile>>().SingleInstance();
+            builder.RegisterType<CharacterProfileRepository>().AsSelf().As<ICharacterProfileRepository>();
+            builder
+                .Register(c =>
+                {
+                    var cache = new MemoryCache("CharacterProfiles");
 
-            _builder.RegisterType<CachedCharacterProfileRepository>().As<ICharacterProfileRepository>();
+                    return new CachedReadOnlyRepository<int, CharacterProfile>(cache, c.Resolve<CharacterProfileRepository>());
+                })
+                .AsSelf()
+                .As<IReadOnlyRepository<int,CharacterProfile>>()
+                .SingleInstance();
 
-            _builder.RegisterType<StandingRepository>().As<IStandingRepository>();
-            _builder.RegisterType<StandingHandler>().OnActivated(e =>
-            {
-                e.Instance.Init();
-            }).As<IStandingHandler>().SingleInstance();
+            builder.RegisterType<CachedCharacterProfileRepository>().As<ICharacterProfileRepository>();
 
-            _builder.RegisterType<CentralBank>().As<ICentralBank>().AutoActivate().OnActivated(e =>
-            {
-                e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromHours(1)));
-            }).SingleInstance();
+            builder.RegisterType<StandingRepository>().As<IStandingRepository>();
+            builder
+                .RegisterType<StandingHandler>()
+                .OnActivated(e =>
+                {
+                    e.Instance.Init();
+                })
+                .As<IStandingHandler>()
+                .SingleInstance();
 
-            _builder.RegisterType<TechTreeInfoService>().As<ITechTreeInfoService>();
-            _builder.RegisterType<TechTreeService>().As<ITechTreeService>();
-            _builder.RegisterType<TeleportDescriptionRepository>().As<ITeleportDescriptionRepository>();
-            _builder.RegisterType<CustomDictionary>().As<ICustomDictionary>().SingleInstance().AutoActivate();
+            builder
+                .RegisterType<CentralBank>()
+                .As<ICentralBank>()
+                .AutoActivate()
+                .OnActivated(e =>
+                {
+                    e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromHours(1)));
+                })
+                .SingleInstance();
 
-            _builder.RegisterType<Session>().AsSelf().As<ISession>();
+            builder.RegisterType<TechTreeInfoService>().As<ITechTreeInfoService>();
+            builder.RegisterType<TechTreeService>().As<ITechTreeService>();
+            builder.RegisterType<TeleportDescriptionRepository>().As<ITeleportDescriptionRepository>();
+            builder.RegisterType<CustomDictionary>().As<ICustomDictionary>().SingleInstance().AutoActivate();
 
-            _builder.RegisterType<SessionManager>().As<ISessionManager>().SingleInstance();
+            builder.RegisterType<Session>().AsSelf().As<ISession>();
+
+            builder.RegisterType<SessionManager>().As<ISessionManager>().SingleInstance();
 
             InitRelayManager();
 
-            _builder.Register(c => new FileSystem(gameRoot)).As<IFileSystem>();
-            _builder.Register(c =>
-            {
-                var fileManager = c.Resolve<IFileSystem>();
-                var settingsFile = fileManager.ReadAllText("perpetuum.ini");
-                var configuration = JsonConvert.DeserializeObject<GlobalConfiguration>(settingsFile);
-                configuration.GameRoot = gameRoot;
-                return configuration;
-            }).SingleInstance();
+            builder.Register(c => new FileSystem(gameRoot)).As<IFileSystem>();
+            builder
+                .Register(c =>
+                {
+                    var fileManager = c.Resolve<IFileSystem>();
+                    var settingsFile = fileManager.ReadAllText("perpetuum.ini");
+                    var configuration = JsonConvert.DeserializeObject<GlobalConfiguration>(settingsFile);
 
-            _builder.RegisterType<AdminCommandRouter>().SingleInstance();
+                    configuration.GameRoot = gameRoot;
 
-            _builder.RegisterType<Gang>();
-            _builder.RegisterType<GangRepository>().As<IGangRepository>();
-            _builder.RegisterType<GangManager>().As<IGangManager>().SingleInstance();
+                    return configuration;
+                })
+                .SingleInstance();
 
-            _builder.Register(c =>
-            {
-                var config = c.Resolve<GlobalConfiguration>();
-                return config.Corporation;
-            }).As<CorporationConfiguration>();
+            builder.RegisterType<AdminCommandRouter>().SingleInstance();
 
-            _builder.RegisterType<HostStateService>().As<IHostStateService>().SingleInstance();
-            _builder.Register(c => new ProcessManager(TimeSpan.FromMilliseconds(50))).As<IProcessManager>().SingleInstance();
+            builder.RegisterType<Gang>();
+            builder.RegisterType<GangRepository>().As<IGangRepository>();
+            builder.RegisterType<GangManager>().As<IGangManager>().SingleInstance();
 
-            _builder.Register<DbConnectionFactory>(x =>
+            builder
+                .Register(c =>
+                {
+                    var config = c.Resolve<GlobalConfiguration>();
+
+                    return config.Corporation;
+                })
+                .As<CorporationConfiguration>();
+
+            builder.RegisterType<HostStateService>().As<IHostStateService>().SingleInstance();
+            builder
+                .Register(c => new ProcessManager(TimeSpan.FromMilliseconds(50)))
+                .As<IProcessManager>()
+                .SingleInstance();
+
+            builder.Register<DbConnectionFactory>(x =>
             {
                 var connectionString = x.Resolve<GlobalConfiguration>().ConnectionString;
+
                 return (() => new SqlConnection(connectionString));
             });
 
-            _builder.RegisterType<DbQuery>();
+            builder.RegisterType<DbQuery>();
 
             
-            _builder.RegisterType<SparkTeleport>();
+            builder.RegisterType<SparkTeleport>();
 
-            _builder.RegisterType<ExtensionReader>().As<IExtensionReader>().SingleInstance();
-            _builder.RegisterType<ExtensionPoints>();
-
-
-            _builder.RegisterType<LootService>().As<ILootService>().SingleInstance().OnActivated(e => e.Instance.Init());
-            _builder.RegisterType<ItemPriceHelper>().SingleInstance();
-            _builder.RegisterType<PriceCalculator>(); // this doesn't appear to be something that should be a singleton.
+            builder.RegisterType<ExtensionReader>().As<IExtensionReader>().SingleInstance();
+            builder.RegisterType<ExtensionPoints>();
 
 
-            _builder.RegisterType<CharacterExtensions>().As<ICharacterExtensions>().SingleInstance();
-            _builder.RegisterType<AccountRepository>().As<IAccountRepository>();
+            builder.RegisterType<LootService>().As<ILootService>().SingleInstance().OnActivated(e => e.Instance.Init());
+            builder.RegisterType<ItemPriceHelper>().SingleInstance();
+            builder.RegisterType<PriceCalculator>(); // this doesn't appear to be something that should be a singleton.
 
-            _builder.RegisterType<SocialService>().As<ISocialService>().SingleInstance();
 
-            _builder.RegisterType<CharacterTransactionLogger>().As<ICharacterTransactionLogger>();
+            builder.RegisterType<CharacterExtensions>().As<ICharacterExtensions>().SingleInstance();
+            builder.RegisterType<AccountRepository>().As<IAccountRepository>();
 
-            _builder.RegisterType<CharacterCreditService>().As<ICharacterCreditService>();
-            _builder.RegisterType<CharacterWallet>().AsSelf().As<ICharacterWallet>();
-            _builder.RegisterType<CharacterWalletHelper>();
-            _builder.Register<CharacterWalletFactory>(x =>
-            {
-                var ctx = x.Resolve<IComponentContext>();
-                return ((character, type) =>
+            builder.RegisterType<SocialService>().As<ISocialService>().SingleInstance();
+
+            builder.RegisterType<CharacterTransactionLogger>().As<ICharacterTransactionLogger>();
+
+            builder.RegisterType<CharacterCreditService>().As<ICharacterCreditService>();
+            builder.RegisterType<CharacterWallet>().AsSelf().As<ICharacterWallet>();
+            builder.RegisterType<CharacterWalletHelper>();
+            builder
+                .Register<CharacterWalletFactory>(x =>
                 {
-                    return ctx.Resolve<CharacterWallet>(new TypedParameter(typeof(Character), character),
-                                                        new TypedParameter(typeof(TransactionType), type));
+                    var ctx = x.Resolve<IComponentContext>();
+
+                    return ((character, type) =>
+                    {
+                        return ctx.Resolve<CharacterWallet>(
+                            new TypedParameter(typeof(Character), character),
+                            new TypedParameter(typeof(TransactionType), type));
+                    });
                 });
-            });
 
-            _builder.RegisterType<Character>().AsSelf();
-            _builder.Register(x => x.Resolve<Character>(TypedParameter.From(0))).Named<Character>("nullcharacter").SingleInstance();
+            builder.RegisterType<Character>().AsSelf();
+            builder
+                .Register(x => x.Resolve<Character>(TypedParameter.From(0)))
+                .Named<Character>("nullcharacter")
+                .SingleInstance();
 
-            _builder.Register<CharacterFactory>(x =>
+            builder.Register<CharacterFactory>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
+
                 return (id =>
                 {
                     if (id == 0)
+                    {
                         return ctx.ResolveNamed<Character>("nullcharacter");
+                    }
 
                     return ctx.Resolve<Character>(TypedParameter.From(id));
                 });
             });
 
-            _builder.RegisterType<MessageBuilder>();
-            _builder.RegisterType<MessageSender>().As<IMessageSender>();
-            _builder.RegisterType<CorporationMessageSender>().As<ICorporationMessageSender>().SingleInstance();
+            builder.RegisterType<MessageBuilder>();
+            builder.RegisterType<MessageSender>().As<IMessageSender>();
+            builder.RegisterType<CorporationMessageSender>().As<ICorporationMessageSender>().SingleInstance();
 
-            _builder.RegisterType<ServerInfo>();
-            _builder.RegisterType<ServerInfoManager>().As<IServerInfoManager>();
+            builder.RegisterType<ServerInfo>();
+            builder.RegisterType<ServerInfoManager>().As<IServerInfoManager>();
 
-
-            _builder.Register(x =>
+            builder.Register(x =>
             {
                 var cfg = x.Resolve<GlobalConfiguration>();
+
                 return new SteamManager(cfg.SteamAppID, cfg.SteamKey);
             }).As<ISteamManager>();
         }
 
         private void RegisterChannelTypes()
         {
-            _builder.RegisterType<ChannelRepository>().As<IChannelRepository>();
-            _builder.RegisterType<ChannelMemberRepository>().As<IChannelMemberRepository>();
-            _builder.RegisterType<ChannelBanRepository>().As<IChannelBanRepository>();
-            _builder.RegisterType<ChannelManager>().As<IChannelManager>().SingleInstance();
+            builder.RegisterType<ChannelRepository>().As<IChannelRepository>();
+            builder.RegisterType<ChannelMemberRepository>().As<IChannelMemberRepository>();
+            builder.RegisterType<ChannelBanRepository>().As<IChannelBanRepository>();
+            builder.RegisterType<ChannelManager>().As<IChannelManager>().SingleInstance();
 
             RegisterRequestHandler<ChannelCreate>(Commands.ChannelCreate);
             RegisterRequestHandler<ChannelList>(Commands.ChannelList);
@@ -657,99 +709,102 @@ namespace Perpetuum.Bootstrapper
 
         private void RegisterEffects()
         {
-            _builder.RegisterType<EffectBuilder>();
+            builder.RegisterType<EffectBuilder>();
 
-            _builder.RegisterType<ZoneEffectHandler>().As<IZoneEffectHandler>();
+            builder.RegisterType<ZoneEffectHandler>().As<IZoneEffectHandler>();
 
-            _builder.Register<Func<IZone, IZoneEffectHandler>>(x =>
+            builder.Register<Func<IZone, IZoneEffectHandler>>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
+
                 return zone => new ZoneEffectHandler(zone);
             });
 
-            _builder.RegisterType<InvulnerableEffect>().Keyed<Effect>(EffectType.effect_invulnerable);
-            _builder.RegisterType<CoTEffect>().Keyed<Effect>(EffectType.effect_eccm);
-            _builder.RegisterType<CoTEffect>().Keyed<Effect>(EffectType.effect_stealth);
+            builder.RegisterType<InvulnerableEffect>().Keyed<Effect>(EffectType.effect_invulnerable);
+            builder.RegisterType<CoTEffect>().Keyed<Effect>(EffectType.effect_eccm);
+            builder.RegisterType<CoTEffect>().Keyed<Effect>(EffectType.effect_stealth);
 
-            _builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_core_recharge_time);
-            _builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_critical_hit_chance);
-            _builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_locking_time);
-            _builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_signature_radius);
-            _builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_fast_extraction);
-            _builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_core_usage_gathering);
-            _builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_siege);
-            _builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_speed);
-            _builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_repaired_amount);
-            _builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_locking_range);
-            _builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_ewar_optimal);
-            _builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_armor_max);
-            _builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_shield_absorbtion_ratio);
+            builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_core_recharge_time);
+            builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_critical_hit_chance);
+            builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_locking_time);
+            builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_signature_radius);
+            builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_fast_extraction);
+            builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_core_usage_gathering);
+            builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_siege);
+            builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_speed);
+            builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_repaired_amount);
+            builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_locking_range);
+            builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_ewar_optimal);
+            builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_armor_max);
+            builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_shield_absorbtion_ratio);
 
             // intrusion effects
 
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_geoscan_lvl1);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_geoscan_lvl2);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_geoscan_lvl3);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_mining_lvl1);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_mining_lvl2);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_mining_lvl3);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_harvester_lvl1);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_harvester_lvl2);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_harvester_lvl3);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_detection_lvl1);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_detection_lvl2);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_detection_lvl3);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_masking_lvl1);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_masking_lvl2);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_masking_lvl3);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_repair_lvl1);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_repair_lvl2);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_repair_lvl3);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_core_lvl1);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_core_lvl2);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_core_lvl3);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_signals_lvl4_combined);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_industrial_lvl4_combined);
-            _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_engineering_lvl4_combined);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_geoscan_lvl1);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_geoscan_lvl2);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_geoscan_lvl3);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_mining_lvl1);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_mining_lvl2);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_mining_lvl3);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_harvester_lvl1);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_harvester_lvl2);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_harvester_lvl3);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_detection_lvl1);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_detection_lvl2);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_detection_lvl3);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_masking_lvl1);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_masking_lvl2);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_masking_lvl3);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_repair_lvl1);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_repair_lvl2);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_repair_lvl3);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_core_lvl1);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_core_lvl2);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_core_lvl3);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_signals_lvl4_combined);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_industrial_lvl4_combined);
+            builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_engineering_lvl4_combined);
 
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_mining_tower_gammaterial_lvl1);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_mining_tower_gammaterial_lvl2);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_mining_tower_gammaterial_lvl3);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_gap_generator_masking_lvl1);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_gap_generator_masking_lvl2);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_gap_generator_masking_lvl3);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_engineering_lvl1);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_engineering_lvl2);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_engineering_lvl3);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_industry_lvl1);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_industry_lvl2);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_industry_lvl3);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_sensors_lvl1);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_sensors_lvl2);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_sensors_lvl3);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_cycle_time_lvl1);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_cycle_time_lvl2);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_cycle_time_lvl3);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_resist_lvl1);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_resist_lvl2);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_resist_lvl3);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_sensor_lvl1);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_sensor_lvl2);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_sensor_lvl3);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_mining_tower_gammaterial_lvl1);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_mining_tower_gammaterial_lvl2);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_mining_tower_gammaterial_lvl3);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_gap_generator_masking_lvl1);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_gap_generator_masking_lvl2);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_gap_generator_masking_lvl3);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_engineering_lvl1);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_engineering_lvl2);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_engineering_lvl3);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_industry_lvl1);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_industry_lvl2);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_industry_lvl3);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_sensors_lvl1);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_sensors_lvl2);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_sensors_lvl3);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_cycle_time_lvl1);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_cycle_time_lvl2);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_cycle_time_lvl3);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_resist_lvl1);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_resist_lvl2);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_resist_lvl3);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_sensor_lvl1);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_sensor_lvl2);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_pbs_booster_sensor_lvl3);
 
             // New Bonuses - OPP
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_beta_bonus);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_beta2_bonus);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_alpha_bonus);
-            _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_alpha2_bonus);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_beta_bonus);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_beta2_bonus);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_alpha_bonus);
+            builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_alpha2_bonus);
 
-            _builder.Register<EffectFactory>(x =>
+            builder.Register<EffectFactory>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return effectType =>
                 {
                     if (!ctx.IsRegisteredWithKey<Effect>(effectType))
+                    {
                         return new Effect();
+                    }
 
                     return ctx.ResolveKeyed<Effect>(effectType);
                 };
@@ -758,13 +813,17 @@ namespace Perpetuum.Bootstrapper
 
         public void InitItems()
         {
-            _builder.RegisterType<ItemDeployerHelper>();
-            _builder.RegisterType<DefaultPropertyModifierReader>().AsSelf().OnActivated(e => e.Instance.Init()).SingleInstance();
+            builder.RegisterType<ItemDeployerHelper>();
+            builder
+                .RegisterType<DefaultPropertyModifierReader>()
+                .AsSelf()
+                .OnActivated(e => e.Instance.Init())
+                .SingleInstance();
         }
 
         private IRegistrationBuilder<T, ConcreteReflectionActivatorData, SingleRegistrationStyle> RegisterEntity<T>() where T : Entity
         {
-            return _builder.RegisterType<T>().OnActivated(e =>
+            return builder.RegisterType<T>().OnActivated(e =>
             {
                 e.Instance.EntityServices = e.Context.Resolve<IEntityServices>();
             });
@@ -795,7 +854,7 @@ namespace Perpetuum.Bootstrapper
 
         protected void RegisterCorporation<T>() where T : Corporation
         {
-            _builder.RegisterType<CorporationTransactionLogger>();
+            builder.RegisterType<CorporationTransactionLogger>();
             RegisterEntity<T>().PropertiesAutowired();
         }
 
@@ -826,20 +885,24 @@ namespace Perpetuum.Bootstrapper
 
         private void RegisterEntities()
         {
-            _builder.RegisterType<ItemHelper>();
-            _builder.RegisterType<ContainerHelper>();
+            builder.RegisterType<ItemHelper>();
+            builder.RegisterType<ContainerHelper>();
 
-            _builder.RegisterType<EntityDefaultReader>().As<IEntityDefaultReader>().SingleInstance().OnActivated(e => e.Instance.Init());
-            _builder.RegisterType<EntityRepository>().As<IEntityRepository>();
+            builder
+                .RegisterType<EntityDefaultReader>()
+                .As<IEntityDefaultReader>()
+                .SingleInstance()
+                .OnActivated(e => e.Instance.Init());
+            builder.RegisterType<EntityRepository>().As<IEntityRepository>();
 
-            _builder.RegisterType<ModulePropertyModifiersReader>().OnActivated(e => e.Instance.Init()).SingleInstance();
+            builder.RegisterType<ModulePropertyModifiersReader>().OnActivated(e => e.Instance.Init()).SingleInstance();
 
-            _builder.RegisterType<LootItemRepository>().As<ILootItemRepository>();
-            _builder.RegisterType<CoreRecharger>().As<ICoreRecharger>();
-            _builder.RegisterType<UnitHelper>();
-            _builder.RegisterType<DockingBaseHelper>();
+            builder.RegisterType<LootItemRepository>().As<ILootItemRepository>();
+            builder.RegisterType<CoreRecharger>().As<ICoreRecharger>();
+            builder.RegisterType<UnitHelper>();
+            builder.RegisterType<DockingBaseHelper>();
 
-            _builder.RegisterType<EntityFactory>().AsSelf().As<IEntityFactory>();
+            builder.RegisterType<EntityFactory>().AsSelf().As<IEntityFactory>();
 
             InitItems();
 
@@ -848,7 +911,7 @@ namespace Perpetuum.Bootstrapper
             RegisterRobot<PBSTurret>();
             RegisterRobot<PunchBag>();
             
-            _builder.RegisterType<EntityAggregateServices>().As<IEntityServices>().PropertiesAutowired().SingleInstance();
+            builder.RegisterType<EntityAggregateServices>().As<IEntityServices>().PropertiesAutowired().SingleInstance();
 
             
             RegisterEntity<Entity>();
@@ -1041,9 +1104,10 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<EPBoost>();
             RegisterEntity<Relic>();
             RegisterEntity<SAPRelic>();
+            RegisterEntity<RespecToken>();
 
 
-            _builder.Register<Func<EntityDefault,Entity>>(x =>
+            builder.Register<Func<EntityDefault,Entity>>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
 
@@ -1254,6 +1318,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<CalibrationProgramCapsule>(CategoryFlags.cf_ct_capsules); // OPP CT capsules
                 ByCategoryFlags<EPBoost>(CategoryFlags.cf_ep_boosters); // OPP EP Boosters
                 ByCategoryFlags<Item>(CategoryFlags.cf_datashards); // OPP datashards
+                ByCategoryFlags<RespecToken>(CategoryFlags.cf_respec_tokens); // OPP respec tokens
 
                 // OPP new Blinder module
                 ByNamePatternAndFlag<TargetBlinderModule>(DefinitionNames.STANDARD_BLINDER_MODULE, CategoryFlags.cf_target_painter);
@@ -1347,7 +1412,7 @@ namespace Perpetuum.Bootstrapper
 
         private void RegisterLoggers()
         {
-            _builder.Register(x =>
+            builder.Register(x =>
             {
                 return new LoggerCache(new MemoryCache("LoggerCache"))
                 {
@@ -1355,7 +1420,7 @@ namespace Perpetuum.Bootstrapper
                 };
             }).As<ILoggerCache>().SingleInstance();
 
-            _builder.Register<ChannelLoggerFactory>(x =>
+            builder.Register<ChannelLoggerFactory>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return name =>
@@ -1365,9 +1430,9 @@ namespace Perpetuum.Bootstrapper
                 };
             });
 
-            _builder.RegisterGeneric(typeof(FileLogger<>));
+            builder.RegisterGeneric(typeof(FileLogger<>));
 
-            _builder.Register<Func<string, string, FileLogger<ChatLogEvent>>>(x =>
+            builder.Register<Func<string, string, FileLogger<ChatLogEvent>>>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return ((directory, filename) =>
@@ -1377,7 +1442,7 @@ namespace Perpetuum.Bootstrapper
                 });
             });
 
-            _builder.Register<ChatLoggerFactory>(x =>
+            builder.Register<ChatLoggerFactory>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return (directory, filename) =>
@@ -1388,7 +1453,7 @@ namespace Perpetuum.Bootstrapper
             });
 
 
-            _builder.Register(c =>
+            builder.Register(c =>
             {
                 var defaultFormater = new DefaultLogEventFormatter();
 
@@ -1419,24 +1484,24 @@ namespace Perpetuum.Bootstrapper
                 return new CompositeLogger<LogEvent>(fileLogger, new ColoredConsoleLogger(formater));
             }).As<ILogger<LogEvent>>();
 
-            _builder.RegisterType<CombatLogger>();
-            _builder.RegisterType<CombatLogHelper>();
-            _builder.RegisterType<CombatSummary>();
-            _builder.RegisterType<CombatLogSaver>().As<ICombatLogSaver>();
+            builder.RegisterType<CombatLogger>();
+            builder.RegisterType<CombatLogHelper>();
+            builder.RegisterType<CombatSummary>();
+            builder.RegisterType<CombatLogSaver>().As<ICombatLogSaver>();
 
-            _builder.RegisterGeneric(typeof(DbLogger<>));
+            builder.RegisterGeneric(typeof(DbLogger<>));
 
         }
 
         private IRegistrationBuilder<T, ConcreteReflectionActivatorData, SingleRegistrationStyle> 
             RegisterPresence<T>(PresenceType presenceType) where T:Presence
         {
-            return _builder.RegisterType<T>().Keyed<Presence>(presenceType).PropertiesAutowired();
+            return builder.RegisterType<T>().Keyed<Presence>(presenceType).PropertiesAutowired();
         }
 
         private void RegisterFlock<T>(PresenceType presenceType) where T : Flock
         {
-            _builder.RegisterType<T>().Keyed<Flock>(presenceType).OnActivated(e =>
+            builder.RegisterType<T>().Keyed<Flock>(presenceType).OnActivated(e =>
             {
                 e.Instance.EntityService = e.Context.Resolve<IEntityServices>();
                 e.Instance.LootService = e.Context.Resolve<ILootService>();
@@ -1445,39 +1510,39 @@ namespace Perpetuum.Bootstrapper
 
         public void RegisterNpcs()
         {
-            _builder.RegisterType<CustomRiftConfigReader>().As<ICustomRiftConfigReader>();
-            _builder.RegisterType<NpcBossInfoBuilder>().SingleInstance();
-            _builder.RegisterType<NpcReinforcementsRepository>().SingleInstance().As<INpcReinforcementsRepository>();
+            builder.RegisterType<CustomRiftConfigReader>().As<ICustomRiftConfigReader>();
+            builder.RegisterType<NpcBossInfoBuilder>().SingleInstance();
+            builder.RegisterType<NpcReinforcementsRepository>().SingleInstance().As<INpcReinforcementsRepository>();
 
-            _builder.RegisterType<FlockConfiguration>().As<IFlockConfiguration>();
-            _builder.RegisterType<FlockConfigurationBuilder>();
-            _builder.RegisterType<IntIDGenerator>().Named<IIDGenerator<int>>("directFlockIDGenerator").SingleInstance().WithParameter("startID",25000);
+            builder.RegisterType<FlockConfiguration>().As<IFlockConfiguration>();
+            builder.RegisterType<FlockConfigurationBuilder>();
+            builder.RegisterType<IntIDGenerator>().Named<IIDGenerator<int>>("directFlockIDGenerator").SingleInstance().WithParameter("startID",25000);
 
 
-            _builder.RegisterType<FlockConfigurationRepository>().OnActivated(e =>
+            builder.RegisterType<FlockConfigurationRepository>().OnActivated(e =>
             {
                 e.Instance.LoadAllConfig();
             }).As<IFlockConfigurationRepository>().SingleInstance();
 
-            _builder.RegisterType<RandomFlockSelector>().As<IRandomFlockSelector>();
+            builder.RegisterType<RandomFlockSelector>().As<IRandomFlockSelector>();
 
-            _builder.RegisterType<RandomFlockReader>()
+            builder.RegisterType<RandomFlockReader>()
                 .As<IRandomFlockReader>()
                 .SingleInstance()
                 .OnActivated(e => e.Instance.Init());
 
-            _builder.RegisterType<EscalatingPresenceFlockSelector>().As<IEscalatingPresenceFlockSelector>().SingleInstance();
+            builder.RegisterType<EscalatingPresenceFlockSelector>().As<IEscalatingPresenceFlockSelector>().SingleInstance();
 
-            _builder.RegisterType<EscalatingFlocksReader>()
+            builder.RegisterType<EscalatingFlocksReader>()
                 .As<IEscalatingFlocksReader>()
                 .SingleInstance()
                 .OnActivated(e => e.Instance.Init());
 
-            _builder.RegisterType<NpcSafeSpawnPointsRepository>().As<ISafeSpawnPointsRepository>();
-            _builder.RegisterType<PresenceConfigurationReader>().As<IPresenceConfigurationReader>();
-            _builder.RegisterType<InterzonePresenceConfigReader>().As<IInterzonePresenceConfigurationReader>();
-            _builder.RegisterType<InterzoneGroup>().As<IInterzoneGroup>();
-            _builder.RegisterType<PresenceManager>().OnActivated(e =>
+            builder.RegisterType<NpcSafeSpawnPointsRepository>().As<ISafeSpawnPointsRepository>();
+            builder.RegisterType<PresenceConfigurationReader>().As<IPresenceConfigurationReader>();
+            builder.RegisterType<InterzonePresenceConfigReader>().As<IInterzonePresenceConfigurationReader>();
+            builder.RegisterType<InterzoneGroup>().As<IInterzoneGroup>();
+            builder.RegisterType<PresenceManager>().OnActivated(e =>
             {
                 var pm = e.Context.Resolve<IProcessManager>();
                 pm.AddProcess(e.Instance.AsTimed(TimeSpan.FromSeconds(2)).ToAsync());
@@ -1486,7 +1551,7 @@ namespace Perpetuum.Bootstrapper
 
             }).As<IPresenceManager>();
 
-            _builder.Register<Func<IZone, IPresenceManager>>(x =>
+            builder.Register<Func<IZone, IPresenceManager>>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return zone =>
@@ -1497,7 +1562,7 @@ namespace Perpetuum.Bootstrapper
                 };
             });
 
-            _builder.Register<FlockFactory>(x =>
+            builder.Register<FlockFactory>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
 
@@ -1538,7 +1603,7 @@ namespace Perpetuum.Bootstrapper
             RegisterPresence<GrowingPresence>(PresenceType.EscalatingRandomPresence);
             RegisterPresence<GrowingNPCBasePresence>(PresenceType.GrowingNPCBasePresence);
 
-            _builder.Register<PresenceFactory>(x =>
+            builder.Register<PresenceFactory>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return ((zone, configuration) =>
@@ -1570,19 +1635,19 @@ namespace Perpetuum.Bootstrapper
 
         private void RegisterMtProducts()
         {
-            _builder.RegisterType<MtProductRepository>().As<IMtProductRepository>();
-            _builder.RegisterType<MtProductHelper>();
+            builder.RegisterType<MtProductRepository>().As<IMtProductRepository>();
+            builder.RegisterType<MtProductHelper>();
             RegisterRequestHandler<MtProductPriceList>(Commands.MtProductPriceList);
         }
 
         private void RegisterMissions()
         {
-            _builder.RegisterType<DisplayMissionSpotsProcess>();
-            _builder.RegisterType<MissionDataCache>().SingleInstance();
-            _builder.RegisterType<MissionHandler>();
-            _builder.RegisterType<MissionInProgress>();
-            _builder.RegisterType<MissionAdministrator>();
-            _builder.RegisterType<MissionProcessor>().OnActivated(e =>
+            builder.RegisterType<DisplayMissionSpotsProcess>();
+            builder.RegisterType<MissionDataCache>().SingleInstance();
+            builder.RegisterType<MissionHandler>();
+            builder.RegisterType<MissionInProgress>();
+            builder.RegisterType<MissionAdministrator>();
+            builder.RegisterType<MissionProcessor>().OnActivated(e =>
             {
                 var pm = e.Context.Resolve<IProcessManager>();
                 pm.AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromSeconds(1)));
@@ -1603,118 +1668,118 @@ namespace Perpetuum.Bootstrapper
             RegisterRequestHandler<MissionReset>(Commands.MissionReset);
             RegisterRequestHandler<MissionListAgents>(Commands.MissionListAgents);
 
-            _builder.RegisterType<DeliveryHelper>();
-            _builder.RegisterType<MissionTargetInProgress>();
+            builder.RegisterType<DeliveryHelper>();
+            builder.RegisterType<MissionTargetInProgress>();
         }
 
         private void InitRelayManager()
         {            
-            _builder.RegisterType<MarketHelper>().SingleInstance();
-            _builder.RegisterType<MarketHandler>().SingleInstance();
+            builder.RegisterType<MarketHelper>().SingleInstance();
+            builder.RegisterType<MarketHandler>().SingleInstance();
 
-            _builder.RegisterType<MarketOrder>();
-            _builder.RegisterType<MarketOrderRepository>().As<IMarketOrderRepository>();
-            _builder.Register(c => new MarketInfoService(0.3, 10, false)).As<IMarketInfoService>();
+            builder.RegisterType<MarketOrder>();
+            builder.RegisterType<MarketOrderRepository>().As<IMarketOrderRepository>();
+            builder.Register(c => new MarketInfoService(0.3, 10, false)).As<IMarketInfoService>();
 
-            _builder.RegisterType<MarketRobotPriceWriter>().As<IMarketRobotPriceWriter>().OnActivated(e =>
+            builder.RegisterType<MarketRobotPriceWriter>().As<IMarketRobotPriceWriter>().OnActivated(e =>
             {
                 e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromHours(4)));
             });
 
-            _builder.RegisterType<GangInviteService>().As<IGangInviteService>().SingleInstance().OnActivated(e =>
+            builder.RegisterType<GangInviteService>().As<IGangInviteService>().SingleInstance().OnActivated(e =>
             {
                 e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromSeconds(2)));
             });
 
-            _builder.RegisterType<VolunteerCEOService>().As<IVolunteerCEOService>();
+            builder.RegisterType<VolunteerCEOService>().As<IVolunteerCEOService>();
 
-            _builder.RegisterType<VolunteerCEORepository>().As<IVolunteerCEORepository>();
+            builder.RegisterType<VolunteerCEORepository>().As<IVolunteerCEORepository>();
 
-            _builder.RegisterType<CorporationLogger>();
-            _builder.RegisterType<CorporationManager>().As<ICorporationManager>().SingleInstance().OnActivated(e =>
+            builder.RegisterType<CorporationLogger>();
+            builder.RegisterType<CorporationManager>().As<ICorporationManager>().SingleInstance().OnActivated(e =>
             {
                 e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromSeconds(1)));
             });
-            _builder.RegisterType<CorporateInvites>();
-            _builder.RegisterType<BulletinHandler>().As<IBulletinHandler>();
-            _builder.RegisterType<VoteHandler>().As<IVoteHandler>();
+            builder.RegisterType<CorporateInvites>();
+            builder.RegisterType<BulletinHandler>().As<IBulletinHandler>();
+            builder.RegisterType<VoteHandler>().As<IVoteHandler>();
 
-            _builder.RegisterType<ReprocessSessionMember>();
-            _builder.RegisterType<ReprocessSession>();
+            builder.RegisterType<ReprocessSessionMember>();
+            builder.RegisterType<ReprocessSession>();
 
-            _builder.RegisterType<ProductionCostReader>().As<IProductionCostReader>();
-            _builder.RegisterType<ProductionDataAccess>().OnActivated(e =>
+            builder.RegisterType<ProductionCostReader>().As<IProductionCostReader>();
+            builder.RegisterType<ProductionDataAccess>().OnActivated(e =>
             {
                 e.Instance.Init();
             }).As<IProductionDataAccess>().SingleInstance();
-            _builder.RegisterType<ProductionDescription>();
-            _builder.RegisterType<ProductionComponentCollector>();
-            _builder.RegisterType<ProductionInProgressRepository>().As<IProductionInProgressRepository>();
-            _builder.RegisterType<ProductionLine>();
-            _builder.RegisterType<ProductionInProgress>();
-            _builder.RegisterType<ProductionProcessor>().SingleInstance().OnActivated(e =>
+            builder.RegisterType<ProductionDescription>();
+            builder.RegisterType<ProductionComponentCollector>();
+            builder.RegisterType<ProductionInProgressRepository>().As<IProductionInProgressRepository>();
+            builder.RegisterType<ProductionLine>();
+            builder.RegisterType<ProductionInProgress>();
+            builder.RegisterType<ProductionProcessor>().SingleInstance().OnActivated(e =>
             {
                 e.Instance.InitProcessor();
             });
-            _builder.RegisterType<ProductionManager>().SingleInstance().OnActivated(e =>
+            builder.RegisterType<ProductionManager>().SingleInstance().OnActivated(e =>
             {
                 e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromSeconds(1)));
             });
 
-            _builder.RegisterType<LoginQueueService>().As<ILoginQueueService>().SingleInstance().OnActivated(e =>
+            builder.RegisterType<LoginQueueService>().As<ILoginQueueService>().SingleInstance().OnActivated(e =>
             {
                 e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromSeconds(5)));
             });
 
 
-            _builder.RegisterType<RelayStateService>().As<IRelayStateService>().SingleInstance();
-            _builder.RegisterType<RelayInfoBuilder>();
+            builder.RegisterType<RelayStateService>().As<IRelayStateService>().SingleInstance();
+            builder.RegisterType<RelayInfoBuilder>();
 
-            _builder.RegisterType<TradeService>().SingleInstance().As<ITradeService>();
+            builder.RegisterType<TradeService>().SingleInstance().As<ITradeService>();
 
-            _builder.RegisterType<HostShutDownManager>().SingleInstance();
+            builder.RegisterType<HostShutDownManager>().SingleInstance();
 
-            _builder.RegisterType<HighScoreService>().As<IHighScoreService>();
-            _builder.RegisterType<CorporationHandler>();
-            _builder.RegisterType<TerraformHandler>().OnActivated(e =>
+            builder.RegisterType<HighScoreService>().As<IHighScoreService>();
+            builder.RegisterType<CorporationHandler>();
+            builder.RegisterType<TerraformHandler>().OnActivated(e =>
             {
                 var pm = e.Context.Resolve<IProcessManager>();
                 pm.AddProcess(e.Instance.AsTimed(TimeSpan.FromMilliseconds(200)).ToAsync());
             });
 
-            _builder.RegisterType<InsuranceHelper>();
-            _builder.RegisterType<InsurancePayOut>();
-            _builder.RegisterType<InsuranceDescription>();
-            _builder.RegisterType<CharacterCleaner>();
+            builder.RegisterType<InsuranceHelper>();
+            builder.RegisterType<InsurancePayOut>();
+            builder.RegisterType<InsuranceDescription>();
+            builder.RegisterType<CharacterCleaner>();
 
-            _builder.RegisterType<SparkTeleportRepository>().As<ISparkTeleportRepository>();
-            _builder.RegisterType<SparkTeleportHelper>();
+            builder.RegisterType<SparkTeleportRepository>().As<ISparkTeleportRepository>();
+            builder.RegisterType<SparkTeleportHelper>();
  
-            _builder.RegisterType<SparkExtensionsReader>().As<ISparkExtensionsReader>();
-            _builder.RegisterType<SparkRepository>().As<ISparkRepository>();
-            _builder.RegisterType<SparkHelper>();
+            builder.RegisterType<SparkExtensionsReader>().As<ISparkExtensionsReader>();
+            builder.RegisterType<SparkRepository>().As<ISparkRepository>();
+            builder.RegisterType<SparkHelper>();
 
 
-            _builder.RegisterType<Trade>();
+            builder.RegisterType<Trade>();
 
-            _builder.RegisterType<GoodiePackHandler>();
+            builder.RegisterType<GoodiePackHandler>();
 
             // OPP: EPBonusEventService singleton
-            _builder.RegisterType<EPBonusEventService>().SingleInstance().OnActivated(e =>
+            builder.RegisterType<EPBonusEventService>().SingleInstance().OnActivated(e =>
             {
                 e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromMinutes(1)));
             });
 
             // OPP: EventListenerService and consumers
-            _builder.RegisterType<ChatEcho>();
-            _builder.RegisterType<DirectMessenger>();
-            _builder.RegisterType<NpcChatEcho>();
-            _builder.RegisterType<AffectOutpostStability>();
-            _builder.RegisterType<PortalSpawner>();
-            _builder.RegisterType<NpcStateAnnouncer>();
-            _builder.RegisterType<OreNpcSpawner>().As<NpcSpawnEventHandler<OreNpcSpawnMessage>>();
-            _builder.RegisterType<NpcReinforcementSpawner>().As<NpcSpawnEventHandler<NpcReinforcementsMessage>>();
-            _builder.RegisterType<EventListenerService>().SingleInstance().OnActivated(e =>
+            builder.RegisterType<ChatEcho>();
+            builder.RegisterType<DirectMessenger>();
+            builder.RegisterType<NpcChatEcho>();
+            builder.RegisterType<AffectOutpostStability>();
+            builder.RegisterType<PortalSpawner>();
+            builder.RegisterType<NpcStateAnnouncer>();
+            builder.RegisterType<OreNpcSpawner>().As<NpcSpawnEventHandler<OreNpcSpawnMessage>>();
+            builder.RegisterType<NpcReinforcementSpawner>().As<NpcSpawnEventHandler<NpcReinforcementsMessage>>();
+            builder.RegisterType<EventListenerService>().SingleInstance().OnActivated(e =>
             {
                 e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromSeconds(0.75)));
                 e.Instance.AttachListener(e.Context.Resolve<ChatEcho>());
@@ -1726,7 +1791,7 @@ namespace Perpetuum.Bootstrapper
                 obs.Subscribe(e.Context.Resolve<IGameTimeService>());
             });
 
-            _builder.RegisterType<GameTimeService>().As<IGameTimeService>().SingleInstance().OnActivated(e =>
+            builder.RegisterType<GameTimeService>().As<IGameTimeService>().SingleInstance().OnActivated(e =>
             {
                 e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromMinutes(1.5)));
             });
@@ -1734,11 +1799,11 @@ namespace Perpetuum.Bootstrapper
             // OPP: InterzoneNPCManager
             RegisterAutoActivate<InterzonePresenceManager>(TimeSpan.FromSeconds(10));
 
-            _builder.RegisterType<AccountManager>().As<IAccountManager>();
+            builder.RegisterType<AccountManager>().As<IAccountManager>();
 
-            _builder.RegisterType<Account>();
-            _builder.RegisterType<AccountWallet>().AsSelf().As<IAccountWallet>();
-            _builder.Register<AccountWalletFactory>(x =>
+            builder.RegisterType<Account>();
+            builder.RegisterType<AccountWallet>().AsSelf().As<IAccountWallet>();
+            builder.Register<AccountWalletFactory>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return ((account, type) =>
@@ -1747,16 +1812,16 @@ namespace Perpetuum.Bootstrapper
                         new TypedParameter(typeof(AccountTransactionType), type));
                 });
             });
-            _builder.RegisterType<AccountTransactionLogger>();
-            _builder.RegisterType<EpForActivityLogger>();
+            builder.RegisterType<AccountTransactionLogger>();
+            builder.RegisterType<EpForActivityLogger>();
         }
 
         private IRegistrationBuilder<TRequestHandler, ConcreteReflectionActivatorData, SingleRegistrationStyle> 
             RegisterRequestHandler<TRequestHandler,TRequest>(Command command) where TRequestHandler:IRequestHandler<TRequest> where TRequest : IRequest
         {
-            var res = _builder.RegisterType<TRequestHandler>();
+            var res = builder.RegisterType<TRequestHandler>();
 
-            _builder.Register(c =>
+            builder.Register(c =>
             {
                 return c.Resolve<RequestHandlerProfiler<TRequest>>(new TypedParameter(typeof(IRequestHandler<TRequest>), c.Resolve<TRequestHandler>()));
             }).Keyed<IRequestHandler<TRequest>>(command);
@@ -1771,7 +1836,7 @@ namespace Perpetuum.Bootstrapper
 
         private void RegisterRequestHandlerFactory<T>() where T : IRequest
         {
-            _builder.Register<RequestHandlerFactory<T>>(x =>
+            builder.Register<RequestHandlerFactory<T>>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return (command =>
@@ -1783,7 +1848,7 @@ namespace Perpetuum.Bootstrapper
 
         private void RegisterRequestHandlers()
         {
-            _builder.RegisterGeneric(typeof(RequestHandlerProfiler<>));
+            builder.RegisterGeneric(typeof(RequestHandlerProfiler<>));
 
             RegisterRequestHandlerFactory<IRequest>();
             RegisterRequestHandlerFactory<IZoneRequest>();
@@ -2092,6 +2157,7 @@ namespace Perpetuum.Bootstrapper
             RegisterRequestHandler<SetItemName>(Commands.SetItemName);
             RegisterRequestHandler<StackTo>(Commands.StackTo);
             RegisterRequestHandler<ServerMessage>(Commands.ServerMessage);
+            //RegisterRequestHandler<SendMessageToCharacterHandler>(Commands.SendMessageToCharacter);
             RegisterRequestHandler<RequestInfiniteBox>(Commands.RequestInfiniteBox);
             RegisterRequestHandler<DecorCategoryList>(Commands.DecorCategoryList);
             RegisterRequestHandler<PollGet>(Commands.PollGet);
@@ -2246,7 +2312,7 @@ namespace Perpetuum.Bootstrapper
 
         private void RegisterRobotTemplates()
         {
-            _builder.Register<RobotTemplateFactory>(x =>
+            builder.Register<RobotTemplateFactory>(x =>
             {
                 var relations = x.Resolve<IRobotTemplateRelations>();
                 return (definition =>
@@ -2255,28 +2321,28 @@ namespace Perpetuum.Bootstrapper
                 });
             });
 
-            _builder.RegisterType<RobotTemplateReader>().AsSelf().As<IRobotTemplateReader>();
-            _builder.Register(x =>
+            builder.RegisterType<RobotTemplateReader>().AsSelf().As<IRobotTemplateReader>();
+            builder.Register(x =>
             {
                 return new CachedRobotTemplateReader(x.Resolve<RobotTemplateReader>());
             }).AsSelf().As<IRobotTemplateReader>().SingleInstance().OnActivated(e => e.Instance.Init());
 
-            _builder.RegisterType<RobotTemplateRepository>().As<IRobotTemplateRepository>();
-            _builder.RegisterType<RobotTemplateRelations>().As<IRobotTemplateRelations>().SingleInstance().OnActivated(e =>
+            builder.RegisterType<RobotTemplateRepository>().As<IRobotTemplateRepository>();
+            builder.RegisterType<RobotTemplateRelations>().As<IRobotTemplateRelations>().SingleInstance().OnActivated(e =>
             {
                 e.Instance.Init();
             });
 
-            _builder.RegisterType<RobotTemplateServicesImpl>().As<IRobotTemplateServices>().PropertiesAutowired().SingleInstance();
+            builder.RegisterType<RobotTemplateServicesImpl>().As<IRobotTemplateServices>().PropertiesAutowired().SingleInstance();
 
-            _builder.RegisterType<HybridRobotBuilder>();
+            builder.RegisterType<HybridRobotBuilder>();
 
-            _builder.RegisterType<RobotHelper>();
+            builder.RegisterType<RobotHelper>();
         }
 
         private void RegisterTerrains()
         {
-            _builder.Register<Func<IZone, IEnumerable<IMaterialLayer>>>(x =>
+            builder.Register<Func<IZone, IEnumerable<IMaterialLayer>>>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return zone =>
@@ -2326,15 +2392,15 @@ namespace Perpetuum.Bootstrapper
                 };
             });
 
-            _builder.RegisterType<Scanner>();
-            _builder.RegisterType<MaterialHelper>().SingleInstance();
+            builder.RegisterType<Scanner>();
+            builder.RegisterType<MaterialHelper>().SingleInstance();
 
-            _builder.RegisterType<GravelRepository>();
-            _builder.RegisterType<LayerFileIO>().As<ILayerFileIO>();
-            _builder.RegisterType<Terrain>();
-            _builder.RegisterGeneric(typeof(IntervalLayerSaver<>)).InstancePerDependency();
+            builder.RegisterType<GravelRepository>();
+            builder.RegisterType<LayerFileIO>().As<ILayerFileIO>();
+            builder.RegisterType<Terrain>();
+            builder.RegisterGeneric(typeof(IntervalLayerSaver<>)).InstancePerDependency();
 
-            _builder.Register<TerrainFactory>(x =>
+            builder.Register<TerrainFactory>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return zone =>
@@ -2417,7 +2483,7 @@ namespace Perpetuum.Bootstrapper
 
         private void RegisterRifts()
         {
-            _builder.Register<Func<IZone, RiftSpawnPositionFinder>>(x =>
+            builder.Register<Func<IZone, RiftSpawnPositionFinder>>(x =>
             {
                 return zone =>
                 {
@@ -2430,10 +2496,10 @@ namespace Perpetuum.Bootstrapper
                 };
             });
 
-            _builder.RegisterType<RiftManager>();
-            _builder.RegisterType<StrongholdRiftManager>();
+            builder.RegisterType<RiftManager>();
+            builder.RegisterType<StrongholdRiftManager>();
 
-            _builder.Register<Func<IZone, IRiftManager>>(x =>
+            builder.Register<Func<IZone, IRiftManager>>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return zone => 
@@ -2481,9 +2547,9 @@ namespace Perpetuum.Bootstrapper
 
         private void RegisterRelics()
         {
-            _builder.RegisterType<ZoneRelicManager>().As<IRelicManager>();
+            builder.RegisterType<ZoneRelicManager>().As<IRelicManager>();
 
-            _builder.Register<Func<IZone, IRelicManager>>(x =>
+            builder.Register<Func<IZone, IRelicManager>>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return zone =>
@@ -2517,14 +2583,14 @@ namespace Perpetuum.Bootstrapper
 
         private void RegisterZones()
         {
-            _builder.RegisterType<ZoneSession>().AsSelf().As<IZoneSession>();
+            builder.RegisterType<ZoneSession>().AsSelf().As<IZoneSession>();
 
-            _builder.RegisterType<SaveBitmapHelper>();
-            _builder.RegisterType<ZoneDrawStatMap>();
+            builder.RegisterType<SaveBitmapHelper>();
+            builder.RegisterType<ZoneDrawStatMap>();
 
-            _builder.RegisterType<ZoneConfigurationReader>().As<IZoneConfigurationReader>();
+            builder.RegisterType<ZoneConfigurationReader>().As<IZoneConfigurationReader>();
 
-            _builder.Register(c =>
+            builder.Register(c =>
             {
                 return new WeatherService(new TimeRange(TimeSpan.FromMinutes(30), TimeSpan.FromHours(1)));
             }).OnActivated(e =>
@@ -2532,9 +2598,9 @@ namespace Perpetuum.Bootstrapper
                 e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromMinutes(5)));
             }).As<IWeatherService>();
 
-            _builder.RegisterType<WeatherMonitor>();
-            _builder.RegisterType<WeatherEventListener>();
-            _builder.Register<Func<IZone, WeatherEventListener>>(x =>
+            builder.RegisterType<WeatherMonitor>();
+            builder.RegisterType<WeatherEventListener>();
+            builder.Register<Func<IZone, WeatherEventListener>>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return zone =>
@@ -2543,7 +2609,7 @@ namespace Perpetuum.Bootstrapper
                 };
             });
 
-            _builder.Register<Func<IZone, EnvironmentalEffectHandler>>(x =>
+            builder.Register<Func<IZone, EnvironmentalEffectHandler>>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return zone =>
@@ -2554,10 +2620,10 @@ namespace Perpetuum.Bootstrapper
                 };
             });
 
-            _builder.RegisterType<DefaultZoneUnitRepository>().AsSelf().As<IZoneUnitRepository>();
-            _builder.RegisterType<UserZoneUnitRepository>().AsSelf().As<IZoneUnitRepository>();
+            builder.RegisterType<DefaultZoneUnitRepository>().AsSelf().As<IZoneUnitRepository>();
+            builder.RegisterType<UserZoneUnitRepository>().AsSelf().As<IZoneUnitRepository>();
 
-            _builder.Register<ZoneUnitServiceFactory>(x =>
+            builder.Register<ZoneUnitServiceFactory>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return zone =>
@@ -2570,14 +2636,14 @@ namespace Perpetuum.Bootstrapper
                 };
             });
 
-            _builder.RegisterType<BeamService>().As<IBeamService>();
-            _builder.RegisterType<MiningLogHandler>();
-            _builder.RegisterType<HarvestLogHandler>();
-            _builder.RegisterType<MineralConfigurationReader>().As<IMineralConfigurationReader>().SingleInstance();
+            builder.RegisterType<BeamService>().As<IBeamService>();
+            builder.RegisterType<MiningLogHandler>();
+            builder.RegisterType<HarvestLogHandler>();
+            builder.RegisterType<MineralConfigurationReader>().As<IMineralConfigurationReader>().SingleInstance();
 
             void RegisterZone<T>(ZoneType type) where T:Zone
             {
-                _builder.RegisterType<T>().Keyed<Zone>(type).OnActivated(e =>
+                builder.RegisterType<T>().Keyed<Zone>(type).OnActivated(e =>
                 {
                     e.Context.Resolve<IProcessManager>().AddProcess(e.Instance.ToAsync());
                 });
@@ -2588,13 +2654,13 @@ namespace Perpetuum.Bootstrapper
             RegisterZone<TrainingZone>(ZoneType.Training);
             RegisterZone<StrongHoldZone>(ZoneType.Stronghold);
 
-            _builder.RegisterType<SettingsLoader>();
-            _builder.RegisterType<PlantRuleLoader>();
+            builder.RegisterType<SettingsLoader>();
+            builder.RegisterType<PlantRuleLoader>();
 
-            _builder.RegisterType<StrongholdPlayerStateManager>().As<IStrongholdPlayerStateManager>();
+            builder.RegisterType<StrongholdPlayerStateManager>().As<IStrongholdPlayerStateManager>();
 
 
-            _builder.Register<Func<IZone, IStrongholdPlayerStateManager>>(x =>
+            builder.Register<Func<IZone, IStrongholdPlayerStateManager>>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return zone =>
@@ -2603,7 +2669,7 @@ namespace Perpetuum.Bootstrapper
                 };
             });
 
-            _builder.Register<Func<ZoneConfiguration, IZone>>(x =>
+            builder.Register<Func<ZoneConfiguration, IZone>>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
                 return configuration =>
@@ -2651,8 +2717,8 @@ namespace Perpetuum.Bootstrapper
                 };
             });
 
-            _builder.Register(c => c.Resolve<ZoneManager>()).As<IZoneManager>();
-            _builder.RegisterType<ZoneManager>().OnActivated(e =>
+            builder.Register(c => c.Resolve<ZoneManager>()).As<IZoneManager>();
+            builder.RegisterType<ZoneManager>().OnActivated(e =>
             {
                 foreach (var c in e.Context.Resolve<IZoneConfigurationReader>().GetAll())
                 {
@@ -2671,46 +2737,46 @@ namespace Perpetuum.Bootstrapper
                 };
             }).SingleInstance();
 
-            _builder.RegisterType<TagHelper>();
+            builder.RegisterType<TagHelper>();
 
-            _builder.RegisterType<ZoneEnterQueueService>().OnActivated(e =>
+            builder.RegisterType<ZoneEnterQueueService>().OnActivated(e =>
             {
                 var pm = e.Context.Resolve<IProcessManager>();
                 pm.AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromSeconds(1)));
             }).As<IZoneEnterQueueService>().InstancePerDependency();
 
-            _builder.RegisterType<DecorHandler>().OnActivated(e => e.Instance.Initialize()).InstancePerDependency();
-            _builder.RegisterType<ZoneEnvironmentHandler>();
-            _builder.RegisterType<PlantHandler>().OnActivated(e =>
+            builder.RegisterType<DecorHandler>().OnActivated(e => e.Instance.Initialize()).InstancePerDependency();
+            builder.RegisterType<ZoneEnvironmentHandler>();
+            builder.RegisterType<PlantHandler>().OnActivated(e =>
             {
                 var pm = e.Context.Resolve<IProcessManager>();
                 pm.AddProcess(e.Instance.ToAsync().AsTimed(TimeSpan.FromSeconds(5)));
             }).As<IPlantHandler>().InstancePerDependency();
 
-            _builder.RegisterType<TeleportDescriptionBuilder>();
-            _builder.RegisterType<TeleportWorldTargetHelper>();
-            _builder.RegisterType<MobileTeleportZoneMapCache>().As<IMobileTeleportToZoneMap>().SingleInstance();
-            _builder.RegisterType<StrongholdTeleportTargetHelper>();
-            _builder.RegisterType<TeleportToAnotherZone>();
-            _builder.RegisterType<TeleportWithinZone>();
-            _builder.RegisterType<TrainingExitStrategy>();
+            builder.RegisterType<TeleportDescriptionBuilder>();
+            builder.RegisterType<TeleportWorldTargetHelper>();
+            builder.RegisterType<MobileTeleportZoneMapCache>().As<IMobileTeleportToZoneMap>().SingleInstance();
+            builder.RegisterType<StrongholdTeleportTargetHelper>();
+            builder.RegisterType<TeleportToAnotherZone>();
+            builder.RegisterType<TeleportWithinZone>();
+            builder.RegisterType<TrainingExitStrategy>();
 
-            _builder.RegisterType<PBSHighwayHandler>().OnActivated(e =>
+            builder.RegisterType<PBSHighwayHandler>().OnActivated(e =>
             {
                 var pm = e.Context.Resolve<IProcessManager>();
                 pm.AddProcess(e.Instance.AsTimed(TimeSpan.FromMilliseconds(PBSHighwayHandler.DRAW_INTERVAL)).ToAsync());
             });
 
-            _builder.RegisterType<MineralScanResultRepository>();
-            _builder.RegisterType<RareMaterialHandler>().SingleInstance();
-            _builder.RegisterType<PlantHarvester>().As<IPlantHarvester>();
+            builder.RegisterType<MineralScanResultRepository>();
+            builder.RegisterType<RareMaterialHandler>().SingleInstance();
+            builder.RegisterType<PlantHarvester>().As<IPlantHarvester>();
 
-            _builder.RegisterType<TeleportStrategyFactoriesImpl>()
+            builder.RegisterType<TeleportStrategyFactoriesImpl>()
                 .As<ITeleportStrategyFactories>()
                 .PropertiesAutowired()
                 .SingleInstance();
 
-            _builder.RegisterType<TrainingRewardRepository>().SingleInstance().As<ITrainingRewardRepository>();
+            builder.RegisterType<TrainingRewardRepository>().SingleInstance().As<ITrainingRewardRepository>();
         }
 
         private IRegistrationBuilder<T, ConcreteReflectionActivatorData, SingleRegistrationStyle>
@@ -2859,9 +2925,9 @@ namespace Perpetuum.Bootstrapper
 
         private void RegisterPBS()
         {
-            _builder.RegisterGeneric(typeof(PBSObjectHelper<>));
-            _builder.RegisterGeneric(typeof(PBSReinforceHandler<>));
-            _builder.RegisterType<PBSProductionFacilityNodeHelper>();
+            builder.RegisterGeneric(typeof(PBSObjectHelper<>));
+            builder.RegisterGeneric(typeof(PBSReinforceHandler<>));
+            builder.RegisterType<PBSProductionFacilityNodeHelper>();
         }
     }
 }

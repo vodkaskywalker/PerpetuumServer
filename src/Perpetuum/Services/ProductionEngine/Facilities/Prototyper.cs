@@ -111,18 +111,18 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
             prototypeTimeSeconds = GetShortenedProductionTime(prototypeTimeSeconds);
 
             var productionInProgress = ProductionInProgressFactory();
-            productionInProgress.amountOfCycles = 1;
-            productionInProgress.baseEID = Parent;
-            productionInProgress.character = character;
-            productionInProgress.facilityEID = Eid;
-            productionInProgress.finishTime = DateTime.Now.AddSeconds(prototypeTimeSeconds);
-            productionInProgress.pricePerSecond = GetPricePerSecond(productionDescription.GetPrototypeDefinition());
+            productionInProgress.AmountOfCycles = 1;
+            productionInProgress.BaseEID = Parent;
+            productionInProgress.Character = character;
+            productionInProgress.FacilityEID = Eid;
+            productionInProgress.FinishTime = DateTime.Now.AddSeconds(prototypeTimeSeconds);
+            productionInProgress.PricePerSecond = GetPricePerSecond(productionDescription.GetPrototypeDefinition());
             productionInProgress.ReservedEids = reservedEids;
-            productionInProgress.resultDefinition = productionDescription.GetPrototypeDefinition();
-            productionInProgress.startTime = DateTime.Now;
-            productionInProgress.totalProductionTimeSeconds = prototypeTimeSeconds;
-            productionInProgress.type = ProductionInProgressType.prototype;
-            productionInProgress.useCorporationWallet = useCorporationWallet;
+            productionInProgress.ResultDefinition = productionDescription.GetPrototypeDefinition();
+            productionInProgress.StartTime = DateTime.Now;
+            productionInProgress.TotalProductionTimeSeconds = prototypeTimeSeconds;
+            productionInProgress.Type = ProductionInProgressType.prototype;
+            productionInProgress.UseCorporationWallet = useCorporationWallet;
 
             if (!productionInProgress.TryWithdrawCredit())
             {
@@ -211,31 +211,31 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
             //delete the used items
             foreach (var item in productionInProgress.GetReservedItems())
             {
-                var b = TransactionLogEvent.Builder().SetTransactionType(TransactionType.PrototypeDeleted).SetCharacter(productionInProgress.character).SetItem(item);
-                productionInProgress.character.LogTransaction(b);
+                var b = TransactionLogEvent.Builder().SetTransactionType(TransactionType.PrototypeDeleted).SetCharacter(productionInProgress.Character).SetItem(item);
+                productionInProgress.Character.LogTransaction(b);
 
                 Repository.Delete(item);
             }
 
             //pick the output defintion---------------------------------------------------
 
-            var outputDefinition = productionInProgress.resultDefinition;
+            var outputDefinition = productionInProgress.ResultDefinition;
 
             //load container
             var container = (PublicContainer) Container.GetOrThrow(PublicContainerEid);
-            container.ReloadItems(productionInProgress.character);
+            container.ReloadItems(productionInProgress.Character);
 
             var outputDefault = EntityDefault.Get(outputDefinition).ThrowIfEqual(EntityDefault.None, ErrorCodes.DefinitionNotSupported);
 
             //create item
             var resultItem = container.CreateAndAddItem(outputDefinition, false, item =>
             {
-                item.Owner = productionInProgress.character.Eid;
-                item.Quantity = outputDefault.Quantity*productionInProgress.amountOfCycles;
+                item.Owner = productionInProgress.Character.Eid;
+                item.Quantity = outputDefault.Quantity*productionInProgress.AmountOfCycles;
             });
             container.Save();
 
-            productionInProgress.character.WriteItemTransactionLog(TransactionType.PrototypeCreated, resultItem);
+            productionInProgress.Character.WriteItemTransactionLog(TransactionType.PrototypeCreated, resultItem);
 
             //get list in order to return
 
@@ -247,7 +247,7 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
             };
 
 
-            ProductionProcessor.EnqueueProductionMissionTarget(MissionTargetType.prototype, productionInProgress.character,MyMissionLocationId(), productionInProgress.resultDefinition);
+            ProductionProcessor.EnqueueProductionMissionTarget(MissionTargetType.prototype, productionInProgress.Character,MyMissionLocationId(), productionInProgress.ResultDefinition);
             return replyDict;
         }
 

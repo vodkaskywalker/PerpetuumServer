@@ -36,9 +36,9 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
             {
                 try
                 {
-                    var productions = facility.ProductionProcessor.RunningProductions.Where(p => p.facilityEID == facility.Eid).ToArray();
+                    var productions = facility.ProductionProcessor.RunningProductions.Where(p => p.FacilityEID == facility.Eid).ToArray();
 
-                    foreach (var productionInProgressGroup in productions.GroupBy(p=>p.character))
+                    foreach (var productionInProgressGroup in productions.GroupBy(p=>p.Character))
                     {
                         var currentCharacter = productionInProgressGroup.Key;
 

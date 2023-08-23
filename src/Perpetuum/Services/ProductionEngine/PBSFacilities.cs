@@ -697,18 +697,18 @@ namespace Perpetuum.Services.ProductionEngine
             forgeTimeSeconds = GetShortenedProductionTime(forgeTimeSeconds);
 
             var productionInProgress = ProductionInProgressFactory();
-            productionInProgress.amountOfCycles = 1;
-            productionInProgress.baseEID = Parent;
-            productionInProgress.character = character;
-            productionInProgress.facilityEID = Eid;
-            productionInProgress.finishTime = DateTime.Now.AddSeconds(forgeTimeSeconds);
-            productionInProgress.pricePerSecond = GetPricePerSecond(targetDefinition);
+            productionInProgress.AmountOfCycles = 1;
+            productionInProgress.BaseEID = Parent;
+            productionInProgress.Character = character;
+            productionInProgress.FacilityEID = Eid;
+            productionInProgress.FinishTime = DateTime.Now.AddSeconds(forgeTimeSeconds);
+            productionInProgress.PricePerSecond = GetPricePerSecond(targetDefinition);
             productionInProgress.ReservedEids = reservedEids;
-            productionInProgress.resultDefinition = targetDefinition;
-            productionInProgress.startTime = DateTime.Now;
-            productionInProgress.totalProductionTimeSeconds = forgeTimeSeconds;
-            productionInProgress.type = ProductionInProgressType.calibrationProgramForge;
-            productionInProgress.useCorporationWallet = useCorporationWallet;
+            productionInProgress.ResultDefinition = targetDefinition;
+            productionInProgress.StartTime = DateTime.Now;
+            productionInProgress.TotalProductionTimeSeconds = forgeTimeSeconds;
+            productionInProgress.Type = ProductionInProgressType.calibrationProgramForge;
+            productionInProgress.UseCorporationWallet = useCorporationWallet;
 
             sourceCalibration.Save();
             targetCalibration.Save();
@@ -762,29 +762,29 @@ namespace Perpetuum.Services.ProductionEngine
             var targetCPRG = (CalibrationProgram)Repository.LoadOrThrow(targetCPRGEid);
 
             //delete the used items
-            var b = TransactionLogEvent.Builder().SetTransactionType(TransactionType.CPRGForgeDeleted).SetCharacter(productionInProgress.character);
+            var b = TransactionLogEvent.Builder().SetTransactionType(TransactionType.CPRGForgeDeleted).SetCharacter(productionInProgress.Character);
             foreach (var item in productionInProgress.GetReservedItems())
             {
                 b.SetItem(item);
-                productionInProgress.character.LogTransaction(b.Build());
+                productionInProgress.Character.LogTransaction(b.Build());
                 Repository.Delete(item);
             }
 
             //pick the output defintion---------------------------------------------------
 
-            var outputDefinition = productionInProgress.resultDefinition;
+            var outputDefinition = productionInProgress.ResultDefinition;
 
             //load container
             var container = (PublicContainer) Container.GetOrThrow(PublicContainerEid);
-            container.ReloadItems(productionInProgress.character);
+            container.ReloadItems(productionInProgress.Character);
 
             var resultItem = (CalibrationProgram) Factory.CreateWithRandomEID(outputDefinition);
-            resultItem.Owner = productionInProgress.character.Eid;
+            resultItem.Owner = productionInProgress.Character.Eid;
             resultItem.Save();
 
             int materialEfficiencyPoints;
             int timeEfficiencyPoints;
-            CalculateResultingPoints(sourceCPRG, targetCPRG, productionInProgress.character, out materialEfficiencyPoints, out timeEfficiencyPoints);
+            CalculateResultingPoints(sourceCPRG, targetCPRG, productionInProgress.Character, out materialEfficiencyPoints, out timeEfficiencyPoints);
 
             resultItem.MaterialEfficiencyPoints = materialEfficiencyPoints;
             resultItem.TimeEfficiencyPoints = timeEfficiencyPoints;
@@ -793,7 +793,7 @@ namespace Perpetuum.Services.ProductionEngine
             container.AddItem(resultItem, false);
             container.Save();
 
-            productionInProgress.character.WriteItemTransactionLog(TransactionType.PrototypeCreated, resultItem);
+            productionInProgress.Character.WriteItemTransactionLog(TransactionType.PrototypeCreated, resultItem);
 
             //get list in order to return
 

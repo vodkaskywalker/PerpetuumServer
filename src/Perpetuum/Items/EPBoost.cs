@@ -1,9 +1,5 @@
 ﻿using Perpetuum.Accounting;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Perpetuum.Items
 {
@@ -35,7 +31,7 @@ namespace Perpetuum.Items
 		
 		public void Activate(IAccountManager accountManager, Account account)
 		{
-				accountManager.ExtensionSubscriptionStart(account, DateTime.Now, DateTime.Now.AddHours(TimePeriodHours), Boost);
+			accountManager.ExtensionSubscriptionStart(account, DateTime.Now, DateTime.Now.AddHours(TimePeriodHours), Boost);
 		}
 	}
 }

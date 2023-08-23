@@ -183,18 +183,18 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
             MoveItemsToStorage(itemsList);
 
             newProduction = ProductionInProgressFactory();
-            newProduction.startTime = DateTime.Now;
-            newProduction.finishTime = DateTime.Now.AddSeconds(researchTimeSeconds);
-            newProduction.type = ProductionInProgressType.research;
-            newProduction.character = character;
-            newProduction.facilityEID = Eid;
-            newProduction.resultDefinition = cprgDefiniton;
-            newProduction.totalProductionTimeSeconds = researchTimeSeconds;
-            newProduction.baseEID = Parent;
-            newProduction.pricePerSecond = GetPricePerSecond(sourceItem.Definition);
+            newProduction.StartTime = DateTime.Now;
+            newProduction.FinishTime = DateTime.Now.AddSeconds(researchTimeSeconds);
+            newProduction.Type = ProductionInProgressType.research;
+            newProduction.Character = character;
+            newProduction.FacilityEID = Eid;
+            newProduction.ResultDefinition = cprgDefiniton;
+            newProduction.TotalProductionTimeSeconds = researchTimeSeconds;
+            newProduction.BaseEID = Parent;
+            newProduction.PricePerSecond = GetPricePerSecond(sourceItem.Definition);
             newProduction.ReservedEids = (from i in itemsList select i.Eid).ToArray();
-            newProduction.useCorporationWallet = useCorporationWallet;
-            newProduction.amountOfCycles = 1;
+            newProduction.UseCorporationWallet = useCorporationWallet;
+            newProduction.AmountOfCycles = 1;
 
             if (!newProduction.TryWithdrawCredit())
             {
@@ -260,13 +260,13 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
 
             int researchTime;
             int levelDifferenceBonusPoints;
-            CalculateFinalResearchTimeSeconds(productionInProgress.character,  itemLevel, researchKitLevel, isPrototypeItem, out researchTime, out levelDifferenceBonusPoints);
+            CalculateFinalResearchTimeSeconds(productionInProgress.Character,  itemLevel, researchKitLevel, isPrototypeItem, out researchTime, out levelDifferenceBonusPoints);
 
-            var outputDefinition = productionInProgress.resultDefinition;
+            var outputDefinition = productionInProgress.ResultDefinition;
 
             //load public container
             var targetContainer = (PublicContainer) Container.GetOrThrow(PublicContainerEid);
-            targetContainer.ReloadItems(productionInProgress.character);
+            targetContainer.ReloadItems(productionInProgress.Character);
 
             var outputDefault = EntityDefault.Get(outputDefinition).ThrowIfEqual(EntityDefault.None,ErrorCodes.DefinitionNotSupported);
             (outputDefault.CategoryFlags.IsCategory(CategoryFlags.cf_calibration_programs) || outputDefault.CategoryFlags.IsCategory(CategoryFlags.cf_random_calibration_programs)).ThrowIfFalse(ErrorCodes.WTFErrorMedicalAttentionSuggested);
@@ -275,7 +275,7 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
             //create item
             var resultItem = targetContainer.CreateAndAddItem(outputDefinition, false, item1 =>
             {
-                item1.Owner = productionInProgress.character.Eid;
+                item1.Owner = productionInProgress.Character.Eid;
                 item1.Quantity = 1;
             });
 
@@ -291,7 +291,7 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
             var rawMatEff = materialEfficiency;
 
             //modify the results even further
-            CalculateMaterialAndTimeEfficiency(productionInProgress.character, itemResearchLevel, levelDifferenceBonusPoints, ref materialEfficiency, ref timeEfficiency);
+            CalculateMaterialAndTimeEfficiency(productionInProgress.Character, itemResearchLevel, levelDifferenceBonusPoints, ref materialEfficiency, ref timeEfficiency);
 
             if (calibrationProgram.IsMissionRelated)
             {
@@ -310,11 +310,11 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
             var randomCalibrationProgram = calibrationProgram as RandomCalibrationProgram;
 
             //for random missions look up for targets, gang and stuff
-            randomCalibrationProgram?.SetComponentsFromRunningTargets(productionInProgress.character);
+            randomCalibrationProgram?.SetComponentsFromRunningTargets(productionInProgress.Character);
 
             calibrationProgram.Save();
 
-            productionInProgress.character.WriteItemTransactionLog(TransactionType.ResearchCreated, calibrationProgram);
+            productionInProgress.Character.WriteItemTransactionLog(TransactionType.ResearchCreated, calibrationProgram);
 
             //delete the used items
 
@@ -322,8 +322,8 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
 
             Repository.Delete(researchKit);
 
-            productionInProgress.character.WriteItemTransactionLog(TransactionType.ResearchDeleted, item);
-            productionInProgress.character.WriteItemTransactionLog(TransactionType.ResearchDeleted, researchKit);
+            productionInProgress.Character.WriteItemTransactionLog(TransactionType.ResearchDeleted, item);
+            productionInProgress.Character.WriteItemTransactionLog(TransactionType.ResearchDeleted, researchKit);
 
             targetContainer.Save();
 
@@ -335,7 +335,7 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
             };
 
            
-            ProductionProcessor.EnqueueProductionMissionTarget(MissionTargetType.research, productionInProgress.character, MyMissionLocationId(), calibrationProgram.Definition);
+            ProductionProcessor.EnqueueProductionMissionTarget(MissionTargetType.research, productionInProgress.Character, MyMissionLocationId(), calibrationProgram.Definition);
             return replyDict;
         }
 

@@ -212,6 +212,7 @@
     <Compile Include="Extensions\ExtensionFreeAllLockedEpByCommand.cs" />
     <Compile Include="GetCommands.cs" />
     <Compile Include="ReimburseItem.cs" />
+    <Compile Include="SendMessageToCharacterHandler.cs" />
     <Compile Include="UpdateNews.cs" />
     <Compile Include="EnableSelfTeleport.cs" />
     <Compile Include="EpForActivityDailyLog.cs" />
