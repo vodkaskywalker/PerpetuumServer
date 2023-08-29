@@ -714,6 +714,8 @@
     <Compile Include="Services\Trading\TradeService.cs" />
     <Compile Include="Services\Trading\TradeState.cs" />
     <Compile Include="Zones\IZoneEnterQueueService.cs" />
+    <Compile Include="Zones\LandMines\LandMine.cs" />
+    <Compile Include="Zones\LandMines\LandMineDeployer.cs" />
     <Compile Include="Zones\LineOfSight.cs" />
     <Compile Include="Zones\NpcSystem\Flocks\FlockConfigurationBuilder.cs" />
     <Compile Include="Zones\NpcSystem\Flocks\FlockConfigurationRepository.cs" />
@@ -757,8 +759,8 @@
     <Compile Include="Zones\NpcSystem\Reinforcements\ReinforcementType.cs" />
     <Compile Include="Zones\PBS\DockingBases\ExpiringPBSDockingBase.cs" />
     <Compile Include="Zones\PBS\ConstructionAmmoHelpers.cs" />
-    <Compile Include="Zones\ProximityProbes\PBSRegisterHelper.cs" />
-    <Compile Include="Zones\ProximityProbes\VisibilityBasedProximityProbe.cs" />
+    <Compile Include="Zones\Helpers\PBSRegisterHelper.cs" />
+    <Compile Include="Zones\ProximityProbes\ProximityProbe.cs" />
     <Compile Include="Accounting\Characters\CharacterCleaner.cs" />
     <Compile Include="Common\Loggers\ChatLogger.cs" />
     <Compile Include="Containers\Container.cs" />
@@ -1078,7 +1080,7 @@
     <Compile Include="Zones\PBS\Turrets\PBSTurret.cs" />
     <Compile Include="Zones\PlantTools\PlantSeedDeployer.cs" />
     <Compile Include="Zones\PlantTools\WallHealerDeployer.cs" />
-    <Compile Include="Zones\ProximityProbes\ProximityProbe.cs" />
+    <Compile Include="Zones\ProximityProbes\ProximityDevice.cs" />
     <Compile Include="Zones\ProximityProbes\ProximityProbeDeployer.cs" />
     <Compile Include="Zones\PunchBags\PunchBag.cs" />
     <Compile Include="Zones\PunchBags\PunchBagDeployer.cs" />
@@ -1262,6 +1264,7 @@
     <Folder Include="Properties\" />
     <Folder Include="Services\ProductionEngine\Methods\" />
     <Folder Include="Services\Relay\RequestHandlers\" />
+    <Folder Include="Zones\ProximityDevices\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

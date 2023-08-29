@@ -9,6 +9,7 @@ using Perpetuum.Services.Looting;
 using Perpetuum.Units;
 using Perpetuum.Zones.Blobs;
 using Perpetuum.Zones.Gates;
+using Perpetuum.Zones.LandMines;
 using Perpetuum.Zones.PBS;
 using Perpetuum.Zones.PBS.DockingBases;
 using Perpetuum.Zones.ProximityProbes;
@@ -43,7 +44,7 @@ namespace Perpetuum.Zones
         {
             var count = 0;
             var buildingsDict = zone.Units
-                                    .NotOf().Types<Robot, LootContainer, MobileTeleport>().Type<ProximityProbeBase>()
+                                    .NotOf().Types<Robot, LootContainer, MobileTeleport>().Type<ProximityDeviceBase>()
                                     .Where(u =>
                                     {
                                         if (u is PBSDockingBase pbsDockingBase)
@@ -79,7 +80,7 @@ namespace Perpetuum.Zones
 
         public static IEnumerable<Unit> GetStaticUnits(this IZone zone)
         {
-            return zone.Units.NotOf().Types<Robot,ProximityProbeBase>();
+            return zone.Units.NotOf().Types<Robot,ProximityDeviceBase>();
         }
 
         [NotNull]

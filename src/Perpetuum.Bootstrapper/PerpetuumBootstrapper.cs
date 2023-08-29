@@ -187,6 +187,7 @@ using Perpetuum.Zones.NpcSystem.Presences.RandomExpiringPresence;
 using Perpetuum.Zones.NpcSystem.Presences.ExpiringStaticPresence;
 using Perpetuum.Zones.NpcSystem.Presences.GrowingPresences;
 using Perpetuum.Items.Helpers;
+using Perpetuum.Zones.LandMines;
 
 namespace Perpetuum.Bootstrapper
 {
@@ -798,7 +799,7 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<T>().PropertiesAutowired();
         }
 
-        protected void RegisterProximityProbe<T>() where T : ProximityProbeBase
+        protected void RegisterProximityDevices<T>() where T : ProximityDeviceBase
         {
             RegisterUnit<T>();
         }
@@ -906,7 +907,10 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<RandomResearchKit>();
             RegisterEntity<Market>();
             RegisterEntity<LotteryItem>();
-            RegisterProximityProbe<VisibilityBasedProximityProbe>();
+
+            RegisterProximityDevices<ProximityProbe>();
+            RegisterProximityDevices<LandMine>();
+
             RegisterUnit<TeleportColumn>();
             RegisterUnit<LootContainer>().OnActivated(e => e.Instance.SetDespawnTime(TimeSpan.FromMinutes(15)));
             RegisterUnit<FieldContainer>().OnActivated(e => e.Instance.SetDespawnTime(TimeSpan.FromHours(1)));
@@ -1017,7 +1021,10 @@ namespace Perpetuum.Bootstrapper
 
             RegisterEntity<Item>();
             RegisterEntity<AreaBombDeployer>();
-            RegisterEntity<VisibilityBasedProbeDeployer>();
+
+            RegisterEntity<ProximityProbeDeployer>();
+            RegisterEntity<LandMineDeployer>();
+
             RegisterEntity<PBSDeployer>();
             RegisterEntity<WallHealerDeployer>();
             RegisterEntity<VolumeWrapperContainer>();
@@ -1241,7 +1248,10 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<Item>(CategoryFlags.cf_mission_coin);
                 ByCategoryFlags<AreaBomb>(CategoryFlags.cf_area_bomb);
                 ByCategoryFlags<AreaBombDeployer>(CategoryFlags.cf_plasma_bomb);
-                ByCategoryFlags<VisibilityBasedProximityProbe>(CategoryFlags.cf_visibility_based_probe);
+                
+                ByCategoryFlags<ProximityProbe>(CategoryFlags.cf_proximity_probe);
+                ByCategoryFlags<LandMine>(CategoryFlags.cf_landmine);
+
                 ByCategoryFlags<RandomResearchKit>(CategoryFlags.cf_random_research_kits);
                 ByCategoryFlags<LotteryItem>(CategoryFlags.cf_lottery_items);
                 ByCategoryFlags<Paint>(CategoryFlags.cf_paints); // OPP Robot paint!
@@ -1253,7 +1263,9 @@ namespace Perpetuum.Bootstrapper
                 // OPP new Blinder module
                 ByNamePatternAndFlag<TargetBlinderModule>(DefinitionNames.STANDARD_BLINDER_MODULE, CategoryFlags.cf_target_painter);
 
-                ByCategoryFlags<VisibilityBasedProbeDeployer>(CategoryFlags.cf_proximity_probe_deployer);
+                ByCategoryFlags<ProximityProbeDeployer>(CategoryFlags.cf_proximity_probe_deployer);
+                ByCategoryFlags<LandMineDeployer>(CategoryFlags.cf_landmine_deployer);
+
                 ByCategoryFlags<Item>(CategoryFlags.cf_gift_packages);
                 ByCategoryFlags<PBSDeployer>(CategoryFlags.cf_pbs_capsules);
                 ByCategoryFlags<PBSEgg>(CategoryFlags.cf_pbs_egg);
@@ -1844,11 +1856,13 @@ namespace Perpetuum.Bootstrapper
             RegisterRequestHandler<SparkList>(Commands.SparkList);
             RegisterRequestHandler<SparkSetDefault>(Commands.SparkSetDefault);
             RegisterRequestHandler<SparkUnlock>(Commands.SparkUnlock);
-            RegisterRequestHandler<Undock>(Commands.Undock);
+            RegisterRequestHandler<Undock>(Commands.Undock)
+                ;
             RegisterRequestHandler<ProximityProbeRegisterSet>(Commands.ProximityProbeRegisterSet);
             RegisterRequestHandler<ProximityProbeSetName>(Commands.ProximityProbeSetName);
             RegisterRequestHandler<ProximityProbeList>(Commands.ProximityProbeList);
             RegisterRequestHandler<ProximityProbeGetRegistrationInfo>(Commands.ProximityProbeGetRegistrationInfo);
+
             RegisterRequestHandler<IntrusionEnabler>(Commands.IntrusionEnabler);
             RegisterRequestHandler<AccountGetTransactionHistory>(Commands.AccountGetTransactionHistory);
             RegisterRequestHandler<AccountList>(Commands.AccountList);
@@ -2828,7 +2842,9 @@ namespace Perpetuum.Bootstrapper
             RegisterZoneRequestHandler<GetRifts>(Commands.GetRifts);
             RegisterZoneRequestHandler<UseItem>(Commands.UseItem);
             RegisterZoneRequestHandler<GateSetName>(Commands.GateSetName);
+
             RegisterZoneRequestHandler<ProximityProbeRemove>(Commands.ProximityProbeRemove);
+
             RegisterZoneRequestHandler<FieldTerminalInfo>(Commands.FieldTerminalInfo);
 
             RegisterZoneRequestHandler<PBSFeedableInfo>(Commands.PBSFeedableInfo);

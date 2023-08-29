@@ -38,6 +38,7 @@ using Perpetuum.Zones.DamageProcessors;
 using Perpetuum.Zones.Effects;
 using Perpetuum.Zones.Finders;
 using Perpetuum.Zones.Finders.PositionFinders;
+using Perpetuum.Zones.LandMines;
 using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.NpcSystem;
@@ -754,7 +755,7 @@ namespace Perpetuum.Players
             return unit is MobileTeleport
                 || unit is IPBSObject
                 || unit is WallHealer
-                || unit is ProximityProbeBase
+                || unit is ProximityDeviceBase
                 || (unit is BlobEmitterUnit b && b.IsPlayerSpawned);
         }
 

@@ -50,12 +50,25 @@ namespace Perpetuum.Groups.Corporations
             return  CEO.GetExtensionLevel(maxProbesExtensionId);
         }
 
+        // TODO: Find a way to use joins instead of this
         public IEnumerable<long> GetProximityProbeEids()
         {
             var probeDefinitions = EntityServices.Defaults.GetAll().GetDefinitionsByCategoryFlag(CategoryFlags.cf_proximity_probes);
             var queryStr = $"SELECT eid FROM entities WHERE owner=@corporationEID and definition in ({probeDefinitions.ArrayToString()})";
 
             return  Db.Query().CommandText(queryStr).SetParameter("@corporationEID",Eid)
+                .Execute()
+                .Select(r => r.GetValue<long>(0))
+                .ToArray();
+        }
+
+        // TODO: Find a way to use joins instead of this
+        public IEnumerable<long> GetLandMineEids()
+        {
+            var landMineDefinitions = EntityServices.Defaults.GetAll().GetDefinitionsByCategoryFlag(CategoryFlags.cf_landmine);
+            var queryStr = $"SELECT eid FROM entities WHERE owner=@corporationEID and definition in ({landMineDefinitions.ArrayToString()})";
+
+            return Db.Query().CommandText(queryStr).SetParameter("@corporationEID", Eid)
                 .Execute()
                 .Select(r => r.GetValue<long>(0))
                 .ToArray();

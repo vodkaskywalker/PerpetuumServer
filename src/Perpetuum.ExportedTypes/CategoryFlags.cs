@@ -501,8 +501,10 @@ namespace Perpetuum.ExportedTypes
         cf_projectile_upgrades = 0x000000000205070F,
         cf_projectiles = 0x000000000002070F,
         cf_prototyper = 0x000000000009036E,
+        
         cf_proximity_probe_deployer = 0x0000000000000798,
         cf_proximity_probes = 0x0000000000010492,
+        
         cf_public_container = 0x0000000000040815,
         cf_public_corporation_hangar_storage = 0x0000000000050815,
         cf_public_docking_base = 0x0000000000010178,
@@ -643,7 +645,13 @@ namespace Perpetuum.ExportedTypes
         cf_tutorial_industry_items = 0x0000000000000295,
         cf_tutorial_punchbag = 0x0000000000000496,
         cf_vendors = 0x000000000000026E,
-        cf_visibility_based_probe = 0x0000000002010492,
+
+        cf_proximity_probe = 0x0000000002010492,
+
+        cf_traps = 0x00000000040492,
+        cf_landmine = 0x0000000001040492,
+        cf_landmine_deployer = 0x0000000000000D98,
+
         cf_volume_wrapper_container = 0x0000000000000B15,
         cf_volume_wrapper_container_old = 0x0000000000080815,
         cf_walker_calibration_programs = 0x0000000005010416,

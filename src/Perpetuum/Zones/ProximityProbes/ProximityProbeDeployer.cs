@@ -9,13 +9,13 @@ using Perpetuum.Units;
 
 namespace Perpetuum.Zones.ProximityProbes
 {
-    public class VisibilityBasedProbeDeployer : ItemDeployer
+    public class ProximityProbeDeployer : ItemDeployer
     {
-        private readonly IEntityServices _entityServices;
+        private readonly IEntityServices entityServices;
 
-        public VisibilityBasedProbeDeployer(IEntityServices entityServices) : base(entityServices)
+        public ProximityProbeDeployer(IEntityServices entityServices) : base(entityServices)
         {
-            _entityServices = entityServices;
+            this.entityServices = entityServices;
         }
 
         protected override Unit CreateDeployableItem(IZone zone, Position spawnPosition, Player player)
@@ -27,7 +27,7 @@ namespace Perpetuum.Zones.ProximityProbes
             var maxProbes = corporation.GetMaximumProbeAmount();
             corporation.GetProximityProbeEids().Count().ThrowIfGreaterOrEqual(maxProbes, ErrorCodes.MaximumAmountOfProbesReached);
 
-            var probe = (ProximityProbeBase)_entityServices.Factory.CreateWithRandomEID(DeployableItemEntityDefault);
+            var probe = (ProximityDeviceBase)entityServices.Factory.CreateWithRandomEID(DeployableItemEntityDefault);
             probe.CheckDeploymentAndThrow(zone, spawnPosition); //Enforce min-distance separations
             probe.Owner = corporation.Eid;
             var zoneStorage = zone.Configuration.GetStorage();
@@ -39,7 +39,7 @@ namespace Perpetuum.Zones.ProximityProbes
             var initialMembers = corporation.GetMembersWithAnyRoles(CorporationRole.CEO, CorporationRole.DeputyCEO).Select(cm => cm.character).ToList();
             initialMembers.Add(player.Character);
             
-            probe.InitProbe( initialMembers.Distinct() );
+            probe.Init( initialMembers.Distinct() );
             probe.SetDespawnTime(this.ProximityProbeDespawnTime);
             return probe;
         }

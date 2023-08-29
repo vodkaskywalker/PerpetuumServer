@@ -23,7 +23,7 @@ namespace Perpetuum.RequestHandlers
                 var probeName = request.Data.GetOrDefault<string>(k.name);
                 var character = request.Session.Character;
 
-                var probe = _unitHelper.GetUnitOrThrow<ProximityProbeBase>(probeEid);
+                var probe = _unitHelper.GetUnitOrThrow<ProximityDeviceBase>(probeEid);
                 probe.HasAccess(character).ThrowIfError();
                 probe.Name = probeName;
                 probe.Save();
