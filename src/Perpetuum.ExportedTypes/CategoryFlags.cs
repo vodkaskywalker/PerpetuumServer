@@ -126,6 +126,9 @@ namespace Perpetuum.ExportedTypes
         cf_ct_capsules_robot_thelodica_heavymech = 0x000004020303049B,
         cf_ct_capsules_robot_thelodica_light = 0x000001020303049B,
         cf_ct_capsules_robot_thelodica_mech = 0x000003020303049B,
+
+        cf_respec_token = 0x000000000004049B,
+
         cf_datashards = 0x0000000000000694,
         cf_decor = 0x000000000000005A,
         cf_decor_buildings = 0x000000000000055A,

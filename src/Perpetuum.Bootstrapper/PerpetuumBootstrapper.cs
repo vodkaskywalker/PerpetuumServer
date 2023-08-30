@@ -921,6 +921,7 @@ namespace Perpetuum.Bootstrapper
 
             RegisterEntity<FieldContainerCapsule>();
             RegisterEntity<Ice>();
+            RegisterEntity<RespecToken>();
             RegisterEntity<Ammo>();
             RegisterEntity<WeaponAmmo>();
             RegisterEntity<MiningAmmo>();
@@ -1086,6 +1087,8 @@ namespace Perpetuum.Bootstrapper
                 ByName<FieldContainer>(DefinitionNames.FIELD_CONTAINER);
                 ByName<MissionContainer>(DefinitionNames.MISSION_CONTAINER);
                 ByName<Ice>(DefinitionNames.ICE);
+                //ByName<RespecToken>(DefinitionNames.RESPEC_TOKEN);
+                ByCategoryFlags<RespecToken>(CategoryFlags.cf_respec_token);
 
                 ByCategoryFlags<FieldContainerCapsule>(CategoryFlags.cf_container_capsule);
                 ByCategoryFlags<Npc>(CategoryFlags.cf_npc);
