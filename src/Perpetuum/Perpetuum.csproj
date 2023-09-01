@@ -218,8 +218,13 @@
     <Compile Include="IO\IFileSystem.cs" />
     <Compile Include="IReadOnlyRepository.cs" />
     <Compile Include="Items\CalibrationProgramCapsule.cs" />
+    <Compile Include="Items\DefaultPropertyModifierReader.cs" />
     <Compile Include="Items\EPBoost.cs" />
+    <Compile Include="Items\Extensions\PropertyModifierCollectionExtensions.cs" />
+    <Compile Include="Items\Helpers\ItemHelper.cs" />
+    <Compile Include="Items\IPropertyModifierCollection.cs" />
     <Compile Include="Items\Paint.cs" />
+    <Compile Include="Items\PropertyModifierCollection.cs" />
     <Compile Include="Items\RespecToken.cs" />
     <Compile Include="Items\Templates\CachedRobotTemplateReader.cs" />
     <Compile Include="Items\Templates\IRobotTemplateReader.cs" />
@@ -380,7 +385,7 @@
     <Compile Include="Items\Ammos\Ammo.cs" />
     <Compile Include="Items\Ammos\AmmoProperty.cs" />
     <Compile Include="Items\DefaultItemPropertyModifiers.cs" />
-    <Compile Include="Items\Item.cs" />
+    <Compile Include="Items\Base\Item.cs" />
     <Compile Include="Items\ItemInfo.cs" />
     <Compile Include="Items\ItemProperty.cs" />
     <Compile Include="Items\ItemPropertyModifier.cs" />

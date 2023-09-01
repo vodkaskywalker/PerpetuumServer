@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Transactions;
 using Perpetuum.Accounting;
 using Perpetuum.Accounting.Characters;
@@ -8,7 +10,10 @@ using Perpetuum.Data;
 using Perpetuum.EntityFramework;
 using Perpetuum.Host.Requests;
 using Perpetuum.Items;
+using Perpetuum.RequestHandlers.Extensions;
 using Perpetuum.Robots;
+using Perpetuum.Services.ExtensionService;
+using Perpetuum.Zones;
 
 namespace Perpetuum.RequestHandlers
 {
@@ -257,21 +262,6 @@ namespace Perpetuum.RequestHandlers
                 Transaction.Current.OnCommited(() =>
                 {
                     accountRepository.Update(account);
-
-                    //Send custom message back in "Redeemables" dialog
-                    var boostDict = containerItem.ToDictionary();
-                    boostDict[k.quantity] = -1;  //Indicate the consumption of item from stack
-
-                    var result = new Dictionary<string, object>
-                    {
-                        { k.container, container.ToDictionary() },
-                        { k.item, boostDict }
-                    };
-
-                    Message.Builder
-                        .FromRequest(request)
-                        .WithData(result)
-                        .Send();
                 });
 
                 scope.Complete();
@@ -279,8 +269,8 @@ namespace Perpetuum.RequestHandlers
 
             var relogMessage = new Dictionary<string, object>
             {
-                { k.message, "Relog required for changes to take effect" },
-                { k.translate, "relog_required_message" },
+                { k.message, "You will be automatically relogged in 5 seconds" },
+                { k.translate, "relog_in_5_seconds" },
             };
 
             Message.Builder
@@ -288,6 +278,18 @@ namespace Perpetuum.RequestHandlers
                 .WithData(relogMessage)
                 .ToCharacter(request.Session.Character)
                 .Send();
+
+            var delay = TimeSpan.FromSeconds(5);
+
+            Task.Delay(delay).ContinueWith(t =>
+            {
+                using (var scope = Db.CreateTransaction())
+                {
+                    var session = request.Session;
+                    session.DeselectCharacter();
+                    scope.Complete();
+                }
+            });
         }
     }
 }

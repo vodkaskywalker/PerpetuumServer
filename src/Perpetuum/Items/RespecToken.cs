@@ -1,5 +1,6 @@
 ﻿using Perpetuum.Accounting;
 using Perpetuum.Accounting.Characters;
+using System;
 
 namespace Perpetuum.Items
 {
@@ -21,6 +22,11 @@ namespace Perpetuum.Items
             Account account,
             Character character)
         {
+            if (character.LastRespec.AddMonths(this.OnceInMonths) > DateTime.Now)
+            {
+                throw new PerpetuumException(ErrorCodes.RespecTokenIsNotReadyYet);
+            }
+
             var epData = accountManager.GetEPData(account, character);
 
             accountManager.FreeLockedEp(account, (int)epData[k.lockedEp]);
@@ -29,6 +35,7 @@ namespace Perpetuum.Items
 
             character.ResetAllExtensions();
             character.SetExtensions(defaultExtensions);
+            character.LastRespec = DateTime.Now;
         }
     }
 }

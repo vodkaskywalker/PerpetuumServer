@@ -186,6 +186,7 @@ using Perpetuum.Services.Strongholds;
 using Perpetuum.Zones.NpcSystem.Presences.RandomExpiringPresence;
 using Perpetuum.Zones.NpcSystem.Presences.ExpiringStaticPresence;
 using Perpetuum.Zones.NpcSystem.Presences.GrowingPresences;
+using Perpetuum.Items.Helpers;
 
 namespace Perpetuum.Bootstrapper
 {
@@ -451,9 +452,7 @@ namespace Perpetuum.Bootstrapper
         {
             RegisterAutoActivate<HostOnlineStateWriter>(TimeSpan.FromSeconds(7));
             RegisterAutoActivate<ServerInfoService>(TimeSpan.FromMinutes(5));
-            //RegisterAutoActivate<CleanUpPayingCustomersService>(TimeSpan.FromHours(10));
             RegisterAutoActivate<MarketCleanUpService>(TimeSpan.FromHours(1));
-//            RegisterAutoActivate<AccountCreditHandler>(TimeSpan.FromSeconds(10));
             RegisterAutoActivate<SessionCountWriter>(TimeSpan.FromMinutes(5));
             RegisterAutoActivate<VolunteerCEOProcessor>(TimeSpan.FromMinutes(10));
             RegisterAutoActivate<GiveExtensionPointsService>(TimeSpan.FromMinutes(10));
@@ -1042,6 +1041,7 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<EPBoost>();
             RegisterEntity<Relic>();
             RegisterEntity<SAPRelic>();
+            RegisterEntity<RespecToken>();
 
 
             _builder.Register<Func<EntityDefault,Entity>>(x =>
@@ -1257,6 +1257,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<CalibrationProgramCapsule>(CategoryFlags.cf_ct_capsules); // OPP CT capsules
                 ByCategoryFlags<EPBoost>(CategoryFlags.cf_ep_boosters); // OPP EP Boosters
                 ByCategoryFlags<Item>(CategoryFlags.cf_datashards); // OPP datashards
+                ByCategoryFlags<RespecToken>(CategoryFlags.cf_respec_tokens); // OPP respec tokens
 
                 // OPP new Blinder module
                 ByNamePatternAndFlag<TargetBlinderModule>(DefinitionNames.STANDARD_BLINDER_MODULE, CategoryFlags.cf_target_painter);
