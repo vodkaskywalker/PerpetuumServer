@@ -186,6 +186,7 @@ using Perpetuum.Services.Strongholds;
 using Perpetuum.Zones.NpcSystem.Presences.RandomExpiringPresence;
 using Perpetuum.Zones.NpcSystem.Presences.ExpiringStaticPresence;
 using Perpetuum.Zones.NpcSystem.Presences.GrowingPresences;
+using Perpetuum.Items.Helpers;
 
 namespace Perpetuum.Bootstrapper
 {
@@ -451,9 +452,7 @@ namespace Perpetuum.Bootstrapper
         {
             RegisterAutoActivate<HostOnlineStateWriter>(TimeSpan.FromSeconds(7));
             RegisterAutoActivate<ServerInfoService>(TimeSpan.FromMinutes(5));
-            //RegisterAutoActivate<CleanUpPayingCustomersService>(TimeSpan.FromHours(10));
             RegisterAutoActivate<MarketCleanUpService>(TimeSpan.FromHours(1));
-//            RegisterAutoActivate<AccountCreditHandler>(TimeSpan.FromSeconds(10));
             RegisterAutoActivate<SessionCountWriter>(TimeSpan.FromMinutes(5));
             RegisterAutoActivate<VolunteerCEOProcessor>(TimeSpan.FromMinutes(10));
             RegisterAutoActivate<GiveExtensionPointsService>(TimeSpan.FromMinutes(10));
@@ -921,6 +920,7 @@ namespace Perpetuum.Bootstrapper
 
             RegisterEntity<FieldContainerCapsule>();
             RegisterEntity<Ice>();
+            RegisterEntity<SparkTeleportToken>();
             RegisterEntity<Ammo>();
             RegisterEntity<WeaponAmmo>();
             RegisterEntity<MiningAmmo>();
@@ -936,7 +936,6 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<LimitedBoxContainer>();
             RegisterEntity<CorporateHangar>();
             RegisterEntity<CorporateHangarFolder>();
-            RegisterEntity<Item>();
             RegisterEntity<MobileTeleportDeployer>();
             RegisterEntity<PlantSeedDeployer>();
             RegisterEntity<PlantSeedDeployer>();
@@ -978,8 +977,6 @@ namespace Perpetuum.Bootstrapper
             RegisterEffectModule<ShieldGeneratorModule>();
 
             RegisterEntity<SystemContainer>();
-            RegisterEntity<Item>();
-            RegisterEntity<Item>();
             RegisterEntity<PunchBagDeployer>();
 
             RegisterUnit<BlobEmitterUnit>();
@@ -1019,12 +1016,10 @@ namespace Perpetuum.Bootstrapper
             RegisterUnit<StrongholdExitRift>(); // OPP: Special rift for exiting strongholds
 
             RegisterEntity<Item>();
-            RegisterEntity<Item>();
             RegisterEntity<AreaBombDeployer>();
             RegisterEntity<VisibilityBasedProbeDeployer>();
             RegisterEntity<PBSDeployer>();
             RegisterEntity<WallHealerDeployer>();
-            RegisterEntity<Item>();
             RegisterEntity<VolumeWrapperContainer>();
             RegisterEntity<Kernel>();
             RegisterEntity<RandomMissionItem>();
@@ -1041,7 +1036,6 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<EPBoost>();
             RegisterEntity<Relic>();
             RegisterEntity<SAPRelic>();
-
 
             _builder.Register<Func<EntityDefault,Entity>>(x =>
             {
@@ -1254,6 +1248,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<CalibrationProgramCapsule>(CategoryFlags.cf_ct_capsules); // OPP CT capsules
                 ByCategoryFlags<EPBoost>(CategoryFlags.cf_ep_boosters); // OPP EP Boosters
                 ByCategoryFlags<Item>(CategoryFlags.cf_datashards); // OPP datashards
+                ByCategoryFlags<SparkTeleportToken>(CategoryFlags.cf_spark_teleport_tokens);
 
                 // OPP new Blinder module
                 ByNamePatternAndFlag<TargetBlinderModule>(DefinitionNames.STANDARD_BLINDER_MODULE, CategoryFlags.cf_target_painter);

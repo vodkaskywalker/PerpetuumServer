@@ -5,6 +5,8 @@ using System.Linq;
 using System.Runtime.Caching;
 using System.Threading.Tasks;
 using System.Transactions;
+using Newtonsoft.Json.Linq;
+using System.Windows.Input;
 using Perpetuum.Common.Loggers.Transaction;
 using Perpetuum.Containers;
 using Perpetuum.Data;
@@ -87,6 +89,7 @@ namespace Perpetuum.Accounting.Characters
         private const string CACHE_KEY_ID_TO_EID = "id_to_eid_";
         private const string CACHE_KEY_EID_TO_ID = "eid_to_id_";
         private const string CACHE_KEY_ID_TO_ACCOUNTID = "id_to_accountid_";
+        private const string LAST_RESPEC = "LastRespec";
 
         public static ObjectCache CharacterCache { get; set; }
       
@@ -238,6 +241,12 @@ namespace Perpetuum.Accounting.Characters
             set => WriteValueToDb(FIELD_LAST_LOGOUT, value);
         }
 
+        public DateTime LastRespec
+        {
+            get => ReadValueFromDb<DateTime>(LAST_RESPEC);
+            set => WriteValueToDb(LAST_RESPEC, value);
+        }
+
         public DateTime LastUsed
         {
             set => WriteValueToDb(FIELD_LAST_USED, value);
@@ -383,6 +392,11 @@ namespace Perpetuum.Accounting.Characters
             CharacterCache.Remove(GetCacheKey(CACHE_KEY_ID_TO_EID, Id));
             CharacterCache.Remove(GetCacheKey(CACHE_KEY_EID_TO_ID, Eid));
             RemoveAccountIdFromCache();
+        }
+
+        public void UpdateExtensionsCache(CharacterExtensionCollection extensions)
+        {
+            CharacterCache.Set(this.Id.ToString(), extensions, new TimeSpan(0,1,0));
         }
 
         private void RemoveAccountIdFromCache()

@@ -1063,7 +1063,10 @@ namespace Perpetuum.ExportedTypes
  		 public const string HYBRID_ROBOT = "def_hybrid_robot";
  		 public const string HYDROBENOL = "def_hydrobenol";
  		 public const string ICE = "def_ice";
- 		 public const string ICS_MISSION_COIN = "def_ics_mission_coin";
+
+        public const string RESPEC_TOKEN = "def_respec_token";
+
+         public const string ICS_MISSION_COIN = "def_ics_mission_coin";
  		 public const string ICS_ZONE_ITEM_SHOP = "def_ics_zone_item_shop";
  		 public const string ICTUS_BOT = "def_ictus_bot";
  		 public const string ICTUS_BOT_CPRG = "def_ictus_bot_cprg";

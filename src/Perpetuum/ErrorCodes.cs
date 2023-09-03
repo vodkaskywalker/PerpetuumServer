@@ -709,6 +709,7 @@ namespace Perpetuum
         OnlyBuildableOnTerraformProtected,
         TechLevelTooLow,
         MaxExpiringBasePerZoneReached,
-        MaxExpiringBasePerZonePerCorpReached
+        MaxExpiringBasePerZonePerCorpReached,
+        RespecTokenIsNotReadyYet,
     }
 }
