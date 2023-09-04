@@ -60,7 +60,7 @@ namespace Perpetuum.RequestHandlers
             {
                 HandleCalibrationTemplateItem(request, itemEid);
             }
-            else if (item is SparkTeleportToken)
+            else if (item is SparkTeleportDevice)
             {
                 HandleSparkTeleportToken(request, itemEid);
             }
@@ -257,7 +257,7 @@ namespace Perpetuum.RequestHandlers
 
                 var container = Container.GetWithItems(containerEid, character);
 
-                var containerItem = (SparkTeleportToken)container
+                var containerItem = (SparkTeleportDevice)container
                     .GetItemOrThrow(itemEid, true)
                     .Unstack(1);
 

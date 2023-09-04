@@ -12,7 +12,7 @@ using System.Transactions;
 
 namespace Perpetuum.Items
 {
-    public class SparkTeleportToken : Item
+    public class SparkTeleportDevice : Item
     {
         public int BaseId
         {
