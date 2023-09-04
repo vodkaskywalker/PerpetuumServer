@@ -249,7 +249,6 @@ namespace Perpetuum.RequestHandlers
                 (character.IsDocked).ThrowIfFalse(ErrorCodes.CharacterHasToBeDocked);
 
                 var container = Container.GetWithItems(containerEid, character);
-
                 var containerItem = (RespecToken)container
                     .GetItemOrThrow(itemEid, true)
                     .Unstack(1);
@@ -307,7 +306,6 @@ namespace Perpetuum.RequestHandlers
                 (character.IsDocked).ThrowIfFalse(ErrorCodes.CharacterHasToBeDocked);
 
                 var container = Container.GetWithItems(containerEid, character);
-
                 var containerItem = (SparkTeleportDevice)container
                     .GetItemOrThrow(itemEid, true)
                     .Unstack(1);
