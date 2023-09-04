@@ -665,6 +665,6 @@ namespace Perpetuum.ExportedTypes
         cf_zone_item_shop = 0x0000000000000796,
         cf_zone_objects = 0x0000000000000092,
         def_pbs_dogtags = 0x0000000000000691,
-        cf_spark_teleport_tokens = 0x000000000005049B,
+        cf_spark_teleport_devices = 0x000000000005049B,
     }
 }

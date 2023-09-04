@@ -1248,7 +1248,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<CalibrationProgramCapsule>(CategoryFlags.cf_ct_capsules); // OPP CT capsules
                 ByCategoryFlags<EPBoost>(CategoryFlags.cf_ep_boosters); // OPP EP Boosters
                 ByCategoryFlags<Item>(CategoryFlags.cf_datashards); // OPP datashards
-                ByCategoryFlags<SparkTeleportToken>(CategoryFlags.cf_spark_teleport_tokens);
+                ByCategoryFlags<SparkTeleportToken>(CategoryFlags.cf_spark_teleport_devices);
 
                 // OPP new Blinder module
                 ByNamePatternAndFlag<TargetBlinderModule>(DefinitionNames.STANDARD_BLINDER_MODULE, CategoryFlags.cf_target_painter);
