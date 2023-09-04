@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Transactions;
 using Perpetuum.Accounting;
 using Perpetuum.Accounting.Characters;
 using Perpetuum.Common.Loggers.Transaction;
@@ -10,10 +6,11 @@ using Perpetuum.Data;
 using Perpetuum.EntityFramework;
 using Perpetuum.Host.Requests;
 using Perpetuum.Items;
-using Perpetuum.RequestHandlers.Extensions;
 using Perpetuum.Robots;
-using Perpetuum.Services.ExtensionService;
-using Perpetuum.Zones;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Transactions;
 
 namespace Perpetuum.RequestHandlers
 {
@@ -57,6 +54,10 @@ namespace Perpetuum.RequestHandlers
             else if (item is RespecToken)
             {
                 HandleRespecToken(request, itemEid);
+            }
+            else if (item is SparkTeleportDevice)
+            {
+                HandleSparkTeleportDevice(request, itemEid);
             }
         }
 
@@ -290,6 +291,52 @@ namespace Perpetuum.RequestHandlers
                     scope.Complete();
                 }
             });
+        }
+
+        private void HandleSparkTeleportDevice(IRequest request, long itemEid)
+        {
+            var baseId = 0;
+            using (var scope = Db.CreateTransaction())
+            {
+                var containerEid = request.Data.GetOrDefault<long>(k.containerEID);
+                var character = request.Session.Character;
+                var account = accountManager.Repository
+                    .Get(request.Session.AccountId)
+                    .ThrowIfNull(ErrorCodes.AccountNotFound);
+
+                (character.IsDocked).ThrowIfFalse(ErrorCodes.CharacterHasToBeDocked);
+
+                var container = Container.GetWithItems(containerEid, character);
+
+                var containerItem = (SparkTeleportDevice)container
+                    .GetItemOrThrow(itemEid, true)
+                    .Unstack(1);
+
+                baseId = containerItem.BaseId;
+
+                entityServices.Repository.Delete(containerItem);
+                container.Save();
+                LogActivation(character, container, containerItem);
+
+                Transaction.Current.OnCommited(() =>
+                {
+                    accountRepository.Update(account);
+                });
+
+                scope.Complete();
+            }
+
+            var sparkTeleportData = new Dictionary<string, object>
+            {
+                { k.ID, baseId },
+            };
+
+            var sparkTeleportRequest = new Request();
+            sparkTeleportRequest.Command = Commands.SparkTeleportUse;
+            sparkTeleportRequest.Session = request.Session;
+            sparkTeleportRequest.Data = sparkTeleportData;
+
+            request.Session.HandleLocalRequest(sparkTeleportRequest);
         }
     }
 }
