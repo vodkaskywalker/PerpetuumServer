@@ -11,6 +11,7 @@ using Perpetuum.Zones.Terrains.Materials.Plants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Policy;
 
 namespace Perpetuum.Services.Channels.ChatCommands
 {
@@ -692,33 +693,21 @@ namespace Perpetuum.Services.Channels.ChatCommands
         [ChatCommand("ZonePBSApplyStagingToConstructed")]
         public static void ZonePBSApplyStagingToConstructed(AdminCommandData data)
         {
-            if (!IsDevModeEnabled(data))
-                return;
-
-            int zoneId;
-
-            if (data.Command.Args.Length > 0)
+            foreach (var zone in data.Request.Session.ZoneMgr.Zones.Where(x => x.Configuration.IsGamma))
             {
-                zoneId = int.Parse(data.Command.Args[0]);
-            }
-            else
-            {
-                zoneId = data.Sender.ZoneId.Value;
+                string cmd = string.Format("zonePBSApplyStagingToConstructed:zone_{0}:null", zone.Id);
+
+                SendMessageToAll(data, $"Processing constructed buildings in zone {zone.Id}...");
+                HandleLocalRequest(data, cmd);
+                SendMessageToAll(data, $"Done");
             }
 
-            string cmd = string.Format("zonePBSApplyStagingToConstructed:zone_{0}:null", zoneId);
-
-            SendMessageToAll(data, $"Processing constructed buildings in zone {zoneId}...");
-            HandleLocalRequest(data, cmd);
-            SendMessageToAll(data, $"Done");
+            SendMessageToAll(data, $"All gammas processed.");
         }
 
         [ChatCommand("ZonePBSReplaceActualWithStaging")]
         public static void ZonePBSReplaceActualWithStaging(AdminCommandData data)
         {
-            if (!IsDevModeEnabled(data))
-                return;
-
             string cmd = "zonePBSReplaceActualWithStaging:zone_0:null";
 
             SendMessageToAll(data, $"Replacing actual values with staging...");

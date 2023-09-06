@@ -3,9 +3,9 @@ using Perpetuum.Host.Requests;
 
 namespace Perpetuum.RequestHandlers.Zone
 {
-    public class ZonePbsReplaceActualWithStaging : IRequestHandler<IZoneRequest>
+    public class ZonePbsReplaceActualWithStaging : IRequestHandler<IRequest>
     {
-        public void HandleRequest(IZoneRequest request)
+        public void HandleRequest(IRequest request)
         {
             using (var scope = Db.CreateTransaction())
             {
