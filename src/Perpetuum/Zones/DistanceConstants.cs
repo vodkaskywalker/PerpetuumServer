@@ -55,8 +55,6 @@ namespace Perpetuum.Zones
         public const double PBS_DIST_FROM_NPC_BASE = 300;
         public const double GAMMA_BOMB_STACK_DISTANCE = 5.0;
 
-        public const double LANDMINE_DEPLOY_DISTANCE = 1.0;
-
         public const double PBS_DIST_FROM_TELEPORT = 200;
 
         public static Dictionary<string, object> GetEnumDictionary()

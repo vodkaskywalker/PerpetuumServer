@@ -142,6 +142,7 @@ namespace Perpetuum.EntityFramework
             network_node_range = record.GetValue<int?>("network_node_range");
             _hitSize = record.GetValue<double?>("hitsize") ?? 1.41;
 
+
             var tint = record.GetValue<string>("tint");
 
             if (!string.IsNullOrEmpty(tint))

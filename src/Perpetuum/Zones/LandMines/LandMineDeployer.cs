@@ -63,7 +63,7 @@ namespace Perpetuum.Zones.LandMines
             }
             else
             {
-                if (zone.Units.OfType<LandMine>().WithinRange(spawnPosition, DistanceConstants.LANDMINE_DEPLOY_DISTANCE).Any())
+                if (zone.Units.OfType<LandMine>().WithinRange(spawnPosition, DistanceConstants.LANDMINE_DEPLOY_RANGE_FROM_LANDMINE).Any())
                     return ErrorCodes.TooCloseToOtherDevice;
             }
 

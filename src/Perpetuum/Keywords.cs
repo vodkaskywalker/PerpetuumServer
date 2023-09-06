@@ -1165,8 +1165,6 @@ namespace Perpetuum
         public const string wearLevelMax_others = "wearLevelMax_others";
         public const string wearLevelMin_others = "wearLevelMin_others";
 
-        //public const string landmine_trigger_range = "landMineTriggerRange";
-
         public const string weather = "weather";
         public const string weight = "weight";
         public const string width = "width";
