@@ -62,7 +62,7 @@ namespace Perpetuum.Services.Channels.ChatCommands
                 str_trunc = text.Substring(1, 255); //text truncated to avoid big text spam insertion in db
             }
 
-            Db.Query().CommandText("insert adminCommandLog (characterid, acclevel, message) values (@characterid, @acclevel, @text)")
+            Db.Query().CommandText("insert into adminCommandLog (characterid, acclevel, message) values (@characterid, @acclevel, @text)")
                 .SetParameter("@characterid", sender.Id)
                 .SetParameter("@acclevel", (int) sender.AccessLevel)
                 .SetParameter("@text", str_trunc)
