@@ -31,16 +31,16 @@ namespace Perpetuum.Services.Channels.ChatCommands
 
         public void TryParseAdminCommand(Character sender, string text, IRequest request, Channel channel, IChannelManager channelManager)
         {
-            var b_isAdmin = IsAdmin(sender);
-            if (b_isAdmin)
+            var isAdmin = IsAdmin(sender);
+            if (isAdmin)
             {
                 channel.SendMessageToAll(_sessionManager, sender, text); //in the future, it will be displayed only in the secure channel
-                WriteLogToDb(sender, text, b_isAdmin); //enhancement todo: put the log in the next part to be able to log all the admin details
+                WriteLogToDb(sender, text); //enhancement todo: put the log in the next part to be able to log all the admin details
                 ParseAdminCommand(sender, text, request, channel, channelManager);
             }
             else //not an admin, id and text logged for abuse check
             {
-                WriteLogToDb(sender, text, b_isAdmin);
+                WriteLogToDb(sender, text);
             }
         }
 
@@ -53,10 +53,9 @@ namespace Perpetuum.Services.Channels.ChatCommands
             return sender.AccessLevel == AccessLevel.admin;
         }
 
-        private void WriteLogToDb(Character sender, string text, bool badmin)
+        private void WriteLogToDb(Character sender, string text)
         {
             var str_trunc = text;
-            var adminright = sender.AccessLevel;
 
             if (text.Length > 255)
             {
