@@ -1,6 +1,7 @@
 ﻿using Perpetuum.Accounting.Characters;
 using Perpetuum.Host.Requests;
 using Perpetuum.Services.Sessions;
+using Perpetuum.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,21 +31,47 @@ namespace Perpetuum.Services.Channels.ChatCommands
 
         public void TryParseAdminCommand(Character sender, string text, IRequest request, Channel channel, IChannelManager channelManager)
         {
-            if (IsAdminCommand(sender, text))
+            var isAdmin = IsAdmin(sender);
+            if (isAdmin)
             {
+                channel.SendMessageToAll(_sessionManager, sender, text); //in the future, it will be displayed only in the secure channel
+                WriteLogToDb(sender, text); //enhancement todo: put the log in the next part to be able to log all the admin details
                 ParseAdminCommand(sender, text, request, channel, channelManager);
+            }
+            else //not an admin, id and text logged for abuse check
+            {
+                WriteLogToDb(sender, text);
             }
         }
 
-        private bool IsAdminCommand(Character sender, string message)
+        public bool IsAdminCommand(string text)
         {
-            return message.StartsWith("#") && sender.AccessLevel == AccessLevel.admin;
+            return text.StartsWith("#");
+        }
+        private bool IsAdmin(Character sender)
+        {
+            return sender.AccessLevel == AccessLevel.admin;
+        }
+
+        private void WriteLogToDb(Character sender, string text)
+        {
+            var str_trunc = text;
+
+            if (text.Length > 255)
+            {
+                str_trunc = text.Substring(1, 255); //text truncated to avoid big text spam insertion in db
+            }
+
+            Db.Query().CommandText("insert into adminCommandLog (characterid, acclevel, message) values (@characterid, @acclevel, @text)")
+                .SetParameter("@characterid", sender.Id)
+                .SetParameter("@acclevel", (int) sender.AccessLevel)
+                .SetParameter("@text", str_trunc)
+                .ExecuteNonQuery().ThrowIfEqual(0, ErrorCodes.SQLInsertError);
+
         }
 
         private void ParseAdminCommand(Character sender, string text, IRequest request, Channel channel, IChannelManager channelManager)
         {
-            if (!IsAdminCommand(sender, text))
-                return;
 
             string[] command = text.Split(new char[] { ',' });
 
@@ -60,6 +87,9 @@ namespace Perpetuum.Services.Channels.ChatCommands
             // Unless it is the command to secure the channel
             if (data.Command.Name == "secure")
             {
+                //channel is secure, the admin command can be displayed
+                channel.SendMessageToAll(_sessionManager, sender, text);
+
                 AdminCommandHandlers.Secure(data);
                 return;
             }
