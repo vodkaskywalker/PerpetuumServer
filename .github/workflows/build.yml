@@ -51,8 +51,9 @@ jobs:
         msbuild $env:Solution_Name  -p:Configuration=$env:Configuration
       env:
         Configuration: ${{ matrix.configuration }}
-    # Enable tmate debugging of manually-triggered workflows if the input option was provided
-    # this allows us to debug the file paths
-    # - name: Setup tmate session
-    #   uses: mxschmitt/action-tmate@v3
-    #   if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled && always()}}
+
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: First-Perp-Artifact
+        path: D:\a\PerpetuumServer\PerpetuumServer\bin\*
