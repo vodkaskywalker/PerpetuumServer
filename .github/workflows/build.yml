@@ -56,4 +56,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: Perpetuum-Server
-        path: .\PerpetuumServer\bin\x64\*
+        path: .\PerpetuumServer\PerpetuumServer\bin\x64\*
