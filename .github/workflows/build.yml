@@ -51,7 +51,7 @@ jobs:
         msbuild $env:Solution_Name  -p:Configuration=$env:Configuration
       env:
         Configuration: ${{ matrix.configuration }}
-        
+
     # Enable tmate debugging of manually-triggered workflows if the input option was provided
     # this allows us to debug the file paths
     - name: Setup tmate session
@@ -62,4 +62,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: Perpetuum-Server
-        path: .\PerpetuumServer\PerpetuumServer\bin\x64\*
+        path: D:\a\PerpetuumServer\PerpetuumServer\bin\x64\*
