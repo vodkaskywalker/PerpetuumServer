@@ -55,5 +55,5 @@ jobs:
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v3
       with:
-        name: First-Perp-Artifact
-        path: D:\a\PerpetuumServer\PerpetuumServer\bin\*
+        name: Perpetuum-Server
+        path: .\PerpetuumServer\bin\x64\*
