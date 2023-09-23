@@ -23,6 +23,14 @@ namespace Perpetuum.Zones.LandMines
         private const int BeamDistance = 600;
         private readonly IntervalTimer probingInterval = new IntervalTimer(TimeSpan.FromSeconds(2));
 
+        public int TriggerMass
+        {
+            get
+            {
+                return ED.Options.GetOption<int>("triggerMass");
+            }
+        }
+
         protected override void OnUpdate(TimeSpan time)
         {
             var despawnHelper = GetDespawnHelper();
@@ -30,7 +38,9 @@ namespace Perpetuum.Zones.LandMines
             probingInterval.Update(time);
 
             if (!probingInterval.Passed)
+            {
                 return;
+            }
 
             probingInterval.Reset();
 
@@ -39,7 +49,7 @@ namespace Perpetuum.Zones.LandMines
                 //detect
                 var robotsNearMe = GetNoticedUnits();
 
-                if (robotsNearMe.Any())
+                if (robotsNearMe.Exists(x => x.ActualMass > this.TriggerMass))
                 {
                     robotsNearMe[0].Zone.CreateBeam(
                         BeamType.plant_bomb_explosion,//.timebomb_explosion,

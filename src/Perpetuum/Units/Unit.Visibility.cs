@@ -7,6 +7,7 @@ using Perpetuum.Log;
 using Perpetuum.Players;
 using Perpetuum.Robots;
 using Perpetuum.Zones;
+using Perpetuum.Zones.LandMines;
 
 namespace Perpetuum.Units
 {
@@ -98,14 +99,22 @@ namespace Perpetuum.Units
 
         protected virtual bool IsDetected(Unit target)
         {
-            var robot = target as Robot;
-            if (robot != null)
+            double range;
+            
+            if (target is LandMine)
             {
-                if (robot.IsLocked(this))
+                range = (this as Robot).MineDetectionRange;
+            } else
+            {
+                var robot = target as Robot;
+                if (robot != null && robot.IsLocked(this))
+                {
                     return true;
+                }
+
+                range = 100 / Math.Max(1, target.StealthStrength) * Math.Max(1, DetectionStrength);
             }
 
-            var range = 100 / Math.Max(1, target.StealthStrength) * Math.Max(1, DetectionStrength);
             return IsInRangeOf3D(target, range);
         }
 

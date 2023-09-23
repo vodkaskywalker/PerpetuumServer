@@ -11,87 +11,100 @@ namespace Perpetuum.Robots
 {
     partial class Robot
     {
-        private UnitOptionalProperty<int> _decay;
-        private UnitOptionalProperty<Color> _tint;
+        private UnitOptionalProperty<int> decay;
+        private UnitOptionalProperty<Color> tint;
 
-        private ItemProperty _powerGridMax;
-        private ItemProperty _powerGrid;
-        private ItemProperty _cpuMax;
-        private ItemProperty _cpu;
-        private ItemProperty _ammoReloadTime;
-        private ItemProperty _missileHitChance;
-        private ItemProperty _decayChance;
+        private ItemProperty powerGridMax;
+        private ItemProperty powerGrid;
+        private ItemProperty cpuMax;
+        private ItemProperty cpu;
+        private ItemProperty ammoReloadTime;
+        private ItemProperty missileHitChance;
+        private ItemProperty decayChance;
+        private ItemProperty mineDetectionRange;
 
         private void InitProperties()
         {
-            _decay = new UnitOptionalProperty<int>(this, UnitDataType.Decay, k.decay, () => 255);
-            OptionalProperties.Add(_decay);
+            decay = new UnitOptionalProperty<int>(this, UnitDataType.Decay, k.decay, () => 255);
+            OptionalProperties.Add(decay);
 
-            _tint = new UnitOptionalProperty<Color>(this,UnitDataType.Tint,k.tint,() => ED.Config.Tint);
-            OptionalProperties.Add(_tint);
+            tint = new UnitOptionalProperty<Color>(this,UnitDataType.Tint,k.tint,() => ED.Config.Tint);
+            OptionalProperties.Add(tint);
 
-            _powerGridMax = new UnitProperty(this, AggregateField.powergrid_max, AggregateField.powergrid_max_modifier);
-            AddProperty(_powerGridMax);
+            powerGridMax = new UnitProperty(this, AggregateField.powergrid_max, AggregateField.powergrid_max_modifier);
+            AddProperty(powerGridMax);
 
-            _powerGrid = new PowerGridProperty(this);
-            AddProperty(_powerGrid);
+            powerGrid = new PowerGridProperty(this);
+            AddProperty(powerGrid);
 
-            _cpuMax = new UnitProperty(this, AggregateField.cpu_max, AggregateField.cpu_max_modifier);
-            AddProperty(_cpuMax);
+            cpuMax = new UnitProperty(this, AggregateField.cpu_max, AggregateField.cpu_max_modifier);
+            AddProperty(cpuMax);
 
-            _cpu = new CpuProperty(this);
-            AddProperty(_cpu);
+            cpu = new CpuProperty(this);
+            AddProperty(cpu);
 
-            _ammoReloadTime = new UnitProperty(this, AggregateField.ammo_reload_time, AggregateField.ammo_reload_time_modifier);
-            AddProperty(_ammoReloadTime);
+            ammoReloadTime = new UnitProperty(this, AggregateField.ammo_reload_time, AggregateField.ammo_reload_time_modifier);
+            AddProperty(ammoReloadTime);
 
-            _missileHitChance = new UnitProperty(this, AggregateField.missile_miss, AggregateField.missile_miss_modifier);
-            AddProperty(_missileHitChance);
+            missileHitChance = new UnitProperty(this, AggregateField.missile_miss, AggregateField.missile_miss_modifier);
+            AddProperty(missileHitChance);
 
-            _decayChance = new DecayChanceProperty(this);
-            AddProperty(_decayChance);
+            decayChance = new DecayChanceProperty(this);
+            AddProperty(decayChance);
+
+            mineDetectionRange = new UnitProperty(
+                this,
+                AggregateField.mine_detection_range,
+                AggregateField.undefined,
+                AggregateField.effect_mine_detection_range_modifier);
+            AddProperty(mineDetectionRange);
         }
 
         private double PowerGridMax
         {
-            get { return _powerGridMax.Value; }
+            get { return powerGridMax.Value; }
         }
 
         public double PowerGrid
         {
-            get { return _powerGrid.Value; }
+            get { return powerGrid.Value; }
         }
 
         private double CpuMax
         {
-            get { return _cpuMax.Value; }
+            get { return cpuMax.Value; }
         }
 
         public double Cpu
         {
-            get { return _cpu.Value; }
+            get { return cpu.Value; }
         }
 
         public TimeSpan AmmoReloadTime
         {
-            get { return TimeSpan.FromMilliseconds(_ammoReloadTime.Value); }
+            get { return TimeSpan.FromMilliseconds(ammoReloadTime.Value); }
         }
 
         public double MissileHitChance
         {
-            get { return _missileHitChance.Value; }
+            get { return missileHitChance.Value; }
         }
 
         public int Decay
         {
-            private get { return _decay.Value; }
-            set { _decay.Value = value & 255; }
+            private get { return decay.Value; }
+            set { decay.Value = value & 255; }
         }
 
         public Color Tint
         {
-            get { return _tint.Value; }
-            set { _tint.Value = value; }
+            get { return tint.Value; }
+            set { tint.Value = value; }
+        }
+
+        public double MineDetectionRange
+        {
+            get { return mineDetectionRange.Value; }
         }
 
         public override void UpdateRelatedProperties(AggregateField field)

@@ -979,6 +979,7 @@ namespace Perpetuum.Bootstrapper
             RegisterEffectModule<DetectionModule>();
             RegisterEffectModule<GangModule>();
             RegisterEffectModule<ShieldGeneratorModule>();
+            RegisterEffectModule<MineDetectorModule>();
 
             RegisterEntity<SystemContainer>();
             RegisterEntity<PunchBagDeployer>();
@@ -1202,6 +1203,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<ArmorHardenerModule>(CategoryFlags.cf_armor_hardeners);
                 ByCategoryFlags<StealthModule>(CategoryFlags.cf_stealth_modules);
                 ByCategoryFlags<DetectionModule>(CategoryFlags.cf_detection_modules);
+                ByCategoryFlags<MineDetectorModule>(CategoryFlags.cf_landmine_detectors);
                 ByCategoryFlags<Module>(CategoryFlags.cf_armor_plates);
                 ByCategoryFlags<Module>(CategoryFlags.cf_core_batteries);
                 ByCategoryFlags<Module>(CategoryFlags.cf_core_rechargers);
@@ -1250,7 +1252,9 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<AreaBombDeployer>(CategoryFlags.cf_plasma_bomb);
                 
                 ByCategoryFlags<ProximityProbe>(CategoryFlags.cf_proximity_probe);
-                ByCategoryFlags<LandMine>(CategoryFlags.cf_landmine);
+                ByCategoryFlags<LandMine>(CategoryFlags.cf_light_landmines);
+                ByCategoryFlags<LandMine>(CategoryFlags.cf_medium_landmines);
+                ByCategoryFlags<LandMine>(CategoryFlags.cf_heavy_landmines);
 
                 ByCategoryFlags<RandomResearchKit>(CategoryFlags.cf_random_research_kits);
                 ByCategoryFlags<LotteryItem>(CategoryFlags.cf_lottery_items);

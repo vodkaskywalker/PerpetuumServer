@@ -236,7 +236,7 @@ namespace Perpetuum.Robots
         {
             base.OnDamageTaken(source, e);
 
-            var decayChance = _decayChance.Value;
+            var decayChance = this.decayChance.Value;
             var random = FastRandom.NextDouble();
 
             if (decayChance >= random)

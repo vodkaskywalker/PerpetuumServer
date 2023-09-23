@@ -65,10 +65,16 @@ namespace Perpetuum.Groups.Corporations
         // TODO: Find a way to use joins instead of this
         public IEnumerable<long> GetLandMineEids()
         {
-            var landMineDefinitions = EntityServices.Defaults.GetAll().GetDefinitionsByCategoryFlag(CategoryFlags.cf_landmine);
+            var lightlandMineDefinitions = EntityServices.Defaults.GetAll().GetDefinitionsByCategoryFlag(CategoryFlags.cf_light_landmines);
+            var mediumlandMineDefinitions = EntityServices.Defaults.GetAll().GetDefinitionsByCategoryFlag(CategoryFlags.cf_medium_landmines);
+            var heavylandMineDefinitions = EntityServices.Defaults.GetAll().GetDefinitionsByCategoryFlag(CategoryFlags.cf_heavy_landmines);
+            var landMineDefinitions = lightlandMineDefinitions.Concat(mediumlandMineDefinitions).Concat(heavylandMineDefinitions);
+
             var queryStr = $"SELECT eid FROM entities WHERE owner=@corporationEID and definition in ({landMineDefinitions.ArrayToString()})";
 
-            return Db.Query().CommandText(queryStr).SetParameter("@corporationEID", Eid)
+            return Db.Query()
+                .CommandText(queryStr)
+                .SetParameter("@corporationEID", Eid)
                 .Execute()
                 .Select(r => r.GetValue<long>(0))
                 .ToArray();

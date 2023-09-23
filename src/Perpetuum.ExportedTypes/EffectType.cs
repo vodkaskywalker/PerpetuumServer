@@ -120,6 +120,7 @@ namespace Perpetuum.ExportedTypes
         effect_gamma_t1 = 117,
         effect_gamma_t2 = 118,
         effect_gamma_t3 = 119,
-        effect_gamma_tc = 120
+        effect_gamma_tc = 120,
+		effect_mine_detector = 121,
     }
 }
