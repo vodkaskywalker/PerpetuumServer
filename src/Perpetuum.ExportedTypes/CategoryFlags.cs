@@ -50,6 +50,8 @@ namespace Perpetuum.ExportedTypes
                 cf_syndicate_crawlers = 0x0000000000020F01,
                 cf_syndicate_mechs = 0x0000000000030F01,
                 cf_syndicate_heavymechs = 0x0000000000040F01,
+            cf_command_robots = 0x0000000000001001,
+                cf_combat_command_robots = 0x0000000000011001,
 
         cf_ammo = 0x000000000000000A,
             cf_railgun_ammo = 0x000000000000010A,
@@ -105,6 +107,12 @@ namespace Perpetuum.ExportedTypes
             cf_construction_ammo_main = 0x000000000000110A,
                 cf_construction_ammo = 0x000000000001110A,
                 cf_wall_builder_ammo = 0x000000000002110A,
+            cf_turret_launcher_ammo = 0x000000000000200A,
+                cf_sentry_turret_ammo = 0x000000000010200A,
+                    cf_em_sentry_turret_ammo = 0x000000001010200A,
+                    cf_laser_sentry_turret_ammo = 0x000000002010200A,
+                    cf_missile_sentry_turret_ammo = 0x000000003010200A,
+                    cf_firearms_sentry_turret_ammo = 0x000000004010200A,
 
         cf_robot_equipment = 0x000000000000000F,
             cf_armor_equipment = 0x000000000000010F,
@@ -255,6 +263,7 @@ namespace Perpetuum.ExportedTypes
                     cf_small_industrial_aoe = 0x00000000010A070F,
                     cf_medium_industrial_aoe = 0x00000000020A070F,
                     cf_large_industrial_aoe = 0x00000000030A070F,
+                cf_turret_launchers = 0x00000000000B070F,
             cf_terraforming_equipment = 0x000000000000080F,
                 cf_small_terraformer = 0x000000000001080F,
                 cf_terraforming_digger = 0x000000000002080F,
@@ -550,6 +559,7 @@ namespace Perpetuum.ExportedTypes
             cf_gate = 0x0000000000000A92,
             cf_rifts = 0x0000000000000B92,
             cf_portals = 0x0000000000000C92,
+            cf_sentry_turrets = 0x0000000000000D92,
 
         cf_production_items = 0x0000000000000094,
             cf_research_kits = 0x0000000000000194,

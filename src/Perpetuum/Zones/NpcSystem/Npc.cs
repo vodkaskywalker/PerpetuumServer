@@ -23,6 +23,7 @@ using Perpetuum.Timers;
 using Perpetuum.Units;
 using Perpetuum.Zones.DamageProcessors;
 using Perpetuum.Zones.Eggs;
+using Perpetuum.Zones.SentryTurrets;
 using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.Movements;
@@ -982,7 +983,7 @@ namespace Perpetuum.Zones.NpcSystem
                 if (EP > 0)
                 {
                     var awardedPlayers = new List<Unit>();
-                    foreach (var hostile in ThreatManager.Hostiles)
+                    foreach (var hostile in ThreatManager.Hostiles.Where(x=>x.unit is Player))
                     {
                         var playerUnit = hostile.unit;
                         var hostilePlayer = zone.ToPlayerOrGetOwnerPlayer(playerUnit);
@@ -1179,6 +1180,16 @@ namespace Perpetuum.Zones.NpcSystem
             return true;
         }
 
+        internal override bool IsHostile(SentryTurret turret)
+        {
+            return true;
+        }
+
+        protected override bool IsHostileFor(Unit unit)
+        {
+            return unit.IsHostile(this);
+        }
+
         /// <summary>
         /// This determines if threat can be added to a target based on the following:
         ///  - Is the target already on the threat manager
@@ -1196,6 +1207,14 @@ namespace Perpetuum.Zones.NpcSystem
                 return false;
 
             return threat.type != ThreatType.Undefined;
+        }
+
+        protected override void UpdateUnitVisibility(Unit target)
+        {
+            if (target is SentryTurret)
+            {
+                UpdateVisibility(target);
+            }
         }
 
         private void AddBodyPullThreat(Unit enemy)

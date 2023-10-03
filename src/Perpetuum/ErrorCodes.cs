@@ -711,5 +711,6 @@ namespace Perpetuum
         MaxExpiringBasePerZoneReached,
         MaxExpiringBasePerZonePerCorpReached,
         RespecTokenIsNotReadyYet,
+        MaxBandwidthExceed,
     }
 }

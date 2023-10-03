@@ -7,7 +7,9 @@ using Perpetuum.Log;
 using Perpetuum.Players;
 using Perpetuum.Robots;
 using Perpetuum.Zones;
+using Perpetuum.Zones.SentryTurrets;
 using Perpetuum.Zones.LandMines;
+using Perpetuum.Zones.NpcSystem;
 
 namespace Perpetuum.Units
 {
@@ -45,6 +47,16 @@ namespace Perpetuum.Units
         protected internal virtual void UpdatePlayerVisibility(Player player)
         {
             // unit => player nem latjak egymast
+        }
+
+        protected internal virtual void UpdateUnitVisibility(SentryTurret turret)
+        {
+
+        }
+
+        protected internal virtual void UpdateUnitVisibility(Npc npc)
+        {
+
         }
 
         public virtual void UpdateVisibilityOf(Unit target)

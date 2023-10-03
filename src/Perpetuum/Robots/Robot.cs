@@ -19,6 +19,7 @@ using Perpetuum.Zones;
 using Perpetuum.Zones.DamageProcessors;
 using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
+using Perpetuum.Zones.SentryTurrets;
 
 namespace Perpetuum.Robots
 {
@@ -60,6 +61,7 @@ namespace Perpetuum.Robots
         protected Robot()
         {
             InitLockHander();
+            InitBandwidthHandler();
             InitProperties();
         }
 
@@ -78,6 +80,7 @@ namespace Perpetuum.Robots
         private Lazy<IEnumerable<ActiveModule>> _activeModules;
         private Lazy<IEnumerable<Item>> _components;
         private Lazy<IEnumerable<RobotComponent>> _robotComponents;
+
         private void InitComponents()
         {
             _components = new Lazy<IEnumerable<Item>>(() => Children.OfType<Item>().ToArray());
@@ -167,6 +170,7 @@ namespace Perpetuum.Robots
             base.OnUpdate(time);
 
             _lockHandler.Update(time);
+            bandwidthHandler.Update();
 
             foreach (var robotComponent in RobotComponents)
             {

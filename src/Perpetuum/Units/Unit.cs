@@ -24,11 +24,13 @@ using Perpetuum.Zones.Blobs;
 using Perpetuum.Zones.DamageProcessors;
 using Perpetuum.Zones.Effects;
 using Perpetuum.Zones.Eggs;
+using Perpetuum.Zones.SentryTurrets;
 using Perpetuum.Zones.Gates;
 using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.PBS;
 using Perpetuum.Zones.PBS.DockingBases;
 using Perpetuum.Zones.PBS.Turrets;
+using Perpetuum.Zones.NpcSystem;
 
 namespace Perpetuum.Units
 {
@@ -919,9 +921,16 @@ namespace Perpetuum.Units
         }
 
         protected virtual bool IsHostileFor(Unit unit)  { return false; }
+        
         internal  virtual bool IsHostile(Player player) { return false; }
+        
         internal  virtual bool IsHostile(AreaBomb bomb) { return false; }
+        
         internal  virtual bool IsHostile(Gate gate)     { return false; }
+
+        internal virtual bool IsHostile(SentryTurret turret) { return false; }
+
+        internal virtual bool IsHostile(Npc npc) { return false; }
 
         public void StopMoving()
         {

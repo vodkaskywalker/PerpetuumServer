@@ -45,6 +45,7 @@ using Perpetuum.Zones.NpcSystem;
 using Perpetuum.Zones.PBS;
 using Perpetuum.Zones.PlantTools;
 using Perpetuum.Zones.ProximityProbes;
+using Perpetuum.Zones.SentryTurrets;
 using Perpetuum.Zones.Teleporting;
 using Perpetuum.Zones.Teleporting.Strategies;
 using Perpetuum.Zones.Terrains;
@@ -66,7 +67,9 @@ namespace Perpetuum.Players
         {
             var speed = _player.Speed;
             if (speed <= 0.0)
+            {
                 return;
+            }
 
             elapsed = elapsed.Min(_maxElapsedTime);
 

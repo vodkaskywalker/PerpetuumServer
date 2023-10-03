@@ -174,5 +174,16 @@ namespace Perpetuum.EntityFramework
                 return id;
             }
         }
+
+        public int TurretId
+        {
+            get
+            {
+                var id = _dictionary.GetOrDefault(k.TurretId, 0);
+                Debug.Assert(id > 0);
+
+                return id;
+            }
+        }
     }
 }

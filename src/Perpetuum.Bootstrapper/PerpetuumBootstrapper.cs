@@ -188,6 +188,7 @@ using Perpetuum.Zones.NpcSystem.Presences.ExpiringStaticPresence;
 using Perpetuum.Zones.NpcSystem.Presences.GrowingPresences;
 using Perpetuum.Items.Helpers;
 using Perpetuum.Zones.LandMines;
+using Perpetuum.Zones.SentryTurrets;
 
 namespace Perpetuum.Bootstrapper
 {
@@ -965,6 +966,7 @@ namespace Perpetuum.Bootstrapper
             RegisterModule<SiegeHackModule>();
             RegisterModule<NeuralyzerModule>();
             RegisterModule<BlobEmissionModulatorModule>();
+            RegisterModule<TurretLauncherModule>();
             RegisterModule<TerraformMultiModule>();
             RegisterModule<WallBuilderModule>();
             RegisterModule<ConstructionModule>();
@@ -985,6 +987,7 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<PunchBagDeployer>();
 
             RegisterUnit<BlobEmitterUnit>();
+            RegisterUnit<SentryTurret>();
             RegisterUnit<Kiosk>();
             RegisterUnit<AlarmSwitch>();
             RegisterUnit<SimpleSwitch>();
@@ -1195,6 +1198,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<SiegeHackModule>(CategoryFlags.cf_siege_hack_modules);
                 ByCategoryFlags<NeuralyzerModule>(CategoryFlags.cf_neuralyzer);
                 ByCategoryFlags<BlobEmissionModulatorModule>(CategoryFlags.cf_blob_emission_modulator,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_blob_emission_modulator_ammo));
+                ByCategoryFlags<TurretLauncherModule>(CategoryFlags.cf_turret_launchers, new NamedParameter("ammoCategoryFlags", CategoryFlags.cf_turret_launcher_ammo));
                 ByCategoryFlags<WebberModule>(CategoryFlags.cf_webber);
                 ByCategoryFlags<SensorDampenerModule>(CategoryFlags.cf_sensor_dampeners);
                 ByCategoryFlags<RemoteSensorBoosterModule>(CategoryFlags.cf_remote_sensor_boosters);
@@ -1240,6 +1244,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<Item>(CategoryFlags.cf_robotshards);
                 ByCategoryFlags<PunchBagDeployer>(CategoryFlags.cf_others);
                 ByCategoryFlags<BlobEmitterUnit>(CategoryFlags.cf_blob_emitter);
+                ByCategoryFlags<SentryTurret>(CategoryFlags.cf_sentry_turrets);
                 ByCategoryFlags<Item>(CategoryFlags.cf_reactor_cores);
                 ByCategoryFlags<Kiosk>(CategoryFlags.cf_kiosk);
                 ByCategoryFlags<AlarmSwitch>(CategoryFlags.cf_alarm_switch);
