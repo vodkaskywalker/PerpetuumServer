@@ -433,7 +433,6 @@ namespace Perpetuum.ExportedTypes
 		turret_fallof_modifier = 336,
 		turret_optimal_range_modifier = 337,
 		weapon_cycle_time_modifier = 540,
-        //bandwidth_max = 672,
-        //bandwidth_max_modifier = 673,
+        bandwidth_max = 672,
     }
 }

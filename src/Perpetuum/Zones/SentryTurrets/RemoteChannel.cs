@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Perpetuum.Timers;
+using Perpetuum.Modules;
 
 namespace Perpetuum.Zones.SentryTurrets
 {
@@ -18,14 +19,14 @@ namespace Perpetuum.Zones.SentryTurrets
     {
         public long Id { get; private set; }
 
-        public RemoteChannel(Robot owner, SentryTurret turret)
+        public RemoteChannel(TurretLauncherModule owner, SentryTurret turret)
         {
             Id = FastRandom.NextLong();
             Owner = owner;
             Turret = turret;
         }
 
-        public Robot Owner { get; private set; }
+        public TurretLauncherModule Owner { get; private set; }
 
         public SentryTurret Turret { get; set; }
 

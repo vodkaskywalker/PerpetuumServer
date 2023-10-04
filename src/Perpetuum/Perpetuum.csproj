@@ -288,7 +288,6 @@
     <Compile Include="Reactive\Observable.cs" />
     <Compile Include="Reactive\ObservableExtensions.cs" />
     <Compile Include="Reactive\Observer.cs" />
-    <Compile Include="Robots\Robot.RemoteOperations.cs" />
     <Compile Include="Robots\RobotHelper.cs" />
     <Compile Include="Rsa.cs" />
     <Compile Include="Selectors\ISelector.cs" />
@@ -656,6 +655,7 @@
     <Compile Include="Zones\Effects\ZoneEffects\ZoneEffectReader.cs" />
     <Compile Include="Zones\SentryTurrets\RemoteChannel.cs" />
     <Compile Include="Zones\SentryTurrets\BandwidthHandler.cs" />
+    <Compile Include="Zones\SentryTurrets\RemoteController.cs" />
     <Compile Include="Zones\SentryTurrets\SentryTurret.cs" />
     <Compile Include="Zones\Finders\PositionFinders\RandomWalkableAroundPositionFinder.cs" />
     <Compile Include="Zones\Finders\PositionFinders\RandomWalkableOnCircle.cs" />

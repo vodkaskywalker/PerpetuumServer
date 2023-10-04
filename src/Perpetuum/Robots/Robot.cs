@@ -61,7 +61,6 @@ namespace Perpetuum.Robots
         protected Robot()
         {
             InitLockHander();
-            InitBandwidthHandler();
             InitProperties();
         }
 
@@ -170,7 +169,6 @@ namespace Perpetuum.Robots
             base.OnUpdate(time);
 
             _lockHandler.Update(time);
-            bandwidthHandler.Update();
 
             foreach (var robotComponent in RobotComponents)
             {

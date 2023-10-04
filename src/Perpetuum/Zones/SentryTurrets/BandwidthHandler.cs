@@ -13,32 +13,22 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Perpetuum.Modules;
 
 namespace Perpetuum.Zones.SentryTurrets
 {
     public class BandwidthHandler
     {
-        private readonly Robot owner;
-        //private readonly ItemProperty bandwidth;
-        private readonly int bandwidth;
+        private readonly TurretLauncherModule owner;
         private List<RemoteChannel> channels = new List<RemoteChannel>();
         private readonly ConcurrentQueue<RemoteChannel> newChannels = new ConcurrentQueue<RemoteChannel>();
         private readonly ConcurrentQueue<RemoteChannel> deactivatedChannels = new ConcurrentQueue<RemoteChannel>();
         private int dirty;
 
-        public BandwidthHandler(Robot owner)
+        public BandwidthHandler(TurretLauncherModule owner)
         {
             this.owner = owner;
-
-            bandwidth = 15;
-
-            //bandwidth = new BandwidthMaxProperty(owner);
-            //owner.AddProperty(bandwidth);
         }
-
-        //private int Bandwidth { get { return (int)bandwidth.Value; } }
-
-        private int Bandwidth { get { return bandwidth; } }
 
         public int BandwidthUsed 
         { 
@@ -57,7 +47,7 @@ namespace Perpetuum.Zones.SentryTurrets
 
         public bool HasFreeBandwidthOf(SentryTurret turret)
         {
-            return BandwidthUsed <= Bandwidth - turret.BandwidthUsage;
+            return BandwidthUsed <= owner.RemoteController.BandwidthMax - turret.BandwidthUsage;
         }
 
         public void UseRemoteChannel(SentryTurret turret)
@@ -149,12 +139,5 @@ namespace Perpetuum.Zones.SentryTurrets
         {
             return channels.OfType<RemoteChannel>().FirstOrDefault(l => l.Turret.Eid == unitEid);
         }
-
-        //private class BandwidthMaxProperty : UnitProperty
-        //{
-        //    public BandwidthMaxProperty(Unit owner) : base(owner, AggregateField.bandwidth_max, AggregateField.bandwidth_max_modifier)
-        //    {
-        //    }
-        //}
     }
 }

@@ -22,7 +22,6 @@ namespace Perpetuum.Robots
         private ItemProperty missileHitChance;
         private ItemProperty decayChance;
         private ItemProperty mineDetectionRange;
-        //private ItemProperty bandwidthMax;
 
         private void InitProperties()
         {
@@ -59,12 +58,6 @@ namespace Perpetuum.Robots
                 AggregateField.undefined,
                 AggregateField.effect_mine_detection_range_modifier);
             AddProperty(mineDetectionRange);
-
-            //bandwidthMax = new UnitProperty(
-            //    this,
-            //    AggregateField.bandwidth_max,
-            //    AggregateField.bandwidth_max_modifier);
-            //AddProperty(bandwidthMax);
         }
 
         private double PowerGridMax
@@ -113,11 +106,6 @@ namespace Perpetuum.Robots
         {
             get { return mineDetectionRange.Value; }
         }
-
-        //public double Bandwidth
-        //{
-        //    get { return 15; /*bandwidthMax.Value;*/ }
-        //}
 
         public override void UpdateRelatedProperties(AggregateField field)
         {

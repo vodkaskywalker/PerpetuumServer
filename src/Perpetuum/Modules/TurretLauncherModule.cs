@@ -17,10 +17,12 @@ namespace Perpetuum.Modules
     {
         private const int SentryTurretHeight = 7;
         private const double SentryTurretDeployRange = 2;
-                
+        public RemoteController RemoteController { get; private set; }
+
         public TurretLauncherModule(CategoryFlags ammoCategoryFlags) : base(ammoCategoryFlags, true)
         {
             optimalRange.AddEffectModifier(AggregateField.effect_ew_optimal_range_modifier);
+            RemoteController = new RemoteController(this);
         }
 
         public override void AcceptVisitor(IEntityVisitor visitor)
@@ -33,6 +35,13 @@ namespace Perpetuum.Modules
 
         protected override void OnAction()
         {
+            if (RemoteController == null)
+            {
+                return;
+            }
+
+            RemoteController.SyncRemoteChannels();
+
             var zone = Zone;
 
             if (zone == null)
@@ -74,8 +83,8 @@ namespace Perpetuum.Modules
             var ammo = GetAmmo();
             var fieldTurret = (SentryTurret)Factory.CreateWithRandomEID(ammo.ED.Options.TurretId);
 
-            ParentRobot.HasFreeBandwidthOf(fieldTurret).ThrowIfFalse(ErrorCodes.MaxBandwidthExceed);
-            ParentRobot.UseRemoteChannel(fieldTurret);
+            RemoteController.HasFreeBandwidthOf(fieldTurret).ThrowIfFalse(ErrorCodes.MaxBandwidthExceed);
+            RemoteController.UseRemoteChannel(fieldTurret);
 
             var despawnTimeMod = ammo.GetPropertyModifier(AggregateField.despawn_time);
 

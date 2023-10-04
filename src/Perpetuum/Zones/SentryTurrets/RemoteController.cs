@@ -1,23 +1,45 @@
-﻿using Perpetuum.Units;
-using Perpetuum.Zones.Locking.Locks;
-using Perpetuum.Zones.Locking;
-using Perpetuum.Zones;
+﻿using Perpetuum.ExportedTypes;
+using Perpetuum.Items;
+using Perpetuum.Modules;
+using Perpetuum.Robots;
+using Perpetuum.Units;
+using Perpetuum.Zones.Blobs.BlobEmitters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Perpetuum.Zones.SentryTurrets;
 
-namespace Perpetuum.Robots
+namespace Perpetuum.Zones.SentryTurrets
 {
-    partial class Robot
+    public class RemoteController
     {
+        private readonly ItemProperty bandwidthMax;
         private BandwidthHandler bandwidthHandler;
 
-        private void InitBandwidthHandler()
+        public RemoteController(TurretLauncherModule module)
         {
-            bandwidthHandler = new BandwidthHandler(this);
+            bandwidthMax = new ModuleProperty(
+                module,
+                AggregateField.bandwidth_max);
+            module.AddProperty(bandwidthMax);
+
+            InitBandwidthHandler(module);
+        }
+
+        public double BandwidthMax
+        {
+            get { return bandwidthMax.Value; }
+        }
+
+        private void InitBandwidthHandler(TurretLauncherModule module)
+        {
+            bandwidthHandler = new BandwidthHandler(module);
+        }
+
+        public void SyncRemoteChannels()
+        {
+            this.bandwidthHandler.Update();
         }
 
         [CanBeNull]
