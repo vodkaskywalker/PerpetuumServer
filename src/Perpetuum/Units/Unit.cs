@@ -24,7 +24,7 @@ using Perpetuum.Zones.Blobs;
 using Perpetuum.Zones.DamageProcessors;
 using Perpetuum.Zones.Effects;
 using Perpetuum.Zones.Eggs;
-using Perpetuum.Zones.SentryTurrets;
+using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.Gates;
 using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.PBS;

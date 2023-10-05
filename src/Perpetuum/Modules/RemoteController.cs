@@ -1,10 +1,9 @@
 ﻿using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
-using Perpetuum.Players;
 using Perpetuum.Zones.Beams;
 using Perpetuum.Zones.Finders.PositionFinders;
 using Perpetuum.Zones.Locking.Locks;
-using Perpetuum.Zones.SentryTurrets;
+using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones;
 using System;
 using System.Linq;
@@ -13,16 +12,64 @@ using Perpetuum.Units;
 
 namespace Perpetuum.Modules
 {
-    public class TurretLauncherModule : ActiveModule
+    public class RemoteControllerModule : ActiveModule
     {
         private const int SentryTurretHeight = 7;
-        private const double SentryTurretDeployRange = 2;
-        public RemoteController RemoteController { get; private set; }
+        private const double SentryTurretDeployRange = 5;
+        private readonly ModuleProperty bandwidthMax;
+        private BandwidthHandler bandwidthHandler;
 
-        public TurretLauncherModule(CategoryFlags ammoCategoryFlags) : base(ammoCategoryFlags, true)
+        public double BandwidthMax
+        {
+            get { return bandwidthMax.Value; }
+        }
+
+        public RemoteControllerModule(CategoryFlags ammoCategoryFlags) : base(ammoCategoryFlags, true)
         {
             optimalRange.AddEffectModifier(AggregateField.effect_ew_optimal_range_modifier);
-            RemoteController = new RemoteController(this);
+
+            bandwidthMax = new ModuleProperty(this, AggregateField.remote_control_bandwidth_max);
+            this.AddProperty(bandwidthMax);
+
+            InitBandwidthHandler(this);
+        }
+
+        private void InitBandwidthHandler(RemoteControllerModule module)
+        {
+            bandwidthHandler = new BandwidthHandler(module);
+        }
+
+        public void SyncRemoteChannels()
+        {
+            this.bandwidthHandler.Update();
+        }
+
+        [CanBeNull]
+        public RemoteChannel GetRemoteChannel(long channelId)
+        {
+            return bandwidthHandler.GetRemoteChannel(channelId);
+        }
+
+        [CanBeNull]
+        public RemoteChannel GetRemoteChannelByUnit(Unit unit)
+        {
+            return bandwidthHandler.GetRemoteChannelByUnit(unit);
+        }
+
+        public bool HasFreeBandwidthFor(RemoteControlledUnit unit)
+        {
+            return bandwidthHandler.HasFreeBandwidthFor(unit);
+        }
+
+        public void UseRemoteChannel(SentryTurret turret)
+        {
+            bandwidthHandler.UseRemoteChannel(turret);
+            turret.RemoteChannelDeactivated += bandwidthHandler.OnRemoteChannelDeactivated;
+        }
+
+        public void UseRemoteChannel(RemoteChannel newChannel)
+        {
+            bandwidthHandler.UseRemoteChannel(newChannel);
         }
 
         public override void AcceptVisitor(IEntityVisitor visitor)
@@ -35,12 +82,12 @@ namespace Perpetuum.Modules
 
         protected override void OnAction()
         {
-            if (RemoteController == null)
+            if (bandwidthHandler == null)
             {
                 return;
             }
 
-            RemoteController.SyncRemoteChannels();
+            SyncRemoteChannels();
 
             var zone = Zone;
 
@@ -80,11 +127,11 @@ namespace Perpetuum.Modules
                 return;
             }
 
-            var ammo = GetAmmo();
+            var ammo = GetAmmo() as RemoteControlledUnit;
             var fieldTurret = (SentryTurret)Factory.CreateWithRandomEID(ammo.ED.Options.TurretId);
 
-            RemoteController.HasFreeBandwidthOf(fieldTurret).ThrowIfFalse(ErrorCodes.MaxBandwidthExceed);
-            RemoteController.UseRemoteChannel(fieldTurret);
+            HasFreeBandwidthFor(ammo).ThrowIfFalse(ErrorCodes.MaxBandwidthExceed);
+            UseRemoteChannel(fieldTurret);
 
             var despawnTimeMod = ammo.GetPropertyModifier(AggregateField.despawn_time);
 

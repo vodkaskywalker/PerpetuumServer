@@ -23,7 +23,7 @@ using Perpetuum.Timers;
 using Perpetuum.Units;
 using Perpetuum.Zones.DamageProcessors;
 using Perpetuum.Zones.Eggs;
-using Perpetuum.Zones.SentryTurrets;
+using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.Movements;

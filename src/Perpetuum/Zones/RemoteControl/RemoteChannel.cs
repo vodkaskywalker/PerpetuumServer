@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Perpetuum.Timers;
 using Perpetuum.Modules;
 
-namespace Perpetuum.Zones.SentryTurrets
+namespace Perpetuum.Zones.RemoteControl
 {
     public delegate void RemoteChannelEventHandler(SentryTurret turret);
     public delegate void RemoteChannelEventHandler<in T>(RemoteChannel channel, T arg);
@@ -19,14 +19,14 @@ namespace Perpetuum.Zones.SentryTurrets
     {
         public long Id { get; private set; }
 
-        public RemoteChannel(TurretLauncherModule owner, SentryTurret turret)
+        public RemoteChannel(RemoteControllerModule owner, SentryTurret turret)
         {
             Id = FastRandom.NextLong();
             Owner = owner;
             Turret = turret;
         }
 
-        public TurretLauncherModule Owner { get; private set; }
+        public RemoteControllerModule Owner { get; private set; }
 
         public SentryTurret Turret { get; set; }
 

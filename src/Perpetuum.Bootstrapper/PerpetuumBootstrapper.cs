@@ -188,7 +188,7 @@ using Perpetuum.Zones.NpcSystem.Presences.ExpiringStaticPresence;
 using Perpetuum.Zones.NpcSystem.Presences.GrowingPresences;
 using Perpetuum.Items.Helpers;
 using Perpetuum.Zones.LandMines;
-using Perpetuum.Zones.SentryTurrets;
+using Perpetuum.Zones.RemoteControl;
 
 namespace Perpetuum.Bootstrapper
 {
@@ -928,6 +928,7 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<SparkTeleportDevice>();
             RegisterEntity<Ammo>();
             RegisterEntity<WeaponAmmo>();
+            RegisterEntity<RemoteControlledUnit>();
             RegisterEntity<MiningAmmo>();
             RegisterEntity<TileScannerAmmo>();
             RegisterEntity<OneTileScannerAmmo>();
@@ -966,7 +967,7 @@ namespace Perpetuum.Bootstrapper
             RegisterModule<SiegeHackModule>();
             RegisterModule<NeuralyzerModule>();
             RegisterModule<BlobEmissionModulatorModule>();
-            RegisterModule<TurretLauncherModule>();
+            RegisterModule<RemoteControllerModule>();
             RegisterModule<TerraformMultiModule>();
             RegisterModule<WallBuilderModule>();
             RegisterModule<ConstructionModule>();
@@ -1112,6 +1113,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<WeaponAmmo>(CategoryFlags.cf_projectile_ammo);
                 ByCategoryFlags<WeaponAmmo>(CategoryFlags.cf_missile_ammo);
                 ByCategoryFlags<MiningAmmo>(CategoryFlags.cf_mining_ammo);
+                ByCategoryFlags<RemoteControlledUnit>(CategoryFlags.cf_sentry_turret_units);
                 ByCategoryFlags<TileScannerAmmo>(CategoryFlags.cf_mining_probe_ammo_tile);
                 ByCategoryFlags<OneTileScannerAmmo>(CategoryFlags.cf_mining_probe_ammo_one_tile);
                 ByCategoryFlags<ArtifactScannerAmmo>(CategoryFlags.cf_mining_probe_ammo_artifact);
@@ -1198,7 +1200,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<SiegeHackModule>(CategoryFlags.cf_siege_hack_modules);
                 ByCategoryFlags<NeuralyzerModule>(CategoryFlags.cf_neuralyzer);
                 ByCategoryFlags<BlobEmissionModulatorModule>(CategoryFlags.cf_blob_emission_modulator,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_blob_emission_modulator_ammo));
-                ByCategoryFlags<TurretLauncherModule>(CategoryFlags.cf_turret_launchers, new NamedParameter("ammoCategoryFlags", CategoryFlags.cf_turret_launcher_ammo));
+                ByCategoryFlags<RemoteControllerModule>(CategoryFlags.cf_remote_controllers, new NamedParameter("ammoCategoryFlags", CategoryFlags.cf_remote_controlled_units));
                 ByCategoryFlags<WebberModule>(CategoryFlags.cf_webber);
                 ByCategoryFlags<SensorDampenerModule>(CategoryFlags.cf_sensor_dampeners);
                 ByCategoryFlags<RemoteSensorBoosterModule>(CategoryFlags.cf_remote_sensor_boosters);

@@ -1,4 +1,7 @@
-﻿using Perpetuum.Players;
+﻿using Perpetuum.ExportedTypes;
+using Perpetuum.Items;
+using Perpetuum.Items.Ammos;
+using Perpetuum.Players;
 using Perpetuum.Robots;
 using Perpetuum.Units;
 using Perpetuum.Zones.Eggs;
@@ -10,7 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Perpetuum.Zones.SentryTurrets
+namespace Perpetuum.Zones.RemoteControl
 {
     public class SentryTurret : Turret
     {
@@ -18,11 +21,24 @@ namespace Perpetuum.Zones.SentryTurrets
 
         public event RemoteChannelEventHandler RemoteChannelDeactivated;
 
-        public int BandwidthUsage { get; private set; } = 3;
+        private ItemProperty rcBandwidthUsage = ItemProperty.None;
+
+        public double RemoteChannelBandwidthUsage
+        {
+            get { return rcBandwidthUsage.Value; }
+        }
 
         public TimeSpan DespawnTime
         {
             set { _despawnHelper = UnitDespawnHelper.Create(this, value); }
+        }
+
+        public override void Initialize()
+        {
+            rcBandwidthUsage = new UnitProperty(this, AggregateField.remote_control_bandwidth_usage);
+            AddProperty(rcBandwidthUsage);
+
+            base.Initialize();
         }
 
         protected override void OnUpdate(TimeSpan time)

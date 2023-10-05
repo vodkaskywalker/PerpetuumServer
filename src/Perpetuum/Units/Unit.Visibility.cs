@@ -7,7 +7,7 @@ using Perpetuum.Log;
 using Perpetuum.Players;
 using Perpetuum.Robots;
 using Perpetuum.Zones;
-using Perpetuum.Zones.SentryTurrets;
+using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.LandMines;
 using Perpetuum.Zones.NpcSystem;
 

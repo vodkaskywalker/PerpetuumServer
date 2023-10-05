@@ -19,7 +19,7 @@ using Perpetuum.Zones;
 using Perpetuum.Zones.DamageProcessors;
 using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
-using Perpetuum.Zones.SentryTurrets;
+using Perpetuum.Zones.RemoteControl;
 
 namespace Perpetuum.Robots
 {

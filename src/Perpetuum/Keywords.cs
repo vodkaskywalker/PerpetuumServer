@@ -1221,7 +1221,7 @@ namespace Perpetuum
         public const string es_admin_trashcan = "admin_trashcan";
         public const string es_account_bound = "account_bound";
 
-        //Definition of field turret
+        // Definition of field turret
         public const string TurretId = "turretId";
     }
 }

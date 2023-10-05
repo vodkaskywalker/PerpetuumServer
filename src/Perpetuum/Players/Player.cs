@@ -45,7 +45,7 @@ using Perpetuum.Zones.NpcSystem;
 using Perpetuum.Zones.PBS;
 using Perpetuum.Zones.PlantTools;
 using Perpetuum.Zones.ProximityProbes;
-using Perpetuum.Zones.SentryTurrets;
+using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.Teleporting;
 using Perpetuum.Zones.Teleporting.Strategies;
 using Perpetuum.Zones.Terrains;

@@ -15,27 +15,27 @@ using System.Threading;
 using System.Threading.Tasks;
 using Perpetuum.Modules;
 
-namespace Perpetuum.Zones.SentryTurrets
+namespace Perpetuum.Zones.RemoteControl
 {
     public class BandwidthHandler
     {
-        private readonly TurretLauncherModule owner;
+        private readonly RemoteControllerModule owner;
         private List<RemoteChannel> channels = new List<RemoteChannel>();
         private readonly ConcurrentQueue<RemoteChannel> newChannels = new ConcurrentQueue<RemoteChannel>();
         private readonly ConcurrentQueue<RemoteChannel> deactivatedChannels = new ConcurrentQueue<RemoteChannel>();
         private int dirty;
 
-        public BandwidthHandler(TurretLauncherModule owner)
+        public BandwidthHandler(RemoteControllerModule owner)
         {
             this.owner = owner;
         }
 
-        public int BandwidthUsed 
+        public double BandwidthUsed 
         { 
             get
             {
                 return channels.Any()
-                    ? channels.Sum(x => x.Turret?.BandwidthUsage ?? 0)
+                    ? channels.Sum(x => x.Turret?.RemoteChannelBandwidthUsage ?? 0)
                     : 0;
             }
         }
@@ -45,9 +45,9 @@ namespace Perpetuum.Zones.SentryTurrets
             get { return channels; }
         }
 
-        public bool HasFreeBandwidthOf(SentryTurret turret)
+        public bool HasFreeBandwidthFor(RemoteControlledUnit unit)
         {
-            return BandwidthUsed <= owner.RemoteController.BandwidthMax - turret.BandwidthUsage;
+            return BandwidthUsed <= owner.BandwidthMax - unit.RemoteChannelBandwidthUsage;
         }
 
         public void UseRemoteChannel(SentryTurret turret)

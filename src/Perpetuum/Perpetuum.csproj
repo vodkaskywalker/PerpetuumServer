@@ -261,7 +261,7 @@
     <Compile Include="Modules\EffectModules\MineDetectorModule.cs" />
     <Compile Include="Modules\EffectModules\TargetBlinderModule.cs" />
     <Compile Include="Modules\ModulePropertyModifiersReader.cs" />
-    <Compile Include="Modules\TurretLauncherModule.cs" />
+    <Compile Include="Modules\RemoteController.cs" />
     <Compile Include="Network\ClientConnection.cs" />
     <Compile Include="Network\EncryptedTcpConnection.cs" />
     <Compile Include="Network\Http.cs" />
@@ -653,10 +653,9 @@
     <Compile Include="Zones\Effects\ZoneEffects\ZoneEffect.cs" />
     <Compile Include="Zones\Effects\ZoneEffects\ZoneEffectHandler.cs" />
     <Compile Include="Zones\Effects\ZoneEffects\ZoneEffectReader.cs" />
-    <Compile Include="Zones\SentryTurrets\RemoteChannel.cs" />
-    <Compile Include="Zones\SentryTurrets\BandwidthHandler.cs" />
-    <Compile Include="Zones\SentryTurrets\RemoteController.cs" />
-    <Compile Include="Zones\SentryTurrets\SentryTurret.cs" />
+    <Compile Include="Zones\RemoteControl\RemoteChannel.cs" />
+    <Compile Include="Zones\RemoteControl\BandwidthHandler.cs" />
+    <Compile Include="Zones\RemoteControl\SentryTurret.cs" />
     <Compile Include="Zones\Finders\PositionFinders\RandomWalkableAroundPositionFinder.cs" />
     <Compile Include="Zones\Finders\PositionFinders\RandomWalkableOnCircle.cs" />
     <Compile Include="Zones\HarvestLogHandler.cs" />
@@ -959,6 +958,7 @@
     <Compile Include="Zones\Environments\EntityEnvironmentDescription.cs" />
     <Compile Include="Zones\Environments\IEnvironmentHandler.cs" />
     <Compile Include="Zones\Environments\ZoneEnvironmentHandler.cs" />
+    <Compile Include="Zones\RemoteControl\RemoteControlledUnit.cs" />
     <Compile Include="Zones\StrongHoldZone.cs" />
     <Compile Include="Zones\Teleporting\MobileStrongholdTeleport.cs" />
     <Compile Include="Zones\Teleporting\MobileTeleportToZoneMap.cs" />
