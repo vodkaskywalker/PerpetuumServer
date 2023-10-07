@@ -18,12 +18,17 @@ namespace Perpetuum.Modules.Weapons
         private readonly ModuleAction _action;
 
         public ModuleProperty DamageModifier { get; }
+
+        public ModuleProperty RemoteControlDamageModifier { get; }
+
         public ModuleProperty Accuracy { get; }
 
         public WeaponModule(CategoryFlags ammoCategoryFlags) : base(ammoCategoryFlags, true)
         {
             _action = new ModuleAction(this);
             DamageModifier = new ModuleProperty(this,AggregateField.damage_modifier);
+            AddProperty(DamageModifier);
+            RemoteControlDamageModifier = new ModuleProperty(this, AggregateField.remote_control_damage_modifier);
             AddProperty(DamageModifier);
             Accuracy = new ModuleProperty(this, AggregateField.accuracy);
             AddProperty(Accuracy);

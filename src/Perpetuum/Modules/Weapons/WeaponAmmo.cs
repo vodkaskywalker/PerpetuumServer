@@ -3,6 +3,7 @@ using System.Threading;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
 using Perpetuum.Items.Ammos;
+using Perpetuum.Zones.RemoteControl;
 
 namespace Perpetuum.Modules.Weapons
 {
@@ -53,7 +54,9 @@ namespace Perpetuum.Modules.Weapons
                 }
             }
 
-            var damageModifier = weapon.DamageModifier.ToPropertyModifier();
+            var damageModifier = weapon.ParentRobot is SentryTurret
+                ? weapon.RemoteControlDamageModifier.ToPropertyModifier()
+                : weapon.DamageModifier.ToPropertyModifier();
 
             var property = GetPropertyModifier(AggregateField.damage_chemical);
 
