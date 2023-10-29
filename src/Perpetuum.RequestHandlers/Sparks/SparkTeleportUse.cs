@@ -32,7 +32,7 @@ namespace Perpetuum.RequestHandlers.Sparks
                 var character = request.Session.Character;
 
                 character.IsDocked.ThrowIfFalse(ErrorCodes.CharacterHasToBeDocked);
-                character.CheckNextAvailableUndockTimeAndThrowIfFailed();
+                //character.CheckNextAvailableUndockTimeAndThrowIfFailed();
                 //CheckExtensionLevelAndThrowIfFailed(character);
 
                 var sparkTeleport = _sparkTeleportHelper.GetCommon(id);//.Get(id);
