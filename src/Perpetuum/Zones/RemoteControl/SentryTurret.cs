@@ -1,23 +1,17 @@
 ﻿using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
-using Perpetuum.Items.Ammos;
 using Perpetuum.Players;
-using Perpetuum.Robots;
 using Perpetuum.Units;
-using Perpetuum.Zones.Eggs;
-using Perpetuum.Zones.LandMines;
+using Perpetuum.Zones.Beams;
 using Perpetuum.Zones.NpcSystem;
+using Perpetuum.Zones.NpcSystem.AI;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Perpetuum.Zones.RemoteControl
 {
-    public class SentryTurret : Turret
+    public class SentryTurret : SmartCreature
     {
-        private UnitDespawnHelper _despawnHelper;
+        private UnitDespawnHelper despawnHelper;
 
         public event RemoteChannelEventHandler RemoteChannelDeactivated;
 
@@ -30,21 +24,24 @@ namespace Perpetuum.Zones.RemoteControl
 
         public TimeSpan DespawnTime
         {
-            set { _despawnHelper = UnitDespawnHelper.Create(this, value); }
+            set { despawnHelper = UnitDespawnHelper.Create(this, value); }
         }
 
         public override void Initialize()
         {
             rcBandwidthUsage = new UnitProperty(this, AggregateField.remote_control_bandwidth_usage);
             AddProperty(rcBandwidthUsage);
+            Behavior = SmartCreatureBehavior.Create(SmartCreatureBehaviorType.RemoteControlled);
 
             base.Initialize();
         }
 
+        public override bool IsStationary => true;
+
         protected override void OnUpdate(TimeSpan time)
         {
             base.OnUpdate(time);
-            _despawnHelper?.Update(time, this);
+            despawnHelper?.Update(time, this);
         }
 
         protected override bool IsHostileFor(Unit unit)
@@ -74,6 +71,17 @@ namespace Perpetuum.Zones.RemoteControl
         {
             RemoteChannelDeactivated(this);
             base.OnRemovedFromZone(zone);
+        }
+
+        protected override void OnDead(Unit killer)
+        {
+            Zone.CreateBeam(
+                BeamType.arbalest_wreck,
+                builder => builder
+                    .WithPosition(CurrentPosition)
+                    .WithState(BeamState.Hit));
+
+            base.OnDead(killer);
         }
     }
 }

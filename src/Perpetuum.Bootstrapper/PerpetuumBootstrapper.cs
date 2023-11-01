@@ -848,6 +848,7 @@ namespace Perpetuum.Bootstrapper
             RegisterRobot<Player>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
             RegisterRobot<PBSTurret>();
             RegisterRobot<PunchBag>();
+            RegisterRobot<SentryTurret>();
             
             _builder.RegisterType<EntityAggregateServices>().As<IEntityServices>().PropertiesAutowired().SingleInstance();
 
@@ -988,7 +989,7 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<PunchBagDeployer>();
 
             RegisterUnit<BlobEmitterUnit>();
-            RegisterUnit<SentryTurret>();
+            //RegisterUnit<SentryTurret>();
             RegisterUnit<Kiosk>();
             RegisterUnit<AlarmSwitch>();
             RegisterUnit<SimpleSwitch>();

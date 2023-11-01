@@ -47,7 +47,7 @@ namespace Perpetuum.Zones.RemoteControl
 
         public bool HasFreeBandwidthFor(RemoteControlledUnit unit)
         {
-            return BandwidthUsed <= owner.BandwidthMax - unit.RemoteChannelBandwidthUsage;
+            return BandwidthUsed < owner.BandwidthMax - unit.RemoteChannelBandwidthUsage;
         }
 
         public void UseRemoteChannel(SentryTurret turret)

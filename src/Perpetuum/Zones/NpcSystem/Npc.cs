@@ -1,11 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
-using System.Linq;
-using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
 using Perpetuum.Collections;
 using Perpetuum.Data;
 using Perpetuum.EntityFramework;
@@ -23,12 +15,20 @@ using Perpetuum.Timers;
 using Perpetuum.Units;
 using Perpetuum.Zones.DamageProcessors;
 using Perpetuum.Zones.Eggs;
-using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.Movements;
 using Perpetuum.Zones.NpcSystem.Flocks;
+using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.Terrains;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
+using System.Linq;
+using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Perpetuum.Zones.NpcSystem
 {
@@ -159,10 +159,10 @@ namespace Perpetuum.Zones.NpcSystem
         protected override PrimaryLockSelectionStrategySelector InitSelector()
         {
             return PrimaryLockSelectionStrategySelector.Create()
-                .WithStrategy(PrimaryLockStrategy.Hostile, 1)
-                .WithStrategy(PrimaryLockStrategy.Closest, 2)
-                .WithStrategy(PrimaryLockStrategy.OptimalRange, 3)
-                .WithStrategy(PrimaryLockStrategy.Random, 10)
+                .WithStrategy(PrimaryLockSelectionStrategy.Hostile, 1)
+                .WithStrategy(PrimaryLockSelectionStrategy.Closest, 2)
+                .WithStrategy(PrimaryLockSelectionStrategy.OptimalRange, 3)
+                .WithStrategy(PrimaryLockSelectionStrategy.Random, 10)
                 .Build();
         }
 
@@ -202,8 +202,8 @@ namespace Perpetuum.Zones.NpcSystem
         protected virtual PrimaryLockSelectionStrategySelector InitSelector()
         {
             return PrimaryLockSelectionStrategySelector.Create()
-                .WithStrategy(PrimaryLockStrategy.Hostile, 9)
-                .WithStrategy(PrimaryLockStrategy.Random, 1)
+                .WithStrategy(PrimaryLockSelectionStrategy.Hostile, 9)
+                .WithStrategy(PrimaryLockSelectionStrategy.Random, 1)
                 .Build();
         }
 
@@ -413,7 +413,7 @@ namespace Perpetuum.Zones.NpcSystem
         public override void Enter()
         {
             var randomHome = npc.Zone.FindPassablePointInRadius(npc.HomePosition, (int)_maxReturnHomeRadius);
-            if(randomHome == default)
+            if (randomHome == default)
             {
                 randomHome = npc.HomePosition;
             }
@@ -424,7 +424,7 @@ namespace Perpetuum.Zones.NpcSystem
                 {
                     WriteLog("Path not found! (" + npc.CurrentPosition + " => " + npc.HomePosition + ")");
 
-                    var f = new AStarFinder(Heuristic.Manhattan,(x,y) => true);
+                    var f = new AStarFinder(Heuristic.Manhattan, (x, y) => true);
                     path = f.FindPath(npc.CurrentPosition, npc.HomePosition);
 
                     if (path == null)
@@ -463,9 +463,9 @@ namespace Perpetuum.Zones.NpcSystem
 
     public class AggressorAI : CombatAI
     {
-        public AggressorAI(Npc npc) : base(npc){ }
+        public AggressorAI(Npc npc) : base(npc) { }
 
-        protected override void ToAggressorAI(){ }
+        protected override void ToAggressorAI() { }
 
         public override void Exit()
         {
@@ -546,7 +546,7 @@ namespace Perpetuum.Zones.NpcSystem
                             return;
                         }
 
-                        Interlocked.Exchange(ref _nextMovement,new PathMovement(path));
+                        Interlocked.Exchange(ref _nextMovement, new PathMovement(path));
                     });
                 }
             }
@@ -573,14 +573,14 @@ namespace Perpetuum.Zones.NpcSystem
             return Task.Run(() => FindNewAttackPosition(hostile, _source.Token), _source.Token);
         }
 
-        private List<Point> FindNewAttackPosition(Unit hostile,CancellationToken cancellationToken)
+        private List<Point> FindNewAttackPosition(Unit hostile, CancellationToken cancellationToken)
         {
             var end = hostile.CurrentPosition.GetRandomPositionInRange2D(0, npc.BestCombatRange - 1).ToPoint();
 
             npc.StopMoving();
 
             var maxNode = Math.Pow(npc.HomeRange, 2) * Math.PI;
-            var pq = new PriorityQueue<Node>((int) maxNode);
+            var pq = new PriorityQueue<Node>((int)maxNode);
             var startNode = new Node(npc.CurrentPosition);
 
             pq.Enqueue(startNode);
@@ -627,7 +627,7 @@ namespace Perpetuum.Zones.NpcSystem
             return null;
         }
 
-        private bool IsValidAttackPosition(Unit hostile,Point position)
+        private bool IsValidAttackPosition(Unit hostile, Point position)
         {
             var position3 = npc.Zone.FixZ(position.ToPosition()).AddToZ(npc.Height);
 
@@ -792,9 +792,9 @@ namespace Perpetuum.Zones.NpcSystem
             get { return MaxSpeed.IsZero(); }
         }
 
-        public void Tag(Player tagger,TimeSpan duration)
+        public void Tag(Player tagger, TimeSpan duration)
         {
-            _tagHelper.DoTagging(this,tagger,duration);
+            _tagHelper.DoTagging(this, tagger, duration);
         }
 
         [CanBeNull]
@@ -826,7 +826,7 @@ namespace Perpetuum.Zones.NpcSystem
             {
                 if (member == this)
                     continue;
-                member.AddThreat(hostile,t,false);
+                member.AddThreat(hostile, t, false);
             }
         }
 
@@ -864,21 +864,21 @@ namespace Perpetuum.Zones.NpcSystem
             switch (property.Field)
             {
                 case AggregateField.locking_range:
-                {
-                    _optimalCombatRange = new Lazy<int>(CalculateCombatRange);
-                    _maxCombatRange = new Lazy<int>(CalculateMaxCombatRange);
-                    break;
-                }
-                case AggregateField.armor_current:
-                {
-                    var percentage = Armor.Ratio(ArmorMax);
-                    if (percentage <= CALL_FOR_HELP_ARMOR_THRESHOLD)
                     {
-                        CallingForHelp();
+                        _optimalCombatRange = new Lazy<int>(CalculateCombatRange);
+                        _maxCombatRange = new Lazy<int>(CalculateMaxCombatRange);
+                        break;
                     }
+                case AggregateField.armor_current:
+                    {
+                        var percentage = Armor.Ratio(ArmorMax);
+                        if (percentage <= CALL_FOR_HELP_ARMOR_THRESHOLD)
+                        {
+                            CallingForHelp();
+                        }
 
-                    break;
-                }
+                        break;
+                    }
             }
         }
 
@@ -903,7 +903,7 @@ namespace Perpetuum.Zones.NpcSystem
 
             _group?.AddDebugInfoToDictionary(info);
 
-            info.Add("ismission",GetMissionGuid() != Guid.Empty);
+            info.Add("ismission", GetMissionGuid() != Guid.Empty);
 
             return info;
         }
@@ -983,7 +983,7 @@ namespace Perpetuum.Zones.NpcSystem
                 if (EP > 0)
                 {
                     var awardedPlayers = new List<Unit>();
-                    foreach (var hostile in ThreatManager.Hostiles.Where(x=>x.unit is Player))
+                    foreach (var hostile in ThreatManager.Hostiles.Where(x => x.unit is Player))
                     {
                         var playerUnit = hostile.unit;
                         var hostilePlayer = zone.ToPlayerOrGetOwnerPlayer(playerUnit);
@@ -1032,11 +1032,11 @@ namespace Perpetuum.Zones.NpcSystem
 
                 Task.Run(() =>
                 {
-                    MissionHelper.MissionProcessor.NpcGotKilledInAway(missionOwner,missionGuid,info);
+                    MissionHelper.MissionProcessor.NpcGotKilledInAway(missionOwner, missionGuid, info);
                 });
                 return;
             }
-                
+
             //local enqueue, this is the proper player, we can skip gang
             EnqueueKill(missionOwnerPlayer, killerUnit);
         }
@@ -1219,7 +1219,7 @@ namespace Perpetuum.Zones.NpcSystem
 
         private void AddBodyPullThreat(Unit enemy)
         {
-            if ( !IsHostile(enemy))
+            if (!IsHostile(enemy))
                 return;
 
             var helper = new BodyPullThreatHelper(this);
@@ -1250,23 +1250,23 @@ namespace Perpetuum.Zones.NpcSystem
         {
             if (Armor.Ratio(ArmorMax) < CALL_FOR_HELP_ARMOR_THRESHOLD)
                 return;
-            
+
             _threatManager.Clear();
             foreach (var hostile in caller.ThreatManager.Hostiles)
             {
-                AddThreat(hostile.unit,new Threat(ThreatType.Undefined,hostile.Threat),true);
+                AddThreat(hostile.unit, new Threat(ThreatType.Undefined, hostile.Threat), true);
             }
         }
 
         public void AddAssistThreat(Unit assistant, Unit target, Threat threat)
         {
-            if ( !_threatManager.Contains(target) )
+            if (!_threatManager.Contains(target))
                 return;
 
-            if ( !CanAddThreatTo(assistant,threat))
+            if (!CanAddThreatTo(assistant, threat))
                 return;
 
-            AddThreat(assistant,threat,true);
+            AddThreat(assistant, threat, true);
         }
 
         private int CalculateCombatRange()
@@ -1278,7 +1278,7 @@ namespace Perpetuum.Zones.NpcSystem
 
             range *= BEST_COMBAT_RANGE_MODIFIER;
             range = Math.Max(3, range);
-            return (int) range;
+            return (int)range;
         }
 
         private int CalculateMaxCombatRange()
@@ -1293,7 +1293,7 @@ namespace Perpetuum.Zones.NpcSystem
 
         private const double BEST_COMBAT_RANGE_MODIFIER = 0.9;
 
-        private class BodyPullThreatHelper : IEntityVisitor<Player>,IEntityVisitor<AreaBomb>
+        private class BodyPullThreatHelper : IEntityVisitor<Player>, IEntityVisitor<AreaBomb>
         {
             private readonly Npc _npc;
 
@@ -1340,7 +1340,7 @@ namespace Perpetuum.Zones.NpcSystem
                 {
                     var h = _npc.ThreatManager.GetMostHatedHostile();
                     if (h != null)
-                        threat = h.Threat*100;
+                        threat = h.Threat * 100;
                 }
 
                 _npc.AddThreat(bomb, new Threat(ThreatType.Bodypull, threat + FastRandom.NextDouble(0, 5)));

@@ -15,7 +15,7 @@ namespace Perpetuum.Modules
     public class RemoteControllerModule : ActiveModule
     {
         private const int SentryTurretHeight = 7;
-        private const double SentryTurretDeployRange = 5;
+        private const double SentryTurretDeployRange = 2;
         private readonly ModuleProperty bandwidthMax;
         private BandwidthHandler bandwidthHandler;
 
