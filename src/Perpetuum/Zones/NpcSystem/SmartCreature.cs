@@ -14,12 +14,6 @@ using System.Linq;
 
 namespace Perpetuum.Zones.NpcSystem
 {
-    #region move to separate files
-
-
-
-    #endregion
-
     public class SmartCreature : Creature
     {
         private const double AggroRange = 30;
@@ -32,7 +26,7 @@ namespace Perpetuum.Zones.NpcSystem
         private readonly IntervalTimer pseudoUpdateFreq = new IntervalTimer(TimeSpan.FromMilliseconds(650));
         private Lazy<int> maxCombatRange;
         private Lazy<int> optimalCombatRange;
-        private TimeSpan _lastHelpCalled;
+        private TimeSpan lastHelpCalled;
 
         [CanBeNull]
         private ISmartCreatureGroup group;
@@ -378,7 +372,7 @@ namespace Perpetuum.Zones.NpcSystem
                 return;
             }
 
-            if (!GlobalTimer.IsPassed(ref _lastHelpCalled, TimeSpan.FromSeconds(5)))
+            if (!GlobalTimer.IsPassed(ref lastHelpCalled, TimeSpan.FromSeconds(5)))
                 return;
 
             var group = Group;

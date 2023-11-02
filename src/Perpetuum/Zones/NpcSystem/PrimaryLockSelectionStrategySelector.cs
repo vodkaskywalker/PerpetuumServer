@@ -12,13 +12,6 @@ namespace Perpetuum.Zones.NpcSystem
             this.primaryLockSelectionStrategies = primaryLockSelectionStrategies;
         }
 
-        public bool TryUseStrategy(Npc npc, UnitLock[] locks)
-        {
-            var primaryLockSelectionStrategy = primaryLockSelectionStrategies.GetRandom();
-
-            return Strategies.TryInvokeStrategy(primaryLockSelectionStrategy, npc, locks);
-        }
-
         public bool TryUseStrategy(SmartCreature smartCreature, UnitLock[] locks)
         {
             var primaryLockSelectionStrategy = primaryLockSelectionStrategies.GetRandom();

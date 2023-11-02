@@ -183,11 +183,6 @@ namespace Perpetuum.Units
                 return;
             }
 
-            foreach (var npc in unit.GetWitnessUnits<Npc>())
-            {
-                npc.AddAssistThreat(assistant, unit, threat);
-            }
-
             foreach (var smartCreature in unit.GetWitnessUnits<SmartCreature>())
             {
                 smartCreature.AddAssistThreat(assistant, unit, threat);
