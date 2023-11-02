@@ -1,6 +1,6 @@
 ﻿namespace Perpetuum.Zones.NpcSystem.AI
 {
-    public enum SmartCreatureBehaviorType
+    public enum BehaviorType
     {
         Passive,
         Neutral,

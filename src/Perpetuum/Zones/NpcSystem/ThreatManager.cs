@@ -1,11 +1,11 @@
-﻿using System;
+﻿using Perpetuum.Comparers;
+using Perpetuum.Timers;
+using Perpetuum.Units;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
-using Perpetuum.Comparers;
-using Perpetuum.Timers;
-using Perpetuum.Units;
 
 namespace Perpetuum.Zones.NpcSystem
 {
@@ -50,7 +50,7 @@ namespace Perpetuum.Zones.NpcSystem
 
         public static Threat Multiply(Threat threat, double multiplier)
         {
-            return new Threat(threat.type,threat.value * multiplier);
+            return new Threat(threat.type, threat.value * multiplier);
         }
     }
 
@@ -74,7 +74,7 @@ namespace Perpetuum.Zones.NpcSystem
 
         public void AddThreat(Threat threat)
         {
-            if ( threat.value <= 0.0 )
+            if (threat.value <= 0.0)
                 return;
 
             Threat += threat.value;
@@ -121,9 +121,14 @@ namespace Perpetuum.Zones.NpcSystem
     public interface IThreatManager
     {
         bool IsThreatened { get; }
+
         bool Contains(Unit hostile);
+
         void Remove(Hostile hostile);
+
         ImmutableSortedSet<Hostile> Hostiles { get; }
+
+        void Clear();
     }
 
     public static class ThreatExtensions
@@ -137,7 +142,7 @@ namespace Perpetuum.Zones.NpcSystem
 
     public class ThreatManager : IThreatManager
     {
-        private ImmutableDictionary<long,Hostile> _hostiles = ImmutableDictionary<long, Hostile>.Empty;
+        private ImmutableDictionary<long, Hostile> _hostiles = ImmutableDictionary<long, Hostile>.Empty;
 
         public Hostile GetOrAddHostile(Unit unit)
         {
@@ -173,9 +178,9 @@ namespace Perpetuum.Zones.NpcSystem
             ImmutableInterlocked.TryRemove(ref _hostiles, hostile.unit.Eid, out hostile);
         }
 
-         public string ToDebugString()
+        public string ToDebugString()
         {
-            if ( _hostiles.Count == 0 )
+            if (_hostiles.Count == 0)
                 return string.Empty;
 
             var sb = new StringBuilder();
@@ -186,7 +191,7 @@ namespace Perpetuum.Zones.NpcSystem
 
             foreach (var hostile in _hostiles.Values.OrderByDescending(h => h.Threat))
             {
-                sb.AppendFormat("  {0} ({1}) => {2}", hostile.unit.ED.Name,hostile.unit.Eid, hostile.Threat);
+                sb.AppendFormat("  {0} ({1}) => {2}", hostile.unit.ED.Name, hostile.unit.Eid, hostile.Threat);
                 sb.AppendLine();
             }
 
@@ -253,7 +258,7 @@ namespace Perpetuum.Zones.NpcSystem
 
         public void Remove(Unit hostile)
         {
-            lock(_lock)
+            lock (_lock)
                 _pseudoThreats.RemoveAll(x => x.Unit == hostile);
         }
 

@@ -31,7 +31,7 @@ namespace Perpetuum.Zones.RemoteControl
         {
             rcBandwidthUsage = new UnitProperty(this, AggregateField.remote_control_bandwidth_usage);
             AddProperty(rcBandwidthUsage);
-            Behavior = SmartCreatureBehavior.Create(SmartCreatureBehaviorType.RemoteControlled);
+            Behavior = Behavior.Create(BehaviorType.RemoteControlled);
 
             base.Initialize();
         }

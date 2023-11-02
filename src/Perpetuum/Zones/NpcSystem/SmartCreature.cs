@@ -1,4 +1,6 @@
 ﻿using Perpetuum.EntityFramework;
+using Perpetuum.ExportedTypes;
+using Perpetuum.Items;
 using Perpetuum.StateMachines;
 using Perpetuum.Timers;
 using Perpetuum.Units;
@@ -22,28 +24,35 @@ namespace Perpetuum.Zones.NpcSystem
     {
         private const double AggroRange = 30;
         private const double BestComnatRangeModifier = 0.9;
+        private const double CallForHelpArmorThreshold = 0.2;
         private readonly ThreatManager threatManager;
-        private readonly IPseudoThreatManager pseudoThreatManager;
-        private readonly Lazy<int> maxCombatRange;
-        private readonly Lazy<int> optimalCombatRange;
+        private readonly PseudoThreatManager pseudoThreatManager;
         private readonly TimeKeeper debounceBodyPull = new TimeKeeper(TimeSpan.FromSeconds(2.5));
         private readonly TimeKeeper debounceLockChange = new TimeKeeper(TimeSpan.FromSeconds(2.5));
         private readonly IntervalTimer pseudoUpdateFreq = new IntervalTimer(TimeSpan.FromMilliseconds(650));
+        private Lazy<int> maxCombatRange;
+        private Lazy<int> optimalCombatRange;
+        private TimeSpan _lastHelpCalled;
 
         [CanBeNull]
-        private INpcGroup group;
+        private ISmartCreatureGroup group;
 
         public StackFSM AI { get; private set; }
 
-        public SmartCreatureBehavior Behavior { get; set; }
+        public Behavior Behavior { get; set; }
 
         public double HomeRange { get; set; }
 
         public Position HomePosition { get; set; }
 
-        public IThreatManager ThreatManager
+        public ThreatManager ThreatManager
         {
             get { return this.threatManager; }
+        }
+
+        public PseudoThreatManager PseudoThreatManager
+        {
+            get { return pseudoThreatManager; }
         }
 
         public int BestCombatRange
@@ -61,7 +70,7 @@ namespace Perpetuum.Zones.NpcSystem
             get { return CurrentPosition.IsInRangeOf2D(HomePosition, HomeRange); }
         }
 
-        public INpcGroup Group
+        public ISmartCreatureGroup Group
         {
             get { return group; }
         }
@@ -71,10 +80,14 @@ namespace Perpetuum.Zones.NpcSystem
             get { return MaxSpeed.IsZero(); }
         }
 
+        public bool CallForHelp { private get; set; }
+
+        public NpcBossInfo BossInfo { get; set; }
+
         public SmartCreature()
         {
-            maxCombatRange = new Lazy<int>(CalculateMaxCombatRange);
-            optimalCombatRange = new Lazy<int>(CalculateCombatRange);
+            RecalculateMaxCombatRange();
+            RecalculateOptimalCombatRange();
             threatManager = new ThreatManager();
             AI = new StackFSM();
             pseudoThreatManager = new PseudoThreatManager();
@@ -93,9 +106,46 @@ namespace Perpetuum.Zones.NpcSystem
             pseudoThreatManager.AddOrRefreshExisting(hostile);
         }
 
-        public void SetGroup(INpcGroup group)
+        public void SetGroup(ISmartCreatureGroup group)
         {
             this.group = group;
+        }
+
+        public void RecalculateOptimalCombatRange()
+        {
+            optimalCombatRange = new Lazy<int>(CalculateCombatRange);
+        }
+
+        public void RecalculateMaxCombatRange()
+        {
+            maxCombatRange = new Lazy<int>(CalculateMaxCombatRange);
+        }
+
+        protected override void OnPropertyChanged(ItemProperty property)
+        {
+            base.OnPropertyChanged(property);
+
+            switch (property.Field)
+            {
+                case AggregateField.locking_range:
+                    {
+                        RecalculateOptimalCombatRange();
+                        RecalculateMaxCombatRange();
+
+                        break;
+                    }
+                case AggregateField.armor_current:
+                    {
+                        var percentage = Armor.Ratio(ArmorMax);
+
+                        if (percentage <= CallForHelpArmorThreshold)
+                        {
+                            CallingForHelp();
+                        }
+
+                        break;
+                    }
+            }
         }
 
         protected override void OnUnitLockStateChanged(Lock @lock)
@@ -148,7 +198,7 @@ namespace Perpetuum.Zones.NpcSystem
                 return;
             }
 
-            var helper = new SmartCreatureBodyPullThreatHelper(this);
+            var helper = new BodyPullThreatHelper(this);
 
             enemy.AcceptVisitor(helper);
         }
@@ -233,7 +283,7 @@ namespace Perpetuum.Zones.NpcSystem
                 return true;
             }
 
-            if (Behavior.Type == SmartCreatureBehaviorType.Passive)
+            if (Behavior.Type == BehaviorType.Passive)
             {
                 return false;
             }
@@ -268,17 +318,17 @@ namespace Perpetuum.Zones.NpcSystem
 
         protected override void OnEnterZone(IZone zone, ZoneEnterType enterType)
         {
-            States.Aggressive = Behavior.Type == SmartCreatureBehaviorType.Aggressive;
+            States.Aggressive = Behavior.Type == BehaviorType.Aggressive;
 
             base.OnEnterZone(zone, enterType);
 
             if (IsStationary)
             {
-                AI.Push(new SmartCreatureStationaryIdleAI(this));
+                AI.Push(new StationaryIdleAI(this));
             }
             else
             {
-                AI.Push(new SmartCreatureIdleAI(this));
+                AI.Push(new IdleAI(this));
             }
         }
 
@@ -292,7 +342,7 @@ namespace Perpetuum.Zones.NpcSystem
                 return;
             }
 
-            //BossInfo?.OnDamageTaken(this, player);
+            BossInfo?.OnDamageTaken(this, player);
             AddThreat(player, new Threat(ThreatType.Damage, e.TotalDamage * 0.9), true);
         }
 
@@ -318,6 +368,41 @@ namespace Perpetuum.Zones.NpcSystem
             {
                 pseudoThreatManager.Update(pseudoUpdateFreq.Elapsed);
                 pseudoUpdateFreq.Reset();
+            }
+        }
+
+        private void CallingForHelp()
+        {
+            if (!CallForHelp)
+            {
+                return;
+            }
+
+            if (!GlobalTimer.IsPassed(ref _lastHelpCalled, TimeSpan.FromSeconds(5)))
+                return;
+
+            var group = Group;
+            if (group == null)
+                return;
+
+            foreach (var member in group.Members.Where(flockMember => flockMember != this))
+            {
+                member.HelpingFor(this);
+            }
+        }
+
+        private void HelpingFor(SmartCreature caller)
+        {
+            if (Armor.Ratio(ArmorMax) < CallForHelpArmorThreshold)
+            {
+                return;
+            }
+
+            ThreatManager.Clear();
+
+            foreach (var hostile in caller.ThreatManager.Hostiles)
+            {
+                AddThreat(hostile.unit, new Threat(ThreatType.Undefined, hostile.Threat), true);
             }
         }
     }

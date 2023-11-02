@@ -2,9 +2,9 @@
 
 namespace Perpetuum.Zones.NpcSystem.AI
 {
-    public class SmartCreatureStationaryIdleAI : SmartCreatureAI
+    public class StationaryIdleAI : BaseAI
     {
-        public SmartCreatureStationaryIdleAI(SmartCreature smartCreature) : base(smartCreature) { }
+        public StationaryIdleAI(SmartCreature smartCreature) : base(smartCreature) { }
 
         public override void Enter()
         {
@@ -25,12 +25,12 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         protected override void ToAggressorAI()
         {
-            if (this.smartCreature.Behavior.Type == SmartCreatureBehaviorType.Passive)
+            if (this.smartCreature.Behavior.Type == BehaviorType.Passive)
             {
                 return;
             }
 
-            this.smartCreature.AI.Push(new SmartCreatureStationaryCombatAI(this.smartCreature));
+            this.smartCreature.AI.Push(new StationaryCombatAI(this.smartCreature));
         }
     }
 }

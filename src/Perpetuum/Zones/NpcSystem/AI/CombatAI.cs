@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Perpetuum.Zones.NpcSystem.AI
 {
-    public class SmartCreatureCombatAI : SmartCreatureAI
+    public class CombatAI : BaseAI
     {
         private const int UpdateFrequency = 1650;
         private readonly IntervalTimer processHostilesTimer = new IntervalTimer(UpdateFrequency);
@@ -20,7 +20,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         public bool IsNpcHasMissiles { get; set; } = false;
 
-        public SmartCreatureCombatAI(SmartCreature smartCreature) : base(smartCreature) { }
+        public CombatAI(SmartCreature smartCreature) : base(smartCreature) { }
 
         public override void Enter()
         {
@@ -134,7 +134,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return false;
             }
 
-            if (this.smartCreature.Behavior.Type == SmartCreatureBehaviorType.Neutral && hostile.IsExpired)
+            if (this.smartCreature.Behavior.Type == BehaviorType.Neutral && hostile.IsExpired)
             {
                 return false;
             }

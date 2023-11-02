@@ -5,11 +5,11 @@ using System.Diagnostics;
 
 namespace Perpetuum.Zones.NpcSystem.AI
 {
-    public abstract class SmartCreatureAI : IState
+    public abstract class BaseAI : IState
     {
         protected readonly SmartCreature smartCreature;
 
-        protected SmartCreatureAI(SmartCreature smartCreature)
+        protected BaseAI(SmartCreature smartCreature)
         {
             this.smartCreature = smartCreature;
         }
@@ -29,17 +29,17 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         protected virtual void ToHomeAI()
         {
-            this.smartCreature.AI.Push(new SmartCreatureHomingAI(smartCreature));
+            this.smartCreature.AI.Push(new HomingAI(smartCreature));
         }
 
         protected virtual void ToAggressorAI()
         {
-            if (this.smartCreature.Behavior.Type == SmartCreatureBehaviorType.Passive)
+            if (this.smartCreature.Behavior.Type == BehaviorType.Passive)
             {
                 return;
             }
 
-            this.smartCreature.AI.Push(new SmartCreatureAggressorAI(smartCreature));
+            this.smartCreature.AI.Push(new AggressorAI(smartCreature));
         }
 
         [Conditional("DEBUG")]

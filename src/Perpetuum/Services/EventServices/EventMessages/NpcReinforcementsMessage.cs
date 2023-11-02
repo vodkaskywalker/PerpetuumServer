@@ -6,13 +6,14 @@ namespace Perpetuum.Services.EventServices.EventMessages
     {
         public EventType Type => EventType.NpcReinforce;
 
-        public Npc Npc { get; }
+        public SmartCreature SmartCreature { get; }
+
         public int ZoneId { get; }
 
-        public NpcReinforcementsMessage(Npc npc, int zoneID)
+        public NpcReinforcementsMessage(SmartCreature smartCreature, int zoneID)
         {
             ZoneId = zoneID;
-            Npc = npc;
+            SmartCreature = smartCreature;
         }
     }
 }

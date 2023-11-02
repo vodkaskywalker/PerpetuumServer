@@ -7,18 +7,18 @@ using System.Linq;
 
 namespace Perpetuum.Zones.NpcSystem.AI
 {
-    public class SmartCreatureBodyPullThreatHelper : IEntityVisitor<Player>, IEntityVisitor<AreaBomb>, IEntityVisitor<Npc>
+    public class BodyPullThreatHelper : IEntityVisitor<Player>, IEntityVisitor<AreaBomb>, IEntityVisitor<Npc>
     {
         private readonly SmartCreature smartCreature;
 
-        public SmartCreatureBodyPullThreatHelper(SmartCreature smartCreature)
+        public BodyPullThreatHelper(SmartCreature smartCreature)
         {
             this.smartCreature = smartCreature;
         }
 
         public void Visit(Player player)
         {
-            if (smartCreature.Behavior.Type != SmartCreatureBehaviorType.Aggressive)
+            if (smartCreature.Behavior.Type != BehaviorType.Aggressive)
             {
                 return;
             }
@@ -79,7 +79,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         public void Visit(Npc npc)
         {
-            if (smartCreature.Behavior.Type != SmartCreatureBehaviorType.RemoteControlled)
+            if (smartCreature.Behavior.Type != BehaviorType.RemoteControlled)
             {
                 return;
             }

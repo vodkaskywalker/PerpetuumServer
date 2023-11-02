@@ -4,13 +4,13 @@ using System;
 
 namespace Perpetuum.Zones.NpcSystem.AI
 {
-    public class SmartCreatureHomingAI : SmartCreatureCombatAI
+    public class HomingAI : CombatAI
     {
         private PathMovement movement;
         private readonly double maxReturnHomeRadius;
         private readonly PathFinder pathFinder;
 
-        public SmartCreatureHomingAI(SmartCreature smartCreature) : base(smartCreature)
+        public HomingAI(SmartCreature smartCreature) : base(smartCreature)
         {
             this.maxReturnHomeRadius = (smartCreature.HomeRange * 0.4).Clamp(3, 20);
             this.pathFinder = new AStarFinder(Heuristic.Manhattan, smartCreature.IsWalkable);

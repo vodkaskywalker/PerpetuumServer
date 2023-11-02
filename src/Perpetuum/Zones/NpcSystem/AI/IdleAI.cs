@@ -3,11 +3,11 @@ using System;
 
 namespace Perpetuum.Zones.NpcSystem.AI
 {
-    public class SmartCreatureIdleAI : SmartCreatureAI
+    public class IdleAI : BaseAI
     {
         private RandomMovement movement;
 
-        public SmartCreatureIdleAI(SmartCreature smartCreature) : base(smartCreature) { }
+        public IdleAI(SmartCreature smartCreature) : base(smartCreature) { }
 
         public override void Enter()
         {

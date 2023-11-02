@@ -3,10 +3,10 @@ using System;
 
 namespace Perpetuum.Zones.NpcSystem.AI
 {
-    public class SmartCreatureStationaryCombatAI : SmartCreatureCombatAI
+    public class StationaryCombatAI : CombatAI
     {
         private readonly IntervalTimer updateFrequency = new IntervalTimer(650);
-        public SmartCreatureStationaryCombatAI(SmartCreature smartCreature) : base(smartCreature) { }
+        public StationaryCombatAI(SmartCreature smartCreature) : base(smartCreature) { }
 
         protected override PrimaryLockSelectionStrategySelector InitSelector()
         {

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Perpetuum.Zones.NpcSystem.AI
 {
-    public class SmartCreatureAggressorAI : SmartCreatureCombatAI
+    public class AggressorAI : CombatAI
     {
         private Position lastTargetPosition;
         private PathMovement movement;
@@ -20,7 +20,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
         private const int Sqrt2 = 141;
         private const int Weight = 1000;
 
-        public SmartCreatureAggressorAI(SmartCreature smartCreature) : base(smartCreature) { }
+        public AggressorAI(SmartCreature smartCreature) : base(smartCreature) { }
 
         public override void Exit()
         {
@@ -33,7 +33,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
         {
             if (!smartCreature.IsInHomeRange)
             {
-                smartCreature.AI.Push(new SmartCreatureHomingAI(smartCreature));
+                smartCreature.AI.Push(new HomingAI(smartCreature));
 
                 return;
             }
@@ -55,7 +55,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
         private void EnterEvadeMode()
         {
             smartCreature.AI.Pop();
-            smartCreature.AI.Push(new SmartCreatureHomingAI(smartCreature));
+            smartCreature.AI.Push(new HomingAI(smartCreature));
             this.WriteLog("Enter evade mode.");
         }
 
