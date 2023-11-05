@@ -136,7 +136,9 @@ namespace Perpetuum.Robots
                     return base.Health;
                 }
 
-                return Armor.Ratio(ArmorMax) * 100;
+                return ArmorMax > 0.0 && Armor > 0.0
+                    ? Armor.Ratio(ArmorMax) * 100
+                    : base.Health;
             }
         }
 
