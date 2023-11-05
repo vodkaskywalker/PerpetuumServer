@@ -53,7 +53,10 @@ namespace Perpetuum.Services.ProductionEngine.Facilities
 
         public override int GetSlotExtensionBonus(Character character)
         {
-            return (int)character.GetExtensionsBonusSummary(ExtensionNames.PRODUCTION_MAX_PROTOTYPER_SLOTS_BASIC);
+            return (int)character.GetExtensionsBonusSummary(
+                ExtensionNames.PRODUCTION_MAX_PROTOTYPER_SLOTS_BASIC,
+                ExtensionNames.PRODUCTION_MAX_PROTOTYPER_SLOTS_ADVANCED,
+                ExtensionNames.PRODUCTION_MAX_PROTOTYPER_SLOTS_EXPERT);
         }
 
         public override int RealMaxSlotsPerCharacter(Character character)
