@@ -11,6 +11,7 @@ using Perpetuum.ExportedTypes;
 
 using Perpetuum.Groups.Corporations;
 using Perpetuum.Items;
+using Perpetuum.Items.Helpers;
 using Perpetuum.Log;
 using Perpetuum.Services.ProductionEngine.Facilities;
 using Perpetuum.Units.DockingBases;
