@@ -1,14 +1,15 @@
 ﻿using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
+using Perpetuum.Units;
+using Perpetuum.Zones;
 using Perpetuum.Zones.Beams;
+using Perpetuum.Zones.Effects;
+using Perpetuum.Zones.Finders;
 using Perpetuum.Zones.Finders.PositionFinders;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.RemoteControl;
-using Perpetuum.Zones;
 using System;
 using System.Linq;
-using Perpetuum.Zones.Finders;
-using Perpetuum.Units;
 
 namespace Perpetuum.Modules
 {
@@ -18,6 +19,7 @@ namespace Perpetuum.Modules
         private const double SentryTurretDeployRange = 2;
         private readonly ModuleProperty bandwidthMax;
         private BandwidthHandler bandwidthHandler;
+        protected readonly EffectToken effectToken = EffectToken.NewToken();
 
         public double BandwidthMax
         {
@@ -44,7 +46,7 @@ namespace Perpetuum.Modules
 
         public void SyncRemoteChannels()
         {
-            this.bandwidthHandler.Update();
+            bandwidthHandler.Update();
         }
 
         [CanBeNull]
@@ -68,6 +70,7 @@ namespace Perpetuum.Modules
         {
             bandwidthHandler.UseRemoteChannel(turret);
             turret.RemoteChannelDeactivated += bandwidthHandler.OnRemoteChannelDeactivated;
+            bandwidthHandler.Update();
         }
 
         public void UseRemoteChannel(RemoteChannel newChannel)
@@ -119,8 +122,12 @@ namespace Perpetuum.Modules
             }
 
             Position targetPosition = lockPosition.Value;
-            zone.Units.OfType<SentryTurret>().WithinRange(targetPosition, SentryTurretDeployRange).Any().ThrowIfTrue(ErrorCodes.BlobEmitterInRange);
-            
+            zone.Units
+                .OfType<SentryTurret>()
+                .WithinRange(targetPosition, SentryTurretDeployRange)
+                .Any()
+                .ThrowIfTrue(ErrorCodes.BlobEmitterInRange);
+
             var r = zone.IsInLineOfSight(ParentRobot, targetPosition, false);
 
             if (r.hit)
@@ -133,13 +140,17 @@ namespace Perpetuum.Modules
             var ammo = GetAmmo() as RemoteControlledUnit;
             var fieldTurret = (SentryTurret)Factory.CreateWithRandomEID(ammo.ED.Options.TurretId);
 
+            fieldTurret.Owner = this.ParentRobot.Eid;
+
             HasFreeBandwidthFor(ammo).ThrowIfFalse(ErrorCodes.MaxBandwidthExceed);
             UseRemoteChannel(fieldTurret);
 
             var despawnTimeMod = ammo.GetPropertyModifier(AggregateField.despawn_time);
 
             fieldTurret.DespawnTime = TimeSpan.FromMilliseconds(despawnTimeMod.Value);
-            
+
+            fieldTurret.SetGroup(bandwidthHandler);
+
             var finder = new ClosestWalkablePositionFinder(zone, targetPosition);
             var position = finder.FindOrThrow();
             var beamBuilder = Beam.NewBuilder()
@@ -149,7 +160,18 @@ namespace Perpetuum.Modules
 
             fieldTurret.AddToZone(zone, position, ZoneEnterType.Default, beamBuilder);
 
+            var effectBuilder = this.ParentRobot.NewEffectBuilder();
+
+            SetupEffect(effectBuilder);
+            effectBuilder.WithToken(effectToken);
+            this.ParentRobot.ApplyEffect(effectBuilder);
+
             ConsumeAmmo();
+        }
+
+        protected void SetupEffect(EffectBuilder effectBuilder)
+        {
+            effectBuilder.SetType(EffectType.effect_remote_control);
         }
     }
 }

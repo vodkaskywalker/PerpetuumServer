@@ -1,13 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
-using Perpetuum.Builders;
+﻿using Perpetuum.Builders;
 using Perpetuum.Collections.Spatial;
 using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
@@ -24,13 +15,22 @@ using Perpetuum.Zones.Blobs;
 using Perpetuum.Zones.DamageProcessors;
 using Perpetuum.Zones.Effects;
 using Perpetuum.Zones.Eggs;
-using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.Gates;
 using Perpetuum.Zones.Locking;
+using Perpetuum.Zones.NpcSystem;
 using Perpetuum.Zones.PBS;
 using Perpetuum.Zones.PBS.DockingBases;
 using Perpetuum.Zones.PBS.Turrets;
-using Perpetuum.Zones.NpcSystem;
+using Perpetuum.Zones.RemoteControl;
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Perpetuum.Units
 {
@@ -50,13 +50,13 @@ namespace Perpetuum.Units
             var speedMaxMod = _owner.GetPropertyModifier(AggregateField.speed_max_modifier);
             speedMaxMod.Modify(ref speedMax);
 
-            _owner.ApplyEffectPropertyModifiers(AggregateField.effect_speed_max_modifier,ref speedMax);
-            _owner.ApplyEffectPropertyModifiers(AggregateField.effect_massivness_speed_max_modifier,ref speedMax);
+            _owner.ApplyEffectPropertyModifiers(AggregateField.effect_speed_max_modifier, ref speedMax);
+            _owner.ApplyEffectPropertyModifiers(AggregateField.effect_massivness_speed_max_modifier, ref speedMax);
 
             if (_owner.ActualMass > 0)
                 speedMax.Multiply(_owner.Mass / _owner.ActualMass);
 
-            _owner.ApplyEffectPropertyModifiers(AggregateField.effect_speed_highway_modifier,ref speedMax);
+            _owner.ApplyEffectPropertyModifiers(AggregateField.effect_speed_highway_modifier, ref speedMax);
             return speedMax.Value;
         }
 
@@ -76,10 +76,10 @@ namespace Perpetuum.Units
         }
     }
 
-    
+
     public delegate void UnitEventHandler(Unit unit);
     public delegate void UnitEventHandler<in T>(Unit unit, T args);
-    public delegate void UnitEventHandler<in T1,in T2>(Unit unit, T1 args1, T2 args2);
+    public delegate void UnitEventHandler<in T1, in T2>(Unit unit, T1 args1, T2 args2);
 
     public abstract partial class Unit : Item
     {
@@ -119,7 +119,7 @@ namespace Perpetuum.Units
         private ItemProperty _reactorRadiation;
         private ItemProperty _signatureRadius;
         private ItemProperty _slope;
-        
+
         private readonly Lazy<double> _height;
 
         protected Unit()
@@ -187,7 +187,7 @@ namespace Perpetuum.Units
             get => _currentSpeed;
             set
             {
-                if ( Math.Abs(_currentSpeed - value) < double.Epsilon )
+                if (Math.Abs(_currentSpeed - value) < double.Epsilon)
                     return;
 
                 _currentSpeed = value;
@@ -200,7 +200,7 @@ namespace Perpetuum.Units
             get => _direction;
             set
             {
-                if ( Math.Abs(_direction - value) < double.Epsilon )
+                if (Math.Abs(_direction - value) < double.Epsilon)
                     return;
 
                 _direction = value;
@@ -213,7 +213,7 @@ namespace Perpetuum.Units
             get => _orientation;
             set
             {
-                if ( Math.Abs(_orientation - value) < double.Epsilon )
+                if (Math.Abs(_orientation - value) < double.Epsilon)
                     return;
 
                 _orientation = value;
@@ -229,7 +229,7 @@ namespace Perpetuum.Units
         {
             get
             {
-                if ( !ED.AttributeFlags.NonAttackable && !States.Dead)
+                if (!ED.AttributeFlags.NonAttackable && !States.Dead)
                     return ErrorCodes.NoError;
 
                 return ErrorCodes.TargetIsNonAttackable;
@@ -251,6 +251,8 @@ namespace Perpetuum.Units
         public bool HasDespawnEffect => EffectHandler.ContainsEffect(EffectType.effect_despawn_timer);
 
         public bool HasNoTeleportWhilePVP => EffectHandler.Effects.Any(e => e.PropertyModifiers.Any(p => p.Field == AggregateField.pvp_no_teleport));
+
+        public bool HasRemoteControlEffect => EffectHandler.ContainsEffect(EffectType.effect_remote_control);
 
         public Position WorldPosition
         {
@@ -300,7 +302,7 @@ namespace Perpetuum.Units
         /// </summary>
         public void Update(TimeSpan time)
         {
-            if ( !InZone || States.Dead )
+            if (!InZone || States.Dead)
                 return;
 
             OnUpdate(time);
@@ -310,7 +312,7 @@ namespace Perpetuum.Units
 
         protected virtual void OnUpdate(TimeSpan time)
         {
-            _coreRecharger.RechargeCore(this,time);
+            _coreRecharger.RechargeCore(this, time);
 
             EffectHandler.Update(time);
 
@@ -362,7 +364,7 @@ namespace Perpetuum.Units
             BroadcastPacket?.Invoke(this, packetBuilder.Build());
         }
 
-        protected virtual void OnEffectChanged(Effect effect,bool apply)
+        protected virtual void OnEffectChanged(Effect effect, bool apply)
         {
             EffectChanged?.Invoke(this, effect, apply);
 
@@ -376,15 +378,15 @@ namespace Perpetuum.Units
 
         public void SendRefreshUnitPacket()
         {
-            OnBroadcastPacket(UnitEnterPacketBuilder.Create(this,ZoneEnterType.Update).ToProxy());
+            OnBroadcastPacket(UnitEnterPacketBuilder.Create(this, ZoneEnterType.Update).ToProxy());
         }
 
-        public void AddToZone(IZone zone,Position position,ZoneEnterType enterType = ZoneEnterType.Default,IBeamBuilder enterBeamBuilder = null)
+        public void AddToZone(IZone zone, Position position, ZoneEnterType enterType = ZoneEnterType.Default, IBeamBuilder enterBeamBuilder = null)
         {
             _zone = zone;
             CurrentPosition = zone.FixZ(position);
 
-            OnEnterZone(zone,enterType);
+            OnEnterZone(zone, enterType);
 
             zone.AddUnit(this);
 
@@ -403,7 +405,7 @@ namespace Perpetuum.Units
         public void RemoveFromZone(IBeamBuilder exitBeamBuilder = null)
         {
             IZone zone;
-            if ((zone = Interlocked.CompareExchange(ref _zone,null,_zone)) == null)
+            if ((zone = Interlocked.CompareExchange(ref _zone, null, _zone)) == null)
                 return;
 
             Debug.Assert(zone != null, "zone != null");
@@ -429,7 +431,7 @@ namespace Perpetuum.Units
 
         protected virtual void OnDamageTaken(Unit source, DamageTakenEventArgs e)
         {
-            DamageTaken?.Invoke(this,source, e);
+            DamageTaken?.Invoke(this, source, e);
 
             var packet = new CombatLogPacket(CombatLogType.Damage, this, source);
             packet.AppendByte((byte)(e.IsCritical ? 1 : 0));
@@ -442,7 +444,7 @@ namespace Perpetuum.Units
 
             Armor -= e.TotalDamage;
 
-            OnCombatEvent(source,e);
+            OnCombatEvent(source, e);
 
             if (Armor <= 0.0)
             {
@@ -452,7 +454,7 @@ namespace Perpetuum.Units
 
         public virtual void OnCombatEvent(Unit source, CombatEventArgs e)
         {
-            
+
         }
 
 
@@ -476,10 +478,10 @@ namespace Perpetuum.Units
         protected virtual void DoExplosion()
         {
             var zone = Zone;
-            if ( zone == null )
+            if (zone == null)
                 return;
 
-            if ( zone.Configuration.Protected )
+            if (zone.Configuration.Protected)
                 return;
 
             var damageBuilder = GetExplosionDamageBuilder();
@@ -521,7 +523,7 @@ namespace Perpetuum.Units
             return damageBuilder;
         }
 
-        private class KillDetectorHelper : IEntityVisitor<PBSTurret>,IEntityVisitor<PBSDockingBase>,IEntityVisitor<PBSObject>
+        private class KillDetectorHelper : IEntityVisitor<PBSTurret>, IEntityVisitor<PBSDockingBase>, IEntityVisitor<PBSObject>
         {
             public KillDetectorHelper()
             {
@@ -554,7 +556,7 @@ namespace Perpetuum.Units
 
         public void Kill(Unit killer = null)
         {
-            if (!Monitor.TryEnter(_killSync) )
+            if (!Monitor.TryEnter(_killSync))
                 return;
 
             try
@@ -591,11 +593,11 @@ namespace Perpetuum.Units
             return true;
         }
 
-        public event Action<Unit /* killer */,Unit /* victim */> Dead;
+        public event Action<Unit /* killer */, Unit /* victim */> Dead;
 
         protected virtual void OnDead(Unit killer)
         {
-            Dead?.Invoke(killer,this);
+            Dead?.Invoke(killer, this);
 
             DoExplosion();
 
@@ -620,13 +622,13 @@ namespace Perpetuum.Units
             TileChanged?.Invoke(this);
         }
 
-        protected virtual void OnCellChanged(CellCoord lastCellCoord, CellCoord currentCellCoord) {}
+        protected virtual void OnCellChanged(CellCoord lastCellCoord, CellCoord currentCellCoord) { }
 
         public override Dictionary<string, object> ToDictionary()
         {
             var result = base.ToDictionary();
 
-            if (!InZone) 
+            if (!InZone)
                 return result;
 
             result.Add(k.px, CurrentPosition.X);
@@ -711,17 +713,17 @@ namespace Perpetuum.Units
 
         public virtual bool IsWalkable(Vector2 position)
         {
-            return Zone.IsWalkable((int) position.X, (int) position.Y, Slope);
+            return Zone.IsWalkable((int)position.X, (int)position.Y, Slope);
         }
 
         public virtual bool IsWalkable(Position position)
         {
-            return Zone.IsWalkable((int) position.X,(int)position.Y, Slope);
+            return Zone.IsWalkable((int)position.X, (int)position.Y, Slope);
         }
 
-        public virtual bool IsWalkable(int x,int y)
+        public virtual bool IsWalkable(int x, int y)
         {
-            return Zone.IsWalkable(x, y,Slope);
+            return Zone.IsWalkable(x, y, Slope);
         }
 
         public virtual IDictionary<string, object> GetDebugInfo()
@@ -761,7 +763,7 @@ namespace Perpetuum.Units
             private readonly ZoneEnterType _enterType;
             private readonly Unit _unit;
 
-            private UnitEnterPacketBuilder(Unit unit,ZoneEnterType enterType)
+            private UnitEnterPacketBuilder(Unit unit, ZoneEnterType enterType)
             {
                 _unit = unit;
                 _enterType = enterType;
@@ -800,7 +802,7 @@ namespace Perpetuum.Units
                     if (primaryLock != null)
                     {
                         packet.AppendByte(1);
-                        LockPacketBuilder.AppendTo(primaryLock,packet);
+                        LockPacketBuilder.AppendTo(primaryLock, packet);
                     }
                     else
                     {
@@ -851,12 +853,12 @@ namespace Perpetuum.Units
                 if (component == null)
                 {
                     bw.Write(0);
-                    bw.Write((byte) 0);
+                    bw.Write((byte)0);
                     return;
                 }
 
                 bw.Write(component.Definition);
-                bw.Write((byte) component.MaxSlots);
+                bw.Write((byte)component.MaxSlots);
 
                 for (var i = 0; i < component.MaxSlots; i++)
                 {
@@ -873,7 +875,7 @@ namespace Perpetuum.Units
 
             public static IBuilder<Packet> Create(Unit unit, ZoneEnterType enterType)
             {
-                return new UnitEnterPacketBuilder(unit,enterType);
+                return new UnitEnterPacketBuilder(unit, enterType);
             }
         }
 
@@ -920,13 +922,13 @@ namespace Perpetuum.Units
             return unit.IsHostileFor(this);
         }
 
-        protected virtual bool IsHostileFor(Unit unit)  { return false; }
-        
-        internal  virtual bool IsHostile(Player player) { return false; }
-        
-        internal  virtual bool IsHostile(AreaBomb bomb) { return false; }
-        
-        internal  virtual bool IsHostile(Gate gate)     { return false; }
+        protected virtual bool IsHostileFor(Unit unit) { return false; }
+
+        internal virtual bool IsHostile(Player player) { return false; }
+
+        internal virtual bool IsHostile(AreaBomb bomb) { return false; }
+
+        internal virtual bool IsHostile(Gate gate) { return false; }
 
         internal virtual bool IsHostile(SentryTurret turret) { return false; }
 

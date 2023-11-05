@@ -6,5 +6,6 @@
         Hostile,
         Closest,
         OptimalRange,
+        HostileOrClosest,
     }
 }

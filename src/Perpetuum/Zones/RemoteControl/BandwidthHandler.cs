@@ -1,23 +1,16 @@
-﻿using Perpetuum.Accounting.Characters;
-using Perpetuum.ExportedTypes;
-using Perpetuum.Items;
-using Perpetuum.Robots;
+﻿using Perpetuum.Items;
+using Perpetuum.Modules;
 using Perpetuum.Units;
-using Perpetuum.Zones.Blobs;
-using Perpetuum.Zones.Locking.Locks;
-using Perpetuum.Zones.Locking;
-using System;
+using Perpetuum.Zones.NpcSystem;
+using Perpetuum.Zones.NpcSystem.Flocks;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using Perpetuum.Modules;
 
 namespace Perpetuum.Zones.RemoteControl
 {
-    public class BandwidthHandler
+    public class BandwidthHandler : ISmartCreatureGroup
     {
         private readonly RemoteControllerModule owner;
         private List<RemoteChannel> channels = new List<RemoteChannel>();
@@ -25,13 +18,17 @@ namespace Perpetuum.Zones.RemoteControl
         private readonly ConcurrentQueue<RemoteChannel> deactivatedChannels = new ConcurrentQueue<RemoteChannel>();
         private int dirty;
 
+        public string Name => owner.GetCharacter().Nick;
+
+        public IEnumerable<SmartCreature> Members => channels.Select(x => x.Turret);
+
         public BandwidthHandler(RemoteControllerModule owner)
         {
             this.owner = owner;
         }
 
-        public double BandwidthUsed 
-        { 
+        public double BandwidthUsed
+        {
             get
             {
                 return channels.Any()
@@ -64,11 +61,14 @@ namespace Perpetuum.Zones.RemoteControl
         public void OnRemoteChannelDeactivated(SentryTurret turret)
         {
             var channel = GetRemoteChannelByUnit(turret);
+
             if (channel != null)
             {
                 ReleaseRemoteChannel(channel);
                 turret.RemoteChannelDeactivated -= OnRemoteChannelDeactivated;
             }
+
+            Update();
         }
 
         private void ReleaseRemoteChannel(RemoteChannel channel)
@@ -80,6 +80,7 @@ namespace Perpetuum.Zones.RemoteControl
         private void ProcessReleasedChannels(IList<RemoteChannel> channels)
         {
             RemoteChannel releasedChannel;
+
             while (deactivatedChannels.TryDequeue(out releasedChannel))
             {
                 channels.Remove(releasedChannel);
@@ -91,6 +92,7 @@ namespace Perpetuum.Zones.RemoteControl
             if (Interlocked.CompareExchange(ref dirty, 0, 1) == 1)
             {
                 var channelsToProcess = this.channels.ToList();
+
                 try
                 {
                     ProcessReleasedChannels(channelsToProcess);
@@ -132,6 +134,11 @@ namespace Perpetuum.Zones.RemoteControl
         public RemoteChannel GetRemoteChannelByUnit(Unit unit)
         {
             return GetRemoteChannelByEid(unit.Eid);
+        }
+
+        public void AddDebugInfoToDictionary(IDictionary<string, object> dictionary)
+        {
+            // Do nothing
         }
 
         [CanBeNull]

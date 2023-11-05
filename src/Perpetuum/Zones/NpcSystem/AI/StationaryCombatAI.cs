@@ -6,6 +6,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
     public class StationaryCombatAI : CombatAI
     {
         private readonly IntervalTimer updateFrequency = new IntervalTimer(650);
+
         public StationaryCombatAI(SmartCreature smartCreature) : base(smartCreature) { }
 
         protected override PrimaryLockSelectionStrategySelector InitSelector()
@@ -32,7 +33,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
             if (updateFrequency.Passed)
             {
                 updateFrequency.Reset();
-                this.smartCreature.LookingForHostiles();
+                smartCreature.LookingForHostiles();
             }
         }
 

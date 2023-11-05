@@ -1,6 +1,8 @@
 ﻿using Perpetuum.ExportedTypes;
+using Perpetuum.Groups.Corporations;
 using Perpetuum.Items;
 using Perpetuum.Players;
+using Perpetuum.Services.Standing;
 using Perpetuum.Units;
 using Perpetuum.Zones.Beams;
 using Perpetuum.Zones.NpcSystem;
@@ -12,6 +14,9 @@ namespace Perpetuum.Zones.RemoteControl
     public class SentryTurret : SmartCreature
     {
         private UnitDespawnHelper despawnHelper;
+        private const double SentryTurretCallForHelpArmorThreshold = 0.8;
+        private readonly IStandingHandler standingHandler;
+        private const double StandingLimit = 0.0;
 
         public event RemoteChannelEventHandler RemoteChannelDeactivated;
 
@@ -27,6 +32,11 @@ namespace Perpetuum.Zones.RemoteControl
             set { despawnHelper = UnitDespawnHelper.Create(this, value); }
         }
 
+        public SentryTurret(IStandingHandler standingHandler)
+        {
+            this.standingHandler = standingHandler;
+        }
+
         public override void Initialize()
         {
             rcBandwidthUsage = new UnitProperty(this, AggregateField.remote_control_bandwidth_usage);
@@ -37,6 +47,8 @@ namespace Perpetuum.Zones.RemoteControl
         }
 
         public override bool IsStationary => true;
+
+        public override double CallForHelpArmorThreshold => SentryTurretCallForHelpArmorThreshold;
 
         protected override void OnUpdate(TimeSpan time)
         {
@@ -51,7 +63,12 @@ namespace Perpetuum.Zones.RemoteControl
 
         internal override bool IsHostile(Player player)
         {
-            return false;
+            if (Owner == player.Eid)
+            {
+                return false;
+            }
+
+            return IsHostileCorporation(player.CorporationEid);
         }
 
         internal override bool IsHostile(Npc npc)
@@ -82,6 +99,18 @@ namespace Perpetuum.Zones.RemoteControl
                     .WithState(BeamState.Hit));
 
             base.OnDead(killer);
+        }
+
+        private bool IsHostileCorporation(long corporationEid)
+        {
+            if (DefaultCorporationDataCache.IsCorporationDefault(corporationEid))
+            {
+                return true;
+            }
+
+            var standing = standingHandler.GetStanding(Owner, corporationEid);
+
+            return StandingLimit >= standing;
         }
     }
 }

@@ -9,6 +9,7 @@ using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.NpcSystem.AI;
 using Perpetuum.Zones.NpcSystem.Flocks;
+using Perpetuum.Zones.RemoteControl;
 using System;
 using System.Linq;
 
@@ -18,7 +19,7 @@ namespace Perpetuum.Zones.NpcSystem
     {
         private const double AggroRange = 30;
         private const double BestComnatRangeModifier = 0.9;
-        private const double CallForHelpArmorThreshold = 0.2;
+        private const double BaseCallForHelpArmorThreshold = 0.2;
         private readonly ThreatManager threatManager;
         private readonly PseudoThreatManager pseudoThreatManager;
         private readonly TimeKeeper debounceBodyPull = new TimeKeeper(TimeSpan.FromSeconds(2.5));
@@ -73,6 +74,8 @@ namespace Perpetuum.Zones.NpcSystem
         {
             get { return MaxSpeed.IsZero(); }
         }
+
+        public virtual double CallForHelpArmorThreshold => BaseCallForHelpArmorThreshold;
 
         public bool CallForHelp { private get; set; }
 
@@ -293,7 +296,9 @@ namespace Perpetuum.Zones.NpcSystem
             }
 
             if (!CanAddThreatTo(assistant, threat))
+            {
                 return;
+            }
 
             AddThreat(assistant, threat, true);
         }
@@ -301,7 +306,9 @@ namespace Perpetuum.Zones.NpcSystem
         public override void AcceptVisitor(IEntityVisitor visitor)
         {
             if (!TryAcceptVisitor(this, visitor))
+            {
                 base.AcceptVisitor(visitor);
+            }
         }
 
         protected override void OnTileChanged()
@@ -316,7 +323,11 @@ namespace Perpetuum.Zones.NpcSystem
 
             base.OnEnterZone(zone, enterType);
 
-            if (IsStationary)
+            if (this is SentryTurret)
+            {
+                AI.Push(new SentryTurretCombatAI(this));
+            }
+            else if (IsStationary)
             {
                 AI.Push(new StationaryIdleAI(this));
             }
@@ -331,6 +342,7 @@ namespace Perpetuum.Zones.NpcSystem
             base.OnDamageTaken(source, e);
 
             var player = Zone.ToPlayerOrGetOwnerPlayer(source);
+
             if (player == null)
             {
                 return;
@@ -373,11 +385,16 @@ namespace Perpetuum.Zones.NpcSystem
             }
 
             if (!GlobalTimer.IsPassed(ref lastHelpCalled, TimeSpan.FromSeconds(5)))
+            {
                 return;
+            }
 
             var group = Group;
+
             if (group == null)
+            {
                 return;
+            }
 
             foreach (var member in group.Members.Where(flockMember => flockMember != this))
             {

@@ -14,7 +14,8 @@ namespace Perpetuum.Zones.NpcSystem
             { PrimaryLockSelectionStrategy.Random, TargetRandom },
             { PrimaryLockSelectionStrategy.Hostile, TargetMostHated },
             { PrimaryLockSelectionStrategy.Closest, TargetClosest },
-            { PrimaryLockSelectionStrategy.OptimalRange, TargetWithinOptimal }
+            { PrimaryLockSelectionStrategy.OptimalRange, TargetWithinOptimal },
+            { PrimaryLockSelectionStrategy.HostileOrClosest, TargetMostHatedOrClosest },
         };
 
         public static TargetSelectionStrategy GetStrategy(PrimaryLockSelectionStrategy strategyType)
@@ -62,6 +63,11 @@ namespace Perpetuum.Zones.NpcSystem
         private static bool TargetRandom(SmartCreature smartCreature, UnitLock[] locks)
         {
             return TrySetPrimaryLock(smartCreature, locks.RandomElement());
+        }
+
+        private static bool TargetMostHatedOrClosest(SmartCreature smartCreature, UnitLock[] locks)
+        {
+            return TargetMostHated(smartCreature, locks) || TargetClosest(smartCreature, locks);
         }
 
         private static bool TrySetPrimaryLock(SmartCreature smartCreature, Lock targetLock)

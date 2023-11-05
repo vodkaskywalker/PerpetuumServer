@@ -276,7 +276,9 @@
     <Compile Include="PathFinders\PathFinder.cs" />
     <Compile Include="PathFinders\PathFinderNodeType.cs" />
     <Compile Include="PerpetuumException.cs" />
+    <Compile Include="Players\ErrorPacketBuilder.cs" />
     <Compile Include="Players\PlayerMoveChecker.cs" />
+    <Compile Include="Players\PlayerMovement.cs" />
     <Compile Include="PointExtensions.cs" />
     <Compile Include="Position.cs" />
     <Compile Include="ProducerConsumerCollectionExtensions.cs" />
@@ -665,6 +667,8 @@
     <Compile Include="Zones\NpcSystem\AI\NeutralBehavior.cs" />
     <Compile Include="Zones\NpcSystem\AI\PassiveBehavior.cs" />
     <Compile Include="Zones\NpcSystem\AI\RemoteControlledBehavior.cs" />
+    <Compile Include="Zones\NpcSystem\AI\SentryTurretCombatAI.cs" />
+    <Compile Include="Zones\NpcSystem\AI\SentryTurretIdleAI.cs" />
     <Compile Include="Zones\NpcSystem\AI\StationaryCombatAI.cs" />
     <Compile Include="Zones\NpcSystem\AI\StationaryIdleAI.cs" />
     <Compile Include="Zones\NpcSystem\Flocks\ISmartCreatureGroup.cs" />

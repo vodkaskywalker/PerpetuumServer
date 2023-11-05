@@ -1,12 +1,12 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Perpetuum.Containers;
+﻿using Perpetuum.Containers;
 using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
 using Perpetuum.Players;
 using Perpetuum.Robots;
 using Perpetuum.Zones;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Perpetuum.Modules
 {
@@ -19,11 +19,11 @@ namespace Perpetuum.Modules
         {
             _powerGridUsage = new ModuleProperty(this, AggregateField.powergrid_usage);
             AddProperty(_powerGridUsage);
-            _cpuUsage = new ModuleProperty(this,AggregateField.cpu_usage);
+            _cpuUsage = new ModuleProperty(this, AggregateField.cpu_usage);
             AddProperty(_cpuUsage);
         }
 
-        public ILookup<AggregateField,AggregateField> PropertyModifiers { get; set; }
+        public ILookup<AggregateField, AggregateField> PropertyModifiers { get; set; }
 
         public double PowerGridUsage
         {
@@ -63,7 +63,7 @@ namespace Perpetuum.Modules
         public int Slot
         {
             get { return DynamicProperties.GetOrDefault<int>(k.slot); }
-            set { DynamicProperties.Update(k.slot,value); }
+            set { DynamicProperties.Update(k.slot, value); }
         }
 
         public long ModuleFlag
@@ -85,7 +85,7 @@ namespace Perpetuum.Modules
             var result = base.ToDictionary();
 
             result.Add(k.slot, Slot);
-            result.Add(k.state, (byte) ModuleStateType.Idle);
+            result.Add(k.state, (byte)ModuleStateType.Idle);
 
             return result;
         }
@@ -109,7 +109,7 @@ namespace Perpetuum.Modules
             var packet = new Packet(ZoneCommand.ModuleInfoResult);
 
             packet.AppendByte((byte)ParentComponent.Type);
-            packet.AppendByte((byte) Slot);
+            packet.AppendByte((byte)Slot);
 
             var properties = Properties.ToList();
 
