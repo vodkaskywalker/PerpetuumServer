@@ -12,20 +12,22 @@ on:
         description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
         required: false
         default: false
+
 jobs:
 
   build:
 
     strategy:
       matrix:
-#        configuration: [Debug, Release]
-        configuration: [Release]
+        configuration: [Debug, Release]
 
     runs-on: windows-2019  # For a list of available runner types, refer to
                              # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
 
     env:
       Solution_Name: Perpetuum.sln                  # Replace with your solution name, i.e. MyWpfApp.sln.
+      Configuration: ${{ matrix.configuration }}
+      Workspace: ${{ github.workspace }}
 
     steps:
     - name: Checkout
@@ -33,24 +35,15 @@ jobs:
       with:
         fetch-depth: 0
 
-    # Install the .NET Core workload
-    - name: Install .NET Core
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 6.0.x
-
     # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
     - name: Setup MSBuild.exe
-      uses: microsoft/setup-msbuild@v1.0.2
-
+      uses: microsoft/setup-msbuild@v1.1
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
-    - name: Restore the application
+    - name: Restore&Build the application for (${{ matrix.configuration }})
       run: |
         nuget restore
-        msbuild $env:Solution_Name  -p:Configuration=$env:Configuration
-      env:
-        Configuration: ${{ matrix.configuration }}
+        msbuild ${{ env.Solution_Name }}  -p:Configuration=${{ env.Configuration }}
 
     # Enable tmate debugging of manually-triggered workflows if the input option was provided
     # this allows us to debug the file paths
@@ -58,8 +51,9 @@ jobs:
       uses: mxschmitt/action-tmate@v3
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled && always()}}
 
-    - name: Upload a Build Artifact
+    - name: Upload a Build Artifact for (${{ matrix.configuration }})
       uses: actions/upload-artifact@v3
       with:
-        name: Perpetuum-Server
-        path: D:\a\PerpetuumServer\PerpetuumServer\bin\x64\*
+        name: Perpetuum-Server-${{ github.sha }}.${{ matrix.configuration }}
+        path: ${{ env.Workspace }}/bin/x64/${{ env.Configuration }}/Perpetuum.Server
+      if: ${{ github.event_name == 'push'}}
