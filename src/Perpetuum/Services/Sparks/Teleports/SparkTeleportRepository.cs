@@ -29,6 +29,18 @@ namespace Perpetuum.Services.Sparks.Teleports
             return CreateFromRecord(record);
         }
 
+        public SparkTeleport GetCommon(int id)
+        {
+            var record = Db.Query().CommandText("select * from charactersparkteleports where baseeid=@ID and characterid=0")
+                .SetParameter("@ID", id)
+                .ExecuteSingleRow();
+
+            if (record == null)
+                return null;
+
+            return CreateFromRecord(record);
+        }
+
         public IEnumerable<SparkTeleport> GetAll()
         {
             throw new NotImplementedException();

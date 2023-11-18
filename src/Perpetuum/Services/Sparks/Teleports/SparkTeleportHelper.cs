@@ -23,6 +23,11 @@ namespace Perpetuum.Services.Sparks.Teleports
             return _sparkTeleportRepository.Get(sparkTeleportID);
         }
 
+        public SparkTeleport GetCommon(int sparkTeleportID)
+        {
+            return _sparkTeleportRepository.GetCommon(sparkTeleportID);
+        }
+
         public SparkTeleport CreateSparkTeleport(DockingBase dockingBase, Character character)
         {
             var teleport = new SparkTeleport
