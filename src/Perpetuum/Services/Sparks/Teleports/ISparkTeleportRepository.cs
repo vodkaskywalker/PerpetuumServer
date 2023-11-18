@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using Perpetuum.Accounting.Characters;
 using Perpetuum.Units.DockingBases;
 
