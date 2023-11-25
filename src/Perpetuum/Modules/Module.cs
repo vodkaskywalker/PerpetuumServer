@@ -2,6 +2,7 @@
 using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
+using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Players;
 using Perpetuum.Robots;
 using Perpetuum.Zones;

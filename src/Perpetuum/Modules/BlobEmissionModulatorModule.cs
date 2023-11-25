@@ -2,6 +2,7 @@
 using System.Linq;
 using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
+using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Players;
 using Perpetuum.Units;
 using Perpetuum.Zones;

@@ -260,6 +260,10 @@
     <Compile Include="MathHelper.cs" />
     <Compile Include="Modules\EffectModules\MineDetectorModule.cs" />
     <Compile Include="Modules\EffectModules\TargetBlinderModule.cs" />
+    <Compile Include="Modules\ModuleProperties\CycleTimeProperty.cs" />
+    <Compile Include="Modules\ModuleProperties\FalloffProperty.cs" />
+    <Compile Include="Modules\ModuleProperties\ModuleProperty.cs" />
+    <Compile Include="Modules\ModuleProperties\OptimalRangeProperty.cs" />
     <Compile Include="Modules\ModulePropertyModifiersReader.cs" />
     <Compile Include="Modules\RemoteController.cs" />
     <Compile Include="Network\ClientConnection.cs" />

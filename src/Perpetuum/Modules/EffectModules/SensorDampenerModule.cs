@@ -1,6 +1,7 @@
 ﻿using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
+using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Units;
 using Perpetuum.Zones.Effects;
 using Perpetuum.Zones.NpcSystem;
