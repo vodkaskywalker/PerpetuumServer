@@ -1182,6 +1182,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<FirearmWeaponModule>(CategoryFlags.cf_small_single_projectile,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_small_projectile_ammo));
                 ByCategoryFlags<FirearmWeaponModule>(CategoryFlags.cf_medium_single_projectile,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_medium_projectile_ammo));
                 ByCategoryFlags<FirearmWeaponModule>(CategoryFlags.cf_large_single_projectile,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_large_projectile_ammo));
+                ByCategoryFlags<FirearmWeaponModule>(CategoryFlags.cf_sentry_turret_guns, new NamedParameter("ammoCategoryFlags", CategoryFlags.cf_large_projectile_ammo));
                 ByCategoryFlags<MissileWeaponModule>(CategoryFlags.cf_small_missile_launchers,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_small_missile_ammo));
                 ByCategoryFlags<MissileWeaponModule>(CategoryFlags.cf_medium_missile_launchers,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_medium_missile_ammo));
                 ByCategoryFlags<MissileWeaponModule>(CategoryFlags.cf_large_missile_launchers,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_large_missile_ammo));

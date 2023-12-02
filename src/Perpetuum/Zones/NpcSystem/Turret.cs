@@ -16,22 +16,36 @@ using Perpetuum.Zones.Terrains;
 
 namespace Perpetuum.Zones.NpcSystem
 {
-    public class ModuleActivator : IEntityVisitor<WeaponModule>,
-                                   IEntityVisitor<MissileWeaponModule>,
-                                   IEntityVisitor<ArmorRepairModule>,
-                                   IEntityVisitor<ShieldGeneratorModule>,
-                                   IEntityVisitor<SensorJammerModule>,
-                                   IEntityVisitor<SensorDampenerModule>,
-                                   IEntityVisitor<WebberModule>,
-                                   IEntityVisitor<EnergyNeutralizerModule>,
-                                   IEntityVisitor<EnergyVampireModule>,
-                                   IEntityVisitor<SensorBoosterModule>,
-                                   IEntityVisitor<ArmorHardenerModule>,
-                                   IEntityVisitor<BlobEmissionModulatorModule>,
-                                   IEntityVisitor<TargetBlinderModule>,
-                                   IEntityVisitor<CoreBoosterModule>,
-                                   IEntityVisitor<TargetPainterModule>
+    public class ModuleActivator :
+        IEntityVisitor<WeaponModule>,
+        IEntityVisitor<MissileWeaponModule>,
+        IEntityVisitor<ArmorRepairModule>,
+        IEntityVisitor<ShieldGeneratorModule>,
+        IEntityVisitor<SensorJammerModule>,
+        IEntityVisitor<SensorDampenerModule>,
+        IEntityVisitor<WebberModule>,
+        IEntityVisitor<EnergyNeutralizerModule>,
+        IEntityVisitor<EnergyVampireModule>,
+        IEntityVisitor<SensorBoosterModule>,
+        IEntityVisitor<ArmorHardenerModule>,
+        IEntityVisitor<BlobEmissionModulatorModule>,
+        IEntityVisitor<TargetBlinderModule>,
+        IEntityVisitor<CoreBoosterModule>,
+        IEntityVisitor<TargetPainterModule>
     {
+        private const double ENERGY_INJECTOR_THRESHOLD = 0.65;
+        private const double ARMOR_REPAIR_THRESHOLD = 0.95;
+        private const double ARMOR_REPAIR_CORE_THRESHOLD = 0.35;
+        private const double SENSOR_DAMPENER_CORE_THRESHOLD = 0.55;
+        private const double SHIELD_ARMOR_THRESHOLD = 0.35;
+        private const double SENSOR_JAMMER_CORE_THRESHOLD = 0.55;
+        private const double WEBBER_CORE_THRESHOLD = 0.55;
+        private const double PAINTER_CORE_THRESHOLD = 0.65;
+        private const double BLOBBER_CORE_THRESHOLD = 0.55;
+        private const double BLINDER_CORE_THRESHOLD = 0.55;
+        private const double ENERGY_NEUTRALIZER_CORE_THRESHOLD = 0.55;
+        private const double ENERGY_VAMPIRE_CORE_THRESHOLD = 0.05;
+
         private readonly IntervalTimer _timer;
         private readonly ActiveModule _module;
 
@@ -46,226 +60,272 @@ namespace Perpetuum.Zones.NpcSystem
             _timer.Update(time);
 
             if (!_timer.Passed)
+            {
                 return;
+            }
 
             _timer.Reset();
 
             if (_module.State.Type != ModuleStateType.Idle)
+            {
                 return;
+            }
 
             _module.AcceptVisitor(this);
-        }
-
-        private void TryActiveModule(LOSResult result, UnitLock primaryLock)
-        {
-            if (result.hit && !result.blockingFlags.HasFlag(BlockingFlags.Plant))
-                return;
-
-            _module.Lock = primaryLock;
-            _module.State.SwitchTo(ModuleStateType.Oneshot);
         }
 
         public void Visit(MissileWeaponModule module)
         {
             var hasShieldEffect = module.ParentRobot.HasShieldEffect;
+
             if (hasShieldEffect)
+            {
                 return;
+            }
 
             var primaryLock = module.ParentRobot.GetFinishedPrimaryLock();
+
             if (primaryLock == null)
+            {
                 return;
+            }
 
             var visibility = module.ParentRobot.GetVisibility(primaryLock.Target);
+
             if (visibility == null)
+            {
                 return;
+            }
 
             var result = visibility.GetLineOfSight(true);
+
             TryActiveModule(result, primaryLock);
         }
 
         public void Visit(WeaponModule module)
         {
             var hasShieldEffect = module.ParentRobot.HasShieldEffect;
+
             if (hasShieldEffect)
+            {
                 return;
+            }
 
             var primaryLock = module.ParentRobot.GetFinishedPrimaryLock();
+
             if (primaryLock == null)
+            {
                 return;
+            }
 
             var visibility = module.ParentRobot.GetVisibility(primaryLock.Target);
+
             if (visibility == null)
+            {
                 return;
+            }
 
             var result = visibility.GetLineOfSight(false);
+
             TryActiveModule(result,primaryLock);
         }
-
-        private const double ARMOR_REPAIR_THRESHOLD = 0.95;
-        private const double ARMOR_REPAIR_CORE_THRESHOLD = 0.35;
 
         public void Visit(ArmorRepairModule module)
         {
             if (module.ParentRobot.ArmorPercentage >= ARMOR_REPAIR_THRESHOLD)
+            {
                 return;
+            }
 
             if (module.ParentRobot.CorePercentage < ARMOR_REPAIR_CORE_THRESHOLD)
+            {
                 return;
+            }
 
             module.State.SwitchTo(ModuleStateType.Oneshot);
         }
-
-        private const double SHIELD_ARMOR_THRESHOLD = 0.35;
 
         public void Visit(ShieldGeneratorModule module)
         {
             if (module.ParentRobot.ArmorPercentage >= SHIELD_ARMOR_THRESHOLD)
+            {
                 return;
+            }
 
             module.State.SwitchTo(ModuleStateType.Oneshot);
         }
 
-        private const double SENSOR_JAMMER_CORE_THRESHOLD = 0.55;
-        
         public void Visit(SensorJammerModule module)
         {
             if ( module.ParentRobot.CorePercentage < SENSOR_JAMMER_CORE_THRESHOLD )
+            {
                 return;
+            }
 
             var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+
             if (lockTarget == null)
+            {
                 return;
+            }
 
             module.Lock = lockTarget;
             module.State.SwitchTo(ModuleStateType.Oneshot);
         }
-
-        private const double SENSOR_DAMPENER_CORE_THRESHOLD = 0.55;
         
         public void Visit(SensorDampenerModule module)
         {
             if (module.ParentRobot.CorePercentage < SENSOR_DAMPENER_CORE_THRESHOLD)
-                return;
-
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
-            if (lockTarget == null)
-                return;
-
-            module.Lock = lockTarget;
-            module.State.SwitchTo(ModuleStateType.Oneshot);
-        }
-
-        private const double WEBBER_CORE_THRESHOLD = 0.55;
-
-        public void Visit(WebberModule module)
-        {
-            if (module.ParentRobot.CorePercentage < WEBBER_CORE_THRESHOLD)
-                return;
-
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
-            if (lockTarget == null)
-                return;
-
-            module.Lock = lockTarget;
-            module.State.SwitchTo(ModuleStateType.Oneshot);
-        }
-
-        private const double PAINTER_CORE_THRESHOLD = 0.65;
-
-        public void Visit(TargetPainterModule module)
-        {
-            if (module.ParentRobot.CorePercentage < PAINTER_CORE_THRESHOLD)
-                return;
-
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
-            if (lockTarget == null)
-                return;
-
-            module.Lock = lockTarget;
-            module.State.SwitchTo(ModuleStateType.Oneshot);
-        }
-
-        private const double BLOBBER_CORE_THRESHOLD = 0.55;
-
-        public void Visit(BlobEmissionModulatorModule module)
-        {
-            if (module.ParentRobot.Zone.Configuration.Protected)
-                return;
-
-            if (module.ParentRobot.CorePercentage < BLOBBER_CORE_THRESHOLD)
-                return;
-
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
-            if (lockTarget == null)
-                return;
-
-            module.Lock = lockTarget;
-            module.State.SwitchTo(ModuleStateType.Oneshot);
-        }
-
-
-        private const double BLINDER_CORE_THRESHOLD = 0.55;
-
-        public void Visit(TargetBlinderModule module)
-        {
-            if (module.ParentRobot.CorePercentage < BLINDER_CORE_THRESHOLD)
-                return;
-
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
-            if (lockTarget == null)
-                return;
-
-            module.Lock = lockTarget;
-            module.State.SwitchTo(ModuleStateType.Oneshot);
-        }
-
-
-        private const double ENERGY_NEUTRALIZER_CORE_THRESHOLD = 0.55;
-
-        public void Visit(EnergyNeutralizerModule module)
-        {
-            if (module.ParentRobot.CorePercentage < ENERGY_NEUTRALIZER_CORE_THRESHOLD)
-                return;
-
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
-            if ( lockTarget == null )
-                return;
-
-            var visibility = module.ParentRobot.GetVisibility(lockTarget.Target);
-            if (visibility == null)
-                return;
-
-            var r = visibility.GetLineOfSight(false);
-            if (r != null)
             {
-                if (r.hit)
-                    return;
+                return;
+            }
+
+            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+
+            if (lockTarget == null)
+            {
+                return;
             }
 
             module.Lock = lockTarget;
             module.State.SwitchTo(ModuleStateType.Oneshot);
         }
 
-        private const double ENERGY_VAMPIRE_CORE_THRESHOLD = 0.05;
+        public void Visit(WebberModule module)
+        {
+            if (module.ParentRobot.CorePercentage < WEBBER_CORE_THRESHOLD)
+            {
+                return;
+            }
+
+            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+
+            if (lockTarget == null)
+            {
+                return;
+            }
+
+            module.Lock = lockTarget;
+            module.State.SwitchTo(ModuleStateType.Oneshot);
+        }
+
+        public void Visit(TargetPainterModule module)
+        {
+            if (module.ParentRobot.CorePercentage < PAINTER_CORE_THRESHOLD)
+            {
+                return;
+            }
+
+            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+
+            if (lockTarget == null)
+            {
+                return;
+            }
+
+            module.Lock = lockTarget;
+            module.State.SwitchTo(ModuleStateType.Oneshot);
+        }
+
+        public void Visit(BlobEmissionModulatorModule module)
+        {
+            if (module.ParentRobot.Zone.Configuration.Protected)
+            {
+                return;
+            }
+
+            if (module.ParentRobot.CorePercentage < BLOBBER_CORE_THRESHOLD)
+            {
+                return;
+            }
+
+            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+
+            if (lockTarget == null)
+            {
+                return;
+            }
+
+            module.Lock = lockTarget;
+            module.State.SwitchTo(ModuleStateType.Oneshot);
+        }
+
+        public void Visit(TargetBlinderModule module)
+        {
+            if (module.ParentRobot.CorePercentage < BLINDER_CORE_THRESHOLD)
+            {
+                return;
+            }
+
+            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+
+            if (lockTarget == null)
+            {
+                return;
+            }
+
+            module.Lock = lockTarget;
+            module.State.SwitchTo(ModuleStateType.Oneshot);
+        }
+
+        public void Visit(EnergyNeutralizerModule module)
+        {
+            if (module.ParentRobot.CorePercentage < ENERGY_NEUTRALIZER_CORE_THRESHOLD)
+            {
+                return;
+            }
+
+            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+
+            if ( lockTarget == null)
+            {
+                return;
+            }
+
+            var visibility = module.ParentRobot.GetVisibility(lockTarget.Target);
+
+            if (visibility == null)
+            {
+                return;
+            }
+
+            var r = visibility.GetLineOfSight(false);
+
+            if (r != null && r.hit)
+            {
+                return;
+            }
+
+            module.Lock = lockTarget;
+            module.State.SwitchTo(ModuleStateType.Oneshot);
+        }
 
         public void Visit(EnergyVampireModule module)
         {
             if ( module.ParentRobot.CorePercentage < ENERGY_VAMPIRE_CORE_THRESHOLD )
+            {
                 return;
+            }
 
             var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+
             if ( lockTarget == null )
+            {
                 return;
+            }
 
             var visibility = module.ParentRobot.GetVisibility(lockTarget.Target);
+
             if (visibility == null)
+            {
                 return;
+            }
 
             var r = visibility.GetLineOfSight(false);
-            if (r != null)
+
+            if (r != null && r.hit)
             {
-                if (r.hit)
-                    return;
+                return;
             }
 
             module.Lock = lockTarget;
@@ -288,14 +348,23 @@ namespace Perpetuum.Zones.NpcSystem
             }
         }
 
-        private const double ENERGY_INJECTOR_THRESHOLD = 0.65;
-
         public void Visit(CoreBoosterModule module)
         {
             if (module.ParentRobot.CorePercentage > ENERGY_INJECTOR_THRESHOLD)
+            {
                 return;
+            }
 
             module.State.SwitchTo(ModuleStateType.Oneshot);
+        }
+
+        private void TryActiveModule(LOSResult result, UnitLock primaryLock)
+        {
+            if (result.hit && !result.blockingFlags.HasFlag(BlockingFlags.Plant))
+                return;
+
+            _module.Lock = primaryLock;
+            _module.State.SwitchTo(ModuleStateType.Oneshot);
         }
     }
 

@@ -54,9 +54,7 @@ namespace Perpetuum.Modules.Weapons
                 }
             }
 
-            var damageModifier = weapon.ParentRobot is SentryTurret
-                ? weapon.RemoteControlDamageModifier.ToPropertyModifier()
-                : weapon.DamageModifier.ToPropertyModifier();
+            var damageModifier = weapon.DamageModifier.ToPropertyModifier();
 
             var property = GetPropertyModifier(AggregateField.damage_chemical);
 
@@ -84,8 +82,10 @@ namespace Perpetuum.Modules.Weapons
 
             property = GetPropertyModifier(AggregateField.damage_explosive);
 
-            if (!property.HasValue) 
+            if (!property.HasValue)
+            {
                 return result;
+            }
 
             damageModifier.Modify(ref property);
             result.Add(new Damage(DamageType.Explosive, property.Value));

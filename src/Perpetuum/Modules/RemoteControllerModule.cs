@@ -1,6 +1,8 @@
 ﻿using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
+using Perpetuum.Items;
 using Perpetuum.Modules.ModuleProperties;
+using Perpetuum.Players;
 using Perpetuum.Units;
 using Perpetuum.Zones;
 using Perpetuum.Zones.Beams;
@@ -87,6 +89,11 @@ namespace Perpetuum.Modules
             }
         }
 
+        public void CloseAllChannels()
+        {
+            bandwidthHandler.CloseAllChannels();
+        }
+
         protected override void OnAction()
         {
             if (bandwidthHandler == null)
@@ -139,6 +146,12 @@ namespace Perpetuum.Modules
             }
 
             var ammo = GetAmmo() as RemoteControlledUnit;
+
+            if (this.ParentRobot is Player player)
+            {
+                ammo.CheckEnablerExtensionsAndThrowIfFailed(player.Character, ErrorCodes.ExtensionLevelMismatchTerrain);
+            }
+
             var fieldTurret = (SentryTurret)Factory.CreateWithRandomEID(ammo.ED.Options.TurretId);
 
             fieldTurret.Owner = this.ParentRobot.Eid;
@@ -148,7 +161,9 @@ namespace Perpetuum.Modules
 
             var despawnTimeMod = ammo.GetPropertyModifier(AggregateField.despawn_time);
 
-            fieldTurret.DespawnTime = TimeSpan.FromMilliseconds(despawnTimeMod.Value);
+            var despawnTime = TimeSpan.FromMilliseconds(despawnTimeMod.Value);
+
+            fieldTurret.DespawnTime = despawnTime;
 
             fieldTurret.SetGroup(bandwidthHandler);
 
@@ -164,7 +179,11 @@ namespace Perpetuum.Modules
             var effectBuilder = this.ParentRobot.NewEffectBuilder();
 
             SetupEffect(effectBuilder);
-            effectBuilder.WithToken(effectToken);
+
+            effectBuilder
+                .WithToken(effectToken)
+                .WithDuration(despawnTime);
+
             this.ParentRobot.ApplyEffect(effectBuilder);
 
             ConsumeAmmo();

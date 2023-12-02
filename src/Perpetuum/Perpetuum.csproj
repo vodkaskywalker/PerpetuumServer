@@ -265,7 +265,7 @@
     <Compile Include="Modules\ModuleProperties\ModuleProperty.cs" />
     <Compile Include="Modules\ModuleProperties\OptimalRangeProperty.cs" />
     <Compile Include="Modules\ModulePropertyModifiersReader.cs" />
-    <Compile Include="Modules\RemoteController.cs" />
+    <Compile Include="Modules\RemoteControllerModule.cs" />
     <Compile Include="Network\ClientConnection.cs" />
     <Compile Include="Network\EncryptedTcpConnection.cs" />
     <Compile Include="Network\Http.cs" />
@@ -295,6 +295,7 @@
     <Compile Include="Reactive\ObservableExtensions.cs" />
     <Compile Include="Reactive\Observer.cs" />
     <Compile Include="Robots\RobotHelper.cs" />
+    <Compile Include="Robots\RobotInfoPacketBuilder.cs" />
     <Compile Include="Rsa.cs" />
     <Compile Include="Selectors\ISelector.cs" />
     <Compile Include="Selectors\ModuloBasedSelector.cs" />
