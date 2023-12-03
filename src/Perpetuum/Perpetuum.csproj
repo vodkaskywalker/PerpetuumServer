@@ -660,6 +660,8 @@
     <Compile Include="Zones\Effects\ZoneEffects\ZoneEffect.cs" />
     <Compile Include="Zones\Effects\ZoneEffects\ZoneEffectHandler.cs" />
     <Compile Include="Zones\Effects\ZoneEffects\ZoneEffectReader.cs" />
+    <Compile Include="Zones\Locking\Locks\TerraformDirection.cs" />
+    <Compile Include="Zones\Locking\Locks\TerrainLockParametersPacketBuilder.cs" />
     <Compile Include="Zones\NpcSystem\AI\AggressiveBehavior.cs" />
     <Compile Include="Zones\NpcSystem\AI\AggressorAI.cs" />
     <Compile Include="Zones\NpcSystem\AI\BaseAI.cs" />
@@ -684,6 +686,15 @@
     <Compile Include="Zones\NpcSystem\PrimaryLockSelectionStrategyBuilder.cs" />
     <Compile Include="Zones\NpcSystem\PrimaryLockSelectionStrategySelector.cs" />
     <Compile Include="Zones\NpcSystem\SmartCreature.cs" />
+    <Compile Include="Zones\NpcSystem\ThreatManagement\Hostile.cs" />
+    <Compile Include="Zones\NpcSystem\ThreatManagement\IPseudoThreatManager.cs" />
+    <Compile Include="Zones\NpcSystem\ThreatManagement\IThreatManager.cs" />
+    <Compile Include="Zones\NpcSystem\ThreatManagement\PseudoThreat.cs" />
+    <Compile Include="Zones\NpcSystem\ThreatManagement\PseudoThreatManager.cs" />
+    <Compile Include="Zones\NpcSystem\ThreatManagement\Threat.cs" />
+    <Compile Include="Zones\NpcSystem\ThreatManagement\ThreatExtensions.cs" />
+    <Compile Include="Zones\NpcSystem\ThreatManagement\ThreatManager.cs" />
+    <Compile Include="Zones\NpcSystem\ThreatManagement\ThreatType.cs" />
     <Compile Include="Zones\RemoteControl\RemoteChannel.cs" />
     <Compile Include="Zones\RemoteControl\BandwidthHandler.cs" />
     <Compile Include="Zones\RemoteControl\SentryTurret.cs" />
@@ -1069,7 +1080,6 @@
     <Compile Include="Zones\NpcSystem\SafeSpawnPoints\ISafeSpawnPointsRepository.cs" />
     <Compile Include="Zones\NpcSystem\SafeSpawnPoints\NpcSafeSpawnPointsRepository.cs" />
     <Compile Include="Zones\NpcSystem\SafeSpawnPoints\SafeSpawnPoint.cs" />
-    <Compile Include="Zones\NpcSystem\ThreatManager.cs" />
     <Compile Include="Zones\NpcSystem\Turret.cs" />
     <Compile Include="Zones\NullZoneSession.cs" />
     <Compile Include="Zones\Packet.cs" />

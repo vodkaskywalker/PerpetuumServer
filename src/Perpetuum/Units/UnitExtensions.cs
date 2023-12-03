@@ -4,6 +4,7 @@ using Perpetuum.Players;
 using Perpetuum.Players.ExtensionMethods;
 using Perpetuum.Zones;
 using Perpetuum.Zones.NpcSystem;
+using Perpetuum.Zones.NpcSystem.ThreatManaging;
 using Perpetuum.Zones.PBS;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,9 +27,6 @@ namespace Perpetuum.Units
 
         public static void AddThreat(this Unit unit, Unit hostile, Threat threat)
         {
-            if (unit is Npc npc && npc.CanAddThreatTo(hostile, threat))
-                npc.AddThreat(hostile, threat, true);
-
             if (unit is SmartCreature smartCreature && smartCreature.CanAddThreatTo(hostile, threat))
             {
                 smartCreature.AddThreat(hostile, threat, true);

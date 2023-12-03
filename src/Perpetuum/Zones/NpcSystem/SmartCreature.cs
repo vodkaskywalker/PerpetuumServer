@@ -9,6 +9,7 @@ using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.NpcSystem.AI;
 using Perpetuum.Zones.NpcSystem.Flocks;
+using Perpetuum.Zones.NpcSystem.ThreatManaging;
 using Perpetuum.Zones.RemoteControl;
 using System;
 using System.Linq;

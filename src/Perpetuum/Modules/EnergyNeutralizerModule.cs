@@ -6,7 +6,7 @@ using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Units;
 using Perpetuum.Zones;
 using Perpetuum.Zones.Locking.Locks;
-using Perpetuum.Zones.NpcSystem;
+using Perpetuum.Zones.NpcSystem.ThreatManaging;
 
 namespace Perpetuum.Modules
 {
@@ -23,7 +23,9 @@ namespace Perpetuum.Modules
         public override void AcceptVisitor(IEntityVisitor visitor)
         {
             if (!TryAcceptVisitor(this, visitor))
+            {
                 base.AcceptVisitor(visitor);
+            }
         }
 
         protected override void OnAction()
@@ -33,6 +35,7 @@ namespace Perpetuum.Modules
             if (!LOSCheckAndCreateBeam(unitLock.Target))
             {
                 OnError(ErrorCodes.LOSFailed);
+
                 return;
             }
 
@@ -45,15 +48,18 @@ namespace Perpetuum.Modules
             if ( coreNeutralized > 0.0 )
             {
                 var core = unitLock.Target.Core;
+
                 unitLock.Target.Core -= coreNeutralized;
                 coreNeutralizedDone = Math.Abs(core - unitLock.Target.Core);
-
                 unitLock.Target.OnCombatEvent(ParentRobot, new EnergyDispersionEventArgs(coreNeutralizedDone));
+
                 var threatValue = (coreNeutralizedDone / 2) + 1;
+
                 unitLock.Target.AddThreat(ParentRobot, new Threat(ThreatType.EnWar, threatValue));
             }
 
             var packet = new CombatLogPacket(CombatLogType.EnergyNeutralize, unitLock.Target, ParentRobot, this);
+
             packet.AppendDouble(coreNeutralized);
             packet.AppendDouble(coreNeutralizedDone);
             packet.Send(unitLock.Target,ParentRobot);

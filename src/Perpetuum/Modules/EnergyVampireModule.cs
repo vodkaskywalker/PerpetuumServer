@@ -6,7 +6,7 @@ using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Units;
 using Perpetuum.Zones;
 using Perpetuum.Zones.Locking.Locks;
-using Perpetuum.Zones.NpcSystem;
+using Perpetuum.Zones.NpcSystem.ThreatManaging;
 
 namespace Perpetuum.Modules
 {
@@ -23,7 +23,9 @@ namespace Perpetuum.Modules
         public override void AcceptVisitor(IEntityVisitor visitor)
         {
             if (!TryAcceptVisitor(this, visitor))
+            {
                 base.AcceptVisitor(visitor);
+            }
         }
 
         protected override void OnAction()
@@ -33,11 +35,13 @@ namespace Perpetuum.Modules
             if (!LOSCheckAndCreateBeam(unitLock.Target))
             {
                 OnError(ErrorCodes.LOSFailed);
+
                 return;
             }
 
             // ennyit szedunk le a targettol
             var coreAmount = _energyVampiredAmount.Value;
+
             ModifyValueByReactorRadiation(unitLock.Target,ref coreAmount);
             // optimalrange-el modositjuk
             coreAmount = ModifyValueByOptimalRange(unitLock.Target,coreAmount);
@@ -48,20 +52,21 @@ namespace Perpetuum.Modules
             if ( coreAmount > 0.0 )
             {
                 var targetCore = unitLock.Target.Core;
+
                 unitLock.Target.Core -= coreAmount;
                 coreNeutralized = Math.Abs(targetCore - unitLock.Target.Core);
-
                 unitLock.Target.OnCombatEvent(ParentRobot,new EnergyDispersionEventArgs(coreNeutralized));
 
                 // amit sikerult leszedni azt hozzaadjuk a robothoz
                 var core = ParentRobot.Core;
+
                 ParentRobot.Core += coreNeutralized;
                 coreTransfered = Math.Abs(core - ParentRobot.Core);
-
                 unitLock.Target.AddThreat(ParentRobot, new Threat(ThreatType.EnWar, coreTransfered + 1));
             }
 
             var packet = new CombatLogPacket(CombatLogType.EnergyVampire, unitLock.Target, ParentRobot, this);
+
             packet.AppendDouble(coreAmount);
             packet.AppendDouble(coreNeutralized);
             packet.AppendDouble(coreTransfered);

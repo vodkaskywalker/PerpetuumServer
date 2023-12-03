@@ -4,7 +4,7 @@ using Perpetuum.ExportedTypes;
 using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Units;
 using Perpetuum.Zones;
-using Perpetuum.Zones.NpcSystem;
+using Perpetuum.Zones.NpcSystem.ThreatManaging;
 
 namespace Perpetuum.Modules
 {
@@ -28,6 +28,7 @@ namespace Perpetuum.Modules
                 case AggregateField.effect_repair_amount_modifier:
                     {
                         armorRepairAmount.Update();
+
                         return;
                     }
             }
@@ -37,14 +38,18 @@ namespace Perpetuum.Modules
 
         protected void OnRepair(Unit target, double amount)
         {
-            if (amount <= 0.0) 
+            if (amount <= 0.0)
+            {
                 return;
+            }
 
             var armor = target.Armor;
-            target.Armor += amount;
-            var total = Math.Abs(armor - target.Armor);
 
+            target.Armor += amount;
+
+            var total = Math.Abs(armor - target.Armor);
             var packet = new CombatLogPacket(CombatLogType.ArmorRepair, target, ParentRobot, this);
+
             packet.AppendDouble(amount);
             packet.AppendDouble(total);
             packet.Send(target, ParentRobot);
@@ -60,14 +65,19 @@ namespace Perpetuum.Modules
         public override void AcceptVisitor(IEntityVisitor visitor)
         {
             if (!TryAcceptVisitor(this, visitor))
+            {
                 base.AcceptVisitor(visitor);
+            }
         }
 
         protected override void OnAction()
         {
             var amount = armorRepairAmount.Value;
+
             OnRepair(ParentRobot, amount);
+
             var threatAmount = Math.Sqrt(amount).Clamp(1, 100);
+
             ParentRobot.SpreadAssistThreatToNpcs(ParentRobot, new Threat(ThreatType.Support, threatAmount));
         }
     }
