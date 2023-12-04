@@ -151,7 +151,7 @@ namespace Perpetuum.Zones.NpcSystem
             }
         }
 
-        internal override bool IsHostile(Player player)
+        public override bool IsHostile(Player player)
         {
             return true;
         }

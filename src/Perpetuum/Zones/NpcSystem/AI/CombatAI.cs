@@ -2,6 +2,7 @@
 using Perpetuum.Timers;
 using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
+using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using Perpetuum.Zones.NpcSystem.TargettingStrategies;
 using Perpetuum.Zones.NpcSystem.ThreatManaging;
 using Perpetuum.Zones.Terrains;

@@ -1,6 +1,6 @@
 using Perpetuum.Data;
 using Perpetuum.EntityFramework;
-using Perpetuum.Zones.NpcSystem.AI;
+using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using System;
 using System.Collections.Generic;
 using System.Linq;

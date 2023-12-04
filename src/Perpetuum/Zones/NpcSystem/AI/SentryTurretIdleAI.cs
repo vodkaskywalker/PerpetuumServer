@@ -1,4 +1,6 @@
-﻿namespace Perpetuum.Zones.NpcSystem.AI
+﻿using Perpetuum.Zones.NpcSystem.AI.Behaviors;
+
+namespace Perpetuum.Zones.NpcSystem.AI
 {
     public class SentryTurretIdleAI : StationaryIdleAI
     {

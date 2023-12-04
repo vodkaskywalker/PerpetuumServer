@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Perpetuum.Zones.NpcSystem.IndustrialTargetsManagement;
+using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 
 namespace Perpetuum.Zones.NpcSystem.AI
 {

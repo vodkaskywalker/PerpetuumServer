@@ -1,5 +1,6 @@
 ﻿using Perpetuum.Log;
 using Perpetuum.StateMachines;
+using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using System;
 using System.Diagnostics;
 

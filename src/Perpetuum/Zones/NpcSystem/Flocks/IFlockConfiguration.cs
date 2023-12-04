@@ -1,5 +1,5 @@
 using Perpetuum.EntityFramework;
-using Perpetuum.Zones.NpcSystem.AI;
+using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using System;
 
 namespace Perpetuum.Zones.NpcSystem.Flocks

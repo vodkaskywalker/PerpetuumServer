@@ -917,14 +917,14 @@ namespace Perpetuum.Units
             }
         }
 
-        protected bool IsHostile(Unit unit)
+        protected virtual bool IsHostileFor(Unit unit) { return false; }
+
+        public bool IsHostile(Unit unit)
         {
             return unit.IsHostileFor(this);
         }
 
-        protected virtual bool IsHostileFor(Unit unit) { return false; }
-
-        internal virtual bool IsHostile(Player player) { return false; }
+        public virtual bool IsHostile(Player player) { return false; }
 
         internal virtual bool IsHostile(AreaBomb bomb) { return false; }
 

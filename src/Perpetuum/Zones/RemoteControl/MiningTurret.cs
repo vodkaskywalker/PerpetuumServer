@@ -23,7 +23,7 @@ namespace Perpetuum.Zones.RemoteControl
             return unit.IsHostile(this);
         }
 
-        internal override bool IsHostile(Player player)
+        public override bool IsHostile(Player player)
         {
             return false;
         }

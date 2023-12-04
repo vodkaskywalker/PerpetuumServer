@@ -3,6 +3,7 @@ using Perpetuum.Modules.Weapons;
 using Perpetuum.Players;
 using Perpetuum.Units;
 using Perpetuum.Zones.Eggs;
+using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using Perpetuum.Zones.NpcSystem.ThreatManaging;
 using System.Linq;
 

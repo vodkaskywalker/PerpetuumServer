@@ -1,4 +1,4 @@
-﻿namespace Perpetuum.Zones.NpcSystem.AI
+﻿namespace Perpetuum.Zones.NpcSystem.AI.Behaviors
 {
     public class AggressiveBehavior : Behavior
     {

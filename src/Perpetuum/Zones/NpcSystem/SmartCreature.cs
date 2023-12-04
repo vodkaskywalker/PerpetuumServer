@@ -18,6 +18,7 @@ using System;
 using System.Linq;
 using Perpetuum.Zones.Terrains.Materials;
 using Perpetuum.Zones.Terrains;
+using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 
 namespace Perpetuum.Zones.NpcSystem
 {

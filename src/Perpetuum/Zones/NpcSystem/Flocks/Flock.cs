@@ -3,7 +3,7 @@ using Perpetuum.Log;
 using Perpetuum.Services.Looting;
 using Perpetuum.Units;
 using Perpetuum.Zones.Finders.PositionFinders;
-using Perpetuum.Zones.NpcSystem.AI;
+using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using Perpetuum.Zones.NpcSystem.Presences;
 using Perpetuum.Zones.NpcSystem.Presences.InterzonePresences;
 using System;

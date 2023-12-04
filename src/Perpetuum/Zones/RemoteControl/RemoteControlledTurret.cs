@@ -3,7 +3,7 @@ using Perpetuum.Items;
 using Perpetuum.Units;
 using Perpetuum.Zones.Beams;
 using Perpetuum.Zones.NpcSystem;
-using Perpetuum.Zones.NpcSystem.AI;
+using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using System;
 
 namespace Perpetuum.Zones.RemoteControl

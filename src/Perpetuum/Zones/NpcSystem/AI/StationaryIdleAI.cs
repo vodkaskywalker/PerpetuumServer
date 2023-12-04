@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Perpetuum.Zones.NpcSystem.AI.Behaviors;
+using System;
 
 namespace Perpetuum.Zones.NpcSystem.AI
 {
