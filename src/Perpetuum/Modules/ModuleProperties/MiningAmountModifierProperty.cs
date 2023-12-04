@@ -4,9 +4,9 @@ namespace Perpetuum.Modules.ModuleProperties
 {
     public class MiningAmountModifierProperty : ModuleProperty
     {
-        private readonly DrillerModule _module;
+        private readonly GathererModule _module;
 
-        public MiningAmountModifierProperty(DrillerModule module) : base(module, AggregateField.mining_amount_modifier)
+        public MiningAmountModifierProperty(GathererModule module) : base(module, AggregateField.mining_amount_modifier)
         {
             _module = module;
             AddEffectModifier(AggregateField.effect_mining_amount_modifier);

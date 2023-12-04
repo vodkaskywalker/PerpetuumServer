@@ -846,10 +846,10 @@ namespace Perpetuum.Bootstrapper
 
             RegisterRobot<Npc>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
             RegisterRobot<Player>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
+            RegisterRobot<SentryTurret>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
+            RegisterRobot<MiningTurret>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
             RegisterRobot<PBSTurret>();
             RegisterRobot<PunchBag>();
-            RegisterRobot<SentryTurret>();
-            RegisterRobot<MiningTurret>();
 
             _builder.RegisterType<EntityAggregateServices>().As<IEntityServices>().PropertiesAutowired().SingleInstance();
 

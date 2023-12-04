@@ -6,7 +6,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
 {
     public class IndustrialTurretAI : IndustrialAI
     {
-        private readonly IntervalTimer updateFrequency = new IntervalTimer(18000);
+        private readonly IntervalTimer updateFrequency = new IntervalTimer(2000);
 
         public IndustrialTurretAI(SmartCreature smartCreature) : base(smartCreature) { }
 

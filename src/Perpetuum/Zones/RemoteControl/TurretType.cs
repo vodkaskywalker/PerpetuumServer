@@ -2,7 +2,7 @@
 {
     public enum TurretType
     {
-        Senrty,
+        Sentry,
         Mining,
     }
 }

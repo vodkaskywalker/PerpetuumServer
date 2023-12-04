@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.Transactions;
 using Perpetuum.Zones.Terrains;
 using System.Drawing;
+using Perpetuum.Modules.ModuleProperties;
 
 namespace Perpetuum.Modules
 {
@@ -19,12 +20,15 @@ namespace Perpetuum.Modules
     {
         private readonly RareMaterialHandler _rareMaterialHandler;
         private readonly MaterialHelper _materialHelper;
+        private readonly ItemProperty _miningAmountModifier;
 
         public RemoteControlledDrillerModule(RareMaterialHandler rareMaterialHandler, MaterialHelper materialHelper)
             : base(CategoryFlags.undefined, true)
         {
             _rareMaterialHandler = rareMaterialHandler;
             _materialHelper = materialHelper;
+            _miningAmountModifier = new MiningAmountModifierProperty(this);
+            AddProperty(_miningAmountModifier);
         }
 
         public override void AcceptVisitor(IEntityVisitor visitor)
@@ -73,7 +77,7 @@ namespace Perpetuum.Modules
             CheckEnablerEffect(materialInfo);
 
             var mineralLayer = zone.Terrain.GetMineralLayerOrThrow(materialInfo.Type);
-            var materialAmount = materialInfo.Amount;
+            var materialAmount = materialInfo.Amount * _miningAmountModifier.Value;
             var extractedMaterials = Extract(mineralLayer, terrainLock.Location, (uint)materialAmount);
 
             extractedMaterials.Count.ThrowIfEqual(0, ErrorCodes.NoMineralOnTile);

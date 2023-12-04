@@ -17,6 +17,7 @@ using Perpetuum.Zones.Terrains.Materials.Minerals;
 using System;
 using System.Linq;
 using Perpetuum.Zones.Terrains.Materials;
+using Perpetuum.Zones.Terrains;
 
 namespace Perpetuum.Zones.NpcSystem
 {
@@ -119,49 +120,23 @@ namespace Perpetuum.Zones.NpcSystem
             }
         }
 
-        /*
-        Undefined = 0,
-        Titan,//1
-        Crude, //2
-        Stermonit, //3
-        Imentium, //4
-        Liquizit, //5
-        Epriton, //6
-        Helioptris, //7
-        Triandlus, //8
-        Prismocitae, //9
-        Gravel, //10
-        Electrofruit, //11
-        Silgium, //12
-        Gammaterial, //13
-        Plants, //14
-        EnergyMineral, //15
-        FluxOre //16
-        */
-
         public void LookingForIndustrialTargets()
         {
             IndustrialValueManager.Clear();
 
             var area = Zone.CreateArea(CurrentPosition, IndustrialScanRange);
 
-            foreach (MaterialType materialType in Enum.GetValues(typeof(MaterialType)))
-            {
-                switch (materialType)
-                {
-                    case MaterialType.Undefined:
-                    case MaterialType.Gravel:
-                    case MaterialType.Plants:
-                    case MaterialType.Electrofruit:
-                        continue;
-                }
+            var availableMaterialTypes = Zone.Terrain.GetAvailableMaterialTypes();
 
+            foreach (MaterialType materialType in availableMaterialTypes)
+            {
                 var builder = MineralScanResultBuilder.Create(Zone, materialType);
 
                 builder.ScanArea = area;
                 builder.ScanAccuracy = 100.0;
 
                 var result = builder.Build();
+
                 MineralLayer mineralLayer = Zone.Terrain.GetMaterialLayer(materialType) as MineralLayer;
 
                 if (mineralLayer != null)
@@ -178,7 +153,7 @@ namespace Perpetuum.Zones.NpcSystem
                         {
                             var mineralNode = mineralLayer.GetNode(valuablePosition);
 
-                            IndustrialValueManager.GetOrAddIndustrialTargetWithValue(valuablePosition, IndustrialValueType.Mineral, mineralNode.GetValue(valuablePosition));
+                            IndustrialValueManager.GetOrAddIndustrialTargetWithValue(valuablePosition.Center, IndustrialValueType.Mineral, mineralNode.GetValue(valuablePosition));
                         }
                     }
                 }

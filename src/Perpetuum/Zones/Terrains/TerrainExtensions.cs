@@ -314,6 +314,15 @@ namespace Perpetuum.Zones.Terrains
                 : (layer as MineralLayer).Type;
         }
 
+        public static MaterialType[] GetAvailableMaterialTypes(this ITerrain terrain)
+        {
+            MaterialType[] materials = Enum.GetValues(typeof(MaterialType)) as MaterialType[];
+
+            return materials
+                .Where(x => terrain.GetMaterialLayer(x) != null)
+                .ToArray();
+        }
+
         private const int GZIP_THRESHOLD = 260;
 
         [CanBeNull]

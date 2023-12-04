@@ -12,7 +12,6 @@ using Perpetuum.Zones.Finders.PositionFinders;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.RemoteControl;
 using System;
-using System.Diagnostics;
 using System.Linq;
 
 namespace Perpetuum.Modules
@@ -117,11 +116,11 @@ namespace Perpetuum.Modules
 
             if (myLock is TerrainLock)
             {
-                lockPosition = (myLock as TerrainLock).Location.AddToZ(SentryTurretHeight);
+                lockPosition = (myLock as TerrainLock).Location;
             }
             else if (myLock is UnitLock)
             {
-                lockPosition = (myLock as UnitLock).Target.CurrentPosition.AddToZ(SentryTurretHeight);
+                lockPosition = (myLock as UnitLock).Target.CurrentPosition;
             }
             else
             {
@@ -133,11 +132,11 @@ namespace Perpetuum.Modules
             Position targetPosition = lockPosition.Value;
             zone.Units
                 .OfType<SentryTurret>()
-                .WithinRange(targetPosition, SentryTurretDeployRange)
+                .WithinRange(zone.FixZ(targetPosition), SentryTurretDeployRange)
                 .Any()
                 .ThrowIfTrue(ErrorCodes.BlobEmitterInRange);
 
-            var r = zone.IsInLineOfSight(ParentRobot, targetPosition, false);
+            var r = zone.IsInLineOfSight(ParentRobot, targetPosition.AddToZ(SentryTurretHeight), false);
 
             if (r.hit)
             {
@@ -155,7 +154,7 @@ namespace Perpetuum.Modules
 
             RemoteControlledTurret fieldTurret = null;
 
-            if (ammo.ED.Options.TurretType == TurretType.Senrty)
+            if (ammo.ED.Options.TurretType == TurretType.Sentry)
             {
                 fieldTurret = (SentryTurret)Factory.CreateWithRandomEID(ammo.ED.Options.TurretId);
             }
