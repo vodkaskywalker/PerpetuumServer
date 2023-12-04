@@ -932,6 +932,8 @@ namespace Perpetuum.Units
 
         internal virtual bool IsHostile(SentryTurret turret) { return false; }
 
+        internal virtual bool IsHostile(MiningTurret turret) { return false; }
+
         internal virtual bool IsHostile(Npc npc) { return false; }
 
         public void StopMoving()

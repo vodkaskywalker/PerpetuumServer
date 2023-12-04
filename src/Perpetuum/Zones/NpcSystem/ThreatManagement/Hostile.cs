@@ -10,7 +10,7 @@ namespace Perpetuum.Zones.NpcSystem.ThreatManaging
 
         private double _threat;
 
-        public readonly Unit unit;
+        public readonly Unit Unit;
 
         public TimeSpan LastThreatUpdate { get; private set; }
 
@@ -44,7 +44,7 @@ namespace Perpetuum.Zones.NpcSystem.ThreatManaging
 
         public Hostile(Unit unit)
         {
-            this.unit = unit;
+            this.Unit = unit;
             Threat = 0.0;
         }
 

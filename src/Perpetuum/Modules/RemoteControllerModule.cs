@@ -12,6 +12,7 @@ using Perpetuum.Zones.Finders.PositionFinders;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.RemoteControl;
 using System;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Perpetuum.Modules
@@ -69,7 +70,7 @@ namespace Perpetuum.Modules
             return bandwidthHandler.HasFreeBandwidthFor(unit);
         }
 
-        public void UseRemoteChannel(SentryTurret turret)
+        public void UseRemoteChannel(RemoteControlledTurret turret)
         {
             bandwidthHandler.UseRemoteChannel(turret);
             turret.RemoteChannelDeactivated += bandwidthHandler.OnRemoteChannelDeactivated;
@@ -152,7 +153,16 @@ namespace Perpetuum.Modules
                 ammo.CheckEnablerExtensionsAndThrowIfFailed(player.Character, ErrorCodes.ExtensionLevelMismatchTerrain);
             }
 
-            var fieldTurret = (SentryTurret)Factory.CreateWithRandomEID(ammo.ED.Options.TurretId);
+            RemoteControlledTurret fieldTurret = null;
+
+            if (ammo.ED.Options.TurretType == TurretType.Senrty)
+            {
+                fieldTurret = (SentryTurret)Factory.CreateWithRandomEID(ammo.ED.Options.TurretId);
+            }
+            else if (ammo.ED.Options.TurretType == TurretType.Mining)
+            {
+                fieldTurret = (MiningTurret)Factory.CreateWithRandomEID(ammo.ED.Options.TurretId);
+            }
 
             fieldTurret.Owner = this.ParentRobot.Eid;
 

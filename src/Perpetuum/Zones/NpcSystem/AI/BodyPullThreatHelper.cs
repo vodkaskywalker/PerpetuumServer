@@ -31,7 +31,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            if (smartCreature.ThreatManager.Hostiles.Any(h => h.unit.Eid == player.Eid))
+            if (smartCreature.ThreatManager.Hostiles.Any(h => h.Unit.Eid == player.Eid))
             {
                 return;
             }
@@ -92,7 +92,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            if (smartCreature.ThreatManager.Hostiles.Any(h => h.unit.Eid == npc.Eid))
+            if (smartCreature.ThreatManager.Hostiles.Any(h => h.Unit.Eid == npc.Eid))
             {
                 return;
             }

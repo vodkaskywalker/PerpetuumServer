@@ -1,4 +1,5 @@
 ﻿using Perpetuum.Timers;
+using Perpetuum.Zones.NpcSystem.TargettingStrategies;
 using System;
 
 namespace Perpetuum.Zones.NpcSystem.AI
@@ -9,21 +10,26 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         public StationaryCombatAI(SmartCreature smartCreature) : base(smartCreature) { }
 
-        protected override PrimaryLockSelectionStrategySelector InitSelector()
-        {
-            return PrimaryLockSelectionStrategySelector.Create()
-                .WithStrategy(PrimaryLockSelectionStrategy.Hostile, 1)
-                .WithStrategy(PrimaryLockSelectionStrategy.Closest, 2)
-                .WithStrategy(PrimaryLockSelectionStrategy.OptimalRange, 3)
-                .WithStrategy(PrimaryLockSelectionStrategy.Random, 10)
-                .Build();
-        }
-
         public override void Update(TimeSpan time)
         {
             FindHostiles(time);
 
             base.Update(time);
+        }
+
+        protected override CombatPrimaryLockSelectionStrategySelector InitSelector()
+        {
+            return CombatPrimaryLockSelectionStrategySelector.Create()
+                .WithStrategy(CombatPrimaryLockSelectionStrategy.Hostile, 1)
+                .WithStrategy(CombatPrimaryLockSelectionStrategy.Closest, 2)
+                .WithStrategy(CombatPrimaryLockSelectionStrategy.OptimalRange, 3)
+                .WithStrategy(CombatPrimaryLockSelectionStrategy.Random, 10)
+                .Build();
+        }
+
+        protected override TimeSpan SetPrimaryDwellTime()
+        {
+            return FastRandom.NextTimeSpan(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(25));
         }
 
         private void FindHostiles(TimeSpan time)
@@ -35,11 +41,6 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 updateFrequency.Reset();
                 smartCreature.LookingForHostiles();
             }
-        }
-
-        protected override TimeSpan SetPrimaryDwellTime()
-        {
-            return FastRandom.NextTimeSpan(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(25));
         }
     }
 }

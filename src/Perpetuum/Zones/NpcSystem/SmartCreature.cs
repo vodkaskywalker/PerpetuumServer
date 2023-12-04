@@ -9,10 +9,14 @@ using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.NpcSystem.AI;
 using Perpetuum.Zones.NpcSystem.Flocks;
+using Perpetuum.Zones.NpcSystem.IndustrialTargetsManagement;
 using Perpetuum.Zones.NpcSystem.ThreatManaging;
 using Perpetuum.Zones.RemoteControl;
+using Perpetuum.Zones.Scanning.Results;
+using Perpetuum.Zones.Terrains.Materials.Minerals;
 using System;
 using System.Linq;
+using Perpetuum.Zones.Terrains.Materials;
 
 namespace Perpetuum.Zones.NpcSystem
 {
@@ -21,8 +25,10 @@ namespace Perpetuum.Zones.NpcSystem
         private const double AggroRange = 30;
         private const double BestComnatRangeModifier = 0.9;
         private const double BaseCallForHelpArmorThreshold = 0.2;
+        private const int IndustrialScanRange = 30;
         private readonly ThreatManager threatManager;
         private readonly PseudoThreatManager pseudoThreatManager;
+        private readonly IndustrialValueManager industrialValueManager;
         private readonly TimeKeeper debounceBodyPull = new TimeKeeper(TimeSpan.FromSeconds(2.5));
         private readonly TimeKeeper debounceLockChange = new TimeKeeper(TimeSpan.FromSeconds(2.5));
         private readonly IntervalTimer pseudoUpdateFreq = new IntervalTimer(TimeSpan.FromMilliseconds(650));
@@ -51,6 +57,11 @@ namespace Perpetuum.Zones.NpcSystem
             get { return pseudoThreatManager; }
         }
 
+        public IndustrialValueManager IndustrialValueManager
+        {
+            get { return industrialValueManager; }
+        }
+
         public int BestCombatRange
         {
             get { return this.optimalCombatRange.Value; }
@@ -64,6 +75,14 @@ namespace Perpetuum.Zones.NpcSystem
         public bool IsInHomeRange
         {
             get { return CurrentPosition.IsInRangeOf2D(HomePosition, HomeRange); }
+        }
+
+        public int MaxIndustrialRange
+        {
+            get
+            {
+                return IndustrialScanRange;
+            }
         }
 
         public ISmartCreatureGroup Group
@@ -89,6 +108,7 @@ namespace Perpetuum.Zones.NpcSystem
             threatManager = new ThreatManager();
             AI = new StackFSM();
             pseudoThreatManager = new PseudoThreatManager();
+            industrialValueManager = new IndustrialValueManager();
         }
 
         public void LookingForHostiles()
@@ -96,6 +116,72 @@ namespace Perpetuum.Zones.NpcSystem
             foreach (var visibility in GetVisibleUnits())
             {
                 AddBodyPullThreat(visibility.Target);
+            }
+        }
+
+        /*
+        Undefined = 0,
+        Titan,//1
+        Crude, //2
+        Stermonit, //3
+        Imentium, //4
+        Liquizit, //5
+        Epriton, //6
+        Helioptris, //7
+        Triandlus, //8
+        Prismocitae, //9
+        Gravel, //10
+        Electrofruit, //11
+        Silgium, //12
+        Gammaterial, //13
+        Plants, //14
+        EnergyMineral, //15
+        FluxOre //16
+        */
+
+        public void LookingForIndustrialTargets()
+        {
+            IndustrialValueManager.Clear();
+
+            var area = Zone.CreateArea(CurrentPosition, IndustrialScanRange);
+
+            foreach (MaterialType materialType in Enum.GetValues(typeof(MaterialType)))
+            {
+                switch (materialType)
+                {
+                    case MaterialType.Undefined:
+                    case MaterialType.Gravel:
+                    case MaterialType.Plants:
+                    case MaterialType.Electrofruit:
+                        continue;
+                }
+
+                var builder = MineralScanResultBuilder.Create(Zone, materialType);
+
+                builder.ScanArea = area;
+                builder.ScanAccuracy = 100.0;
+
+                var result = builder.Build();
+                MineralLayer mineralLayer = Zone.Terrain.GetMaterialLayer(materialType) as MineralLayer;
+
+                if (mineralLayer != null)
+                {
+                    if (result.FoundAny)
+                    {
+                        var valuablePositions = result.Area
+                            .GetPositions()
+                            .Where(x => mineralLayer.HasMineral(x))
+                            .Select(x=>Zone.FixZ(x))
+                            .Where(x => x.IsInRangeOf3D(this.PositionWithHeight, this.BestCombatRange));
+
+                        foreach (var valuablePosition in valuablePositions)
+                        {
+                            var mineralNode = mineralLayer.GetNode(valuablePosition);
+
+                            IndustrialValueManager.GetOrAddIndustrialTargetWithValue(valuablePosition, IndustrialValueType.Mineral, mineralNode.GetValue(valuablePosition));
+                        }
+                    }
+                }
             }
         }
 
@@ -328,6 +414,10 @@ namespace Perpetuum.Zones.NpcSystem
             {
                 AI.Push(new SentryTurretCombatAI(this));
             }
+            else if (this is MiningTurret)
+            {
+                AI.Push(new MiningTurretIndustrialAI(this));
+            }
             else if (IsStationary)
             {
                 AI.Push(new StationaryIdleAI(this));
@@ -414,7 +504,7 @@ namespace Perpetuum.Zones.NpcSystem
 
             foreach (var hostile in caller.ThreatManager.Hostiles)
             {
-                AddThreat(hostile.unit, new Threat(ThreatType.Undefined, hostile.Threat), true);
+                AddThreat(hostile.Unit, new Threat(ThreatType.Undefined, hostile.Threat), true);
             }
         }
     }

@@ -31,7 +31,8 @@ namespace Perpetuum.Zones.NpcSystem
         IEntityVisitor<BlobEmissionModulatorModule>,
         IEntityVisitor<TargetBlinderModule>,
         IEntityVisitor<CoreBoosterModule>,
-        IEntityVisitor<TargetPainterModule>
+        IEntityVisitor<TargetPainterModule>,
+        IEntityVisitor<RemoteControlledDrillerModule>
     {
         private const double ENERGY_INJECTOR_THRESHOLD = 0.65;
         private const double ARMOR_REPAIR_THRESHOLD = 0.95;
@@ -355,6 +356,19 @@ namespace Perpetuum.Zones.NpcSystem
                 return;
             }
 
+            module.State.SwitchTo(ModuleStateType.Oneshot);
+        }
+
+        public void Visit(RemoteControlledDrillerModule module)
+        {
+            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockIndustrialTargetFor(module);
+
+            if (lockTarget == null)
+            {
+                return;
+            }
+
+            module.Lock = lockTarget;
             module.State.SwitchTo(ModuleStateType.Oneshot);
         }
 

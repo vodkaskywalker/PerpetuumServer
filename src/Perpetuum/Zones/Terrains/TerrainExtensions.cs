@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -297,6 +298,20 @@ namespace Perpetuum.Zones.Terrains
         public static MineralLayer GetMineralLayerOrThrow(this ITerrain terrain, MaterialType type)
         {
             return terrain.GetMaterialLayer(type).ThrowIfNotType<MineralLayer>(ErrorCodes.NoSuchMineralOnZone);
+        }
+
+        public static MaterialType GetMaterialTypeAtPosition(this ITerrain terrain, Position position)
+        {
+            MaterialType[] materials = Enum.GetValues(typeof(MaterialType)) as MaterialType[];
+
+            var layer = materials
+                .Select(x => terrain.GetMaterialLayer(x))
+                .Where(x => x is MineralLayer)
+                .FirstOrDefault(x => (x as MineralLayer).Nodes.Any(y => y.Area.Contains(position)));
+
+            return layer == null
+                ? MaterialType.Undefined
+                : (layer as MineralLayer).Type;
         }
 
         private const int GZIP_THRESHOLD = 260;

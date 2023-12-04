@@ -102,7 +102,7 @@ namespace Perpetuum.Modules
             _lock = null;
         }
 
-        private bool IsInRange(Position position)
+        public bool IsInRange(Position position)
         {
             Debug.Assert(ParentRobot != null, "ParentRobot != null");
             return !IsRanged || ParentRobot.IsInRangeOf3D(position,OptimalRange + Falloff);

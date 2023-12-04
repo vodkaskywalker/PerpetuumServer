@@ -1,6 +1,6 @@
-﻿namespace Perpetuum.Zones.NpcSystem
+﻿namespace Perpetuum.Zones.NpcSystem.TargettingStrategies
 {
-    public enum PrimaryLockSelectionStrategy
+    public enum CombatPrimaryLockSelectionStrategy
     {
         Random,
         Hostile,

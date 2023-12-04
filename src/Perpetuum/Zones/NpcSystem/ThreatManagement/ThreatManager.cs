@@ -41,7 +41,7 @@ namespace Perpetuum.Zones.NpcSystem.ThreatManaging
 
         public void Remove(Hostile hostile)
         {
-            ImmutableInterlocked.TryRemove(ref _hostiles, hostile.unit.Eid, out hostile);
+            ImmutableInterlocked.TryRemove(ref _hostiles, hostile.Unit.Eid, out hostile);
         }
 
         public string ToDebugString()
@@ -59,7 +59,7 @@ namespace Perpetuum.Zones.NpcSystem.ThreatManaging
 
             foreach (var hostile in _hostiles.Values.OrderByDescending(h => h.Threat))
             {
-                sb.AppendFormat("  {0} ({1}) => {2}", hostile.unit.ED.Name, hostile.unit.Eid, hostile.Threat);
+                sb.AppendFormat("  {0} ({1}) => {2}", hostile.Unit.ED.Name, hostile.Unit.Eid, hostile.Threat);
                 sb.AppendLine();
             }
 

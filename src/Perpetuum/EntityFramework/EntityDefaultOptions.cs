@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Perpetuum.ExportedTypes;
 using Perpetuum.GenXY;
+using Perpetuum.Zones.RemoteControl;
 
 namespace Perpetuum.EntityFramework
 {
@@ -183,6 +185,16 @@ namespace Perpetuum.EntityFramework
                 Debug.Assert(id > 0);
 
                 return id;
+            }
+        }
+
+        public TurretType TurretType
+        {
+            get
+            {
+                var typeString = _dictionary.GetOrDefault<string>("turretType");
+
+                return (TurretType)Enum.Parse(typeof(TurretType), typeString);
             }
         }
     }

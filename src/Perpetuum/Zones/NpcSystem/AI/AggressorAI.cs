@@ -68,19 +68,19 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            if (!mostHated.unit.CurrentPosition.IsEqual2D(this.lastTargetPosition))
+            if (!mostHated.Unit.CurrentPosition.IsEqual2D(this.lastTargetPosition))
             {
-                this.lastTargetPosition = mostHated.unit.CurrentPosition;
+                this.lastTargetPosition = mostHated.Unit.CurrentPosition;
 
                 var findNewTargetPosition = false;
 
-                if (!smartCreature.IsInRangeOf3D(mostHated.unit, smartCreature.BestCombatRange))
+                if (!smartCreature.IsInRangeOf3D(mostHated.Unit, smartCreature.BestCombatRange))
                 {
                     findNewTargetPosition = true;
                 }
                 else
                 {
-                    var visibility = smartCreature.GetVisibility(mostHated.unit);
+                    var visibility = smartCreature.GetVisibility(mostHated.Unit);
 
                     if (visibility != null)
                     {
@@ -95,7 +95,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
                 if (findNewTargetPosition)
                 {
-                    FindNewAttackPositionAsync(mostHated.unit).ContinueWith(t =>
+                    FindNewAttackPositionAsync(mostHated.Unit).ContinueWith(t =>
                     {
                         if (t.IsCanceled)
                         {
@@ -107,7 +107,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                         if (path == null)
                         {
                             smartCreature.ThreatManager.Remove(mostHated);
-                            smartCreature.AddPseudoThreat(mostHated.unit);
+                            smartCreature.AddPseudoThreat(mostHated.Unit);
 
                             return;
                         }

@@ -236,7 +236,7 @@ namespace Perpetuum.Zones.NpcSystem
             if (outpost is Outpost)
             {
                 var participants = npc.ThreatManager.Hostiles
-                    .Select(x => zone.ToPlayerOrGetOwnerPlayer(x.unit))
+                    .Select(x => zone.ToPlayerOrGetOwnerPlayer(x.Unit))
                     .ToList();
                 var builder = StabilityAffectingEvent.Builder()
                     .WithOutpost(outpost as Outpost)

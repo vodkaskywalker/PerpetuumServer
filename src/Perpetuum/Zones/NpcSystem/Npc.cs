@@ -166,6 +166,11 @@ namespace Perpetuum.Zones.NpcSystem
             return true;
         }
 
+        internal override bool IsHostile(MiningTurret turret)
+        {
+            return true;
+        }
+
         protected override bool IsHostileFor(Unit unit)
         {
             return unit.IsHostile(this);
@@ -193,7 +198,7 @@ namespace Perpetuum.Zones.NpcSystem
                 if (BossInfo?.IsLootSplit ?? false)
                 {
                     List<Player> participants = new List<Player>();
-                    participants = ThreatManager.Hostiles.Select(x => zone.ToPlayerOrGetOwnerPlayer(x.unit)).ToList();
+                    participants = ThreatManager.Hostiles.Select(x => zone.ToPlayerOrGetOwnerPlayer(x.Unit)).ToList();
 
                     if (participants.Count > 0)
                     {
@@ -236,9 +241,9 @@ namespace Perpetuum.Zones.NpcSystem
                 {
                     var awardedPlayers = new List<Unit>();
 
-                    foreach (var hostile in ThreatManager.Hostiles.Where(x => x.unit is Player))
+                    foreach (var hostile in ThreatManager.Hostiles.Where(x => x.Unit is Player))
                     {
-                        var playerUnit = hostile.unit;
+                        var playerUnit = hostile.Unit;
                         var hostilePlayer = zone.ToPlayerOrGetOwnerPlayer(playerUnit);
 
                         hostilePlayer?.Character.AddExtensionPointsBoostAndLog(EpForActivityType.Npc, EP);

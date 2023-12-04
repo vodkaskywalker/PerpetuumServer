@@ -96,5 +96,37 @@ namespace Perpetuum.Zones.NpcSystem
 
             return locks.RandomElement();
         }
+
+        [CanBeNull]
+        public TerrainLock SelectOptimalLockIndustrialTargetFor(ActiveModule module)
+        {
+            var range = module.OptimalRange;
+            var locks = GetLocks().OfType<TerrainLock>().Where(industrialLock =>
+            {
+                if (industrialLock.State != LockState.Locked)
+                {
+                    return false;
+                }
+
+                return true;
+
+            }).ToArray();
+
+            var primaryLock = locks.FirstOrDefault(l => l.Primary);
+
+            if (module.ED.AttributeFlags.PrimaryLockedTarget)
+            {
+                return primaryLock;
+            }
+
+            var chance = FastRandom.NextDouble() <= PRIMARY_LOCK_CHANCE_FOR_SECONDARY_MODULE;
+
+            if (primaryLock != null && chance)
+            {
+                return primaryLock;
+            }
+
+            return locks.RandomElement();
+        }
     }
 }

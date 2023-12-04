@@ -2,28 +2,28 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Perpetuum.Zones.NpcSystem
+namespace Perpetuum.Zones.NpcSystem.TargettingStrategies
 {
-    public delegate bool TargetSelectionStrategy(SmartCreature smartCreature, UnitLock[] locks);
+    public delegate bool CombatTargetSelectionStrategy(SmartCreature smartCreature, UnitLock[] locks);
 
-    public static class Strategies
+    public static class CombatStrategies
     {
-        public static Dictionary<PrimaryLockSelectionStrategy, TargetSelectionStrategy> All =
-            new Dictionary<PrimaryLockSelectionStrategy, TargetSelectionStrategy>()
+        public static Dictionary<CombatPrimaryLockSelectionStrategy, CombatTargetSelectionStrategy> All =
+            new Dictionary<CombatPrimaryLockSelectionStrategy, CombatTargetSelectionStrategy>()
         {
-            { PrimaryLockSelectionStrategy.Random, TargetRandom },
-            { PrimaryLockSelectionStrategy.Hostile, TargetMostHated },
-            { PrimaryLockSelectionStrategy.Closest, TargetClosest },
-            { PrimaryLockSelectionStrategy.OptimalRange, TargetWithinOptimal },
-            { PrimaryLockSelectionStrategy.HostileOrClosest, TargetMostHatedOrClosest },
+            { CombatPrimaryLockSelectionStrategy.Random, TargetRandom },
+            { CombatPrimaryLockSelectionStrategy.Hostile, TargetMostHated },
+            { CombatPrimaryLockSelectionStrategy.Closest, TargetClosest },
+            { CombatPrimaryLockSelectionStrategy.OptimalRange, TargetWithinOptimal },
+            { CombatPrimaryLockSelectionStrategy.HostileOrClosest, TargetMostHatedOrClosest },
         };
 
-        public static TargetSelectionStrategy GetStrategy(PrimaryLockSelectionStrategy strategyType)
+        public static CombatTargetSelectionStrategy GetStrategy(CombatPrimaryLockSelectionStrategy strategyType)
         {
             return All.GetOrDefault(strategyType);
         }
 
-        public static bool TryInvokeStrategy(PrimaryLockSelectionStrategy strategyType, SmartCreature smartCreature, UnitLock[] locks)
+        public static bool TryInvokeStrategy(CombatPrimaryLockSelectionStrategy strategyType, SmartCreature smartCreature, UnitLock[] locks)
         {
             var primaryLockSelectionStrategy = GetStrategy(strategyType);
 
@@ -38,9 +38,9 @@ namespace Perpetuum.Zones.NpcSystem
         private static bool TargetMostHated(SmartCreature smartCreature, UnitLock[] locks)
         {
             var hostiles = smartCreature.ThreatManager.Hostiles;
-            var hostileLocks = locks.Where(u => hostiles.Any(h => h.unit.Eid == u.Target.Eid));
+            var hostileLocks = locks.Where(u => hostiles.Any(h => h.Unit.Eid == u.Target.Eid));
             var mostHostileLock = hostileLocks
-                .OrderByDescending(u => hostiles.Where(h => h.unit.Eid == u.Target.Eid).FirstOrDefault()?.Threat ?? 0)
+                .OrderByDescending(u => hostiles.Where(h => h.Unit.Eid == u.Target.Eid).FirstOrDefault()?.Threat ?? 0)
                 .FirstOrDefault();
 
             return TrySetPrimaryLock(smartCreature, mostHostileLock);

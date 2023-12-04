@@ -118,7 +118,7 @@ namespace Perpetuum.Services.EventServices.EventProcessors.NpcSpawnEventHandlers
             {
                 foreach (var threat in smartCreatureWithAggro.ThreatManager.Hostiles)
                 {
-                    npc.AddDirectThreat(threat.unit, threat.Threat + FastRandom.NextDouble(5, 10));
+                    npc.AddDirectThreat(threat.Unit, threat.Threat + FastRandom.NextDouble(5, 10));
                 }
             }
         }
