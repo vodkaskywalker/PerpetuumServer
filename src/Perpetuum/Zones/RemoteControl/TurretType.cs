@@ -4,5 +4,6 @@
     {
         Sentry,
         Mining,
+        Harvesting,
     }
 }

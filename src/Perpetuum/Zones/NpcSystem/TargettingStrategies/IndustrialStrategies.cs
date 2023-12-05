@@ -11,7 +11,7 @@ namespace Perpetuum.Zones.NpcSystem.TargettingStrategies
         public static Dictionary<IndustrialPrimaryLockSelectionStrategy, IndustrialTargetSelectionStrategy> All =
             new Dictionary<IndustrialPrimaryLockSelectionStrategy, IndustrialTargetSelectionStrategy>()
         {
-            { IndustrialPrimaryLockSelectionStrategy.RichestTileWithinOptimal, TargetRichestTileWithinOptimal },
+            { IndustrialPrimaryLockSelectionStrategy.RichestTile, TargetRichestTile },
         };
 
         public static IndustrialTargetSelectionStrategy GetStrategy(IndustrialPrimaryLockSelectionStrategy strategyType)
@@ -31,13 +31,19 @@ namespace Perpetuum.Zones.NpcSystem.TargettingStrategies
             return industrialLockSelectionStrategy(smartCreature, locks);
         }
 
-        private static bool TargetRichestTileWithinOptimal(SmartCreature smartCreature, TerrainLock[] locks)
+        private static bool TargetRichestTile(SmartCreature smartCreature, TerrainLock[] locks)
         {
             var industrialTargets = smartCreature.IndustrialValueManager.IndustrialTargets;
+
+            if (!industrialTargets.Any())
+            {
+                return false;
+            }
+
             var industrialTargetLocks = locks.Where(u => industrialTargets.Any(h => h.Position.ToString() == u.Location.ToString()));
             var mostHostileLock = industrialTargetLocks
-                .Where(k => k.Location.IsInRangeOf3D(smartCreature.PositionWithHeight, smartCreature.BestCombatRange))
-                .OrderByDescending(u => industrialTargets.Where(h => h.Position.ToString() == u.Location.ToString()).FirstOrDefault()?.IndustrialValue ?? 0)
+                //.Where(k => k.Location.IsInRangeOf2D(smartCreature.CurrentPosition, smartCreature.BestCombatRange))
+                .OrderByDescending(u => industrialTargets.FirstOrDefault(h => h.Position.ToString() == u.Location.ToString())?.IndustrialValue ?? 0)
                 .FirstOrDefault();
 
             return TrySetPrimaryLock(smartCreature, mostHostileLock);

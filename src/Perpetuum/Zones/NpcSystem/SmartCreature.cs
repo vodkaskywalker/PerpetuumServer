@@ -19,6 +19,7 @@ using System.Linq;
 using Perpetuum.Zones.Terrains.Materials;
 using Perpetuum.Zones.Terrains;
 using Perpetuum.Zones.NpcSystem.AI.Behaviors;
+using Perpetuum.Zones.Terrains.Materials.Plants;
 
 namespace Perpetuum.Zones.NpcSystem
 {
@@ -121,13 +122,13 @@ namespace Perpetuum.Zones.NpcSystem
             }
         }
 
-        public void LookingForIndustrialTargets()
+        public void LookingForMiningTargets()
         {
             IndustrialValueManager.Clear();
 
             var area = Zone.CreateArea(CurrentPosition, IndustrialScanRange);
 
-            var availableMaterialTypes = Zone.Terrain.GetAvailableMaterialTypes();
+            var availableMaterialTypes = Zone.Terrain.GetAvailableMineralTypes();
 
             foreach (MaterialType materialType in availableMaterialTypes)
             {
@@ -156,6 +157,37 @@ namespace Perpetuum.Zones.NpcSystem
 
                             IndustrialValueManager.GetOrAddIndustrialTargetWithValue(valuablePosition.Center, IndustrialValueType.Mineral, mineralNode.GetValue(valuablePosition));
                         }
+                    }
+                }
+            }
+        }
+
+        public void LookingForHarvestingTargets()
+        {
+            IndustrialValueManager.Clear();
+
+            var area = Zone.CreateArea(CurrentPosition, IndustrialScanRange);
+
+            var availablePlantTypes = Zone.Terrain.GetAvailablePlantTypes();
+
+            foreach (PlantType plantType in availablePlantTypes)
+            {
+                var plantsCounter = Zone.CountPlantsInArea(plantType, area);
+
+                if (plantsCounter > 0)
+                {
+                    var valuablePositions = Zone.GetPlantPositionsInArea(plantType, area)
+                        .Select(x => Zone.FixZ(x))
+                        .Where(x => x.IsInRangeOf2D(this.CurrentPosition, this.BestCombatRange));
+
+                    foreach (var valuablePosition in valuablePositions)
+                    {
+                        var plant = Zone.Terrain.Plants.GetValue(valuablePosition.intX, valuablePosition.intY);
+
+                        if (plant.material > 0)
+                        {
+                            IndustrialValueManager.GetOrAddIndustrialTargetWithValue(valuablePosition.Center, IndustrialValueType.Mineral, plant.material);
+                        }                       
                     }
                 }
             }
@@ -390,9 +422,16 @@ namespace Perpetuum.Zones.NpcSystem
             {
                 AI.Push(new SentryTurretCombatAI(this));
             }
-            else if (this is MiningTurret)
+            else if (this is IndustrialTurret)
             {
-                AI.Push(new MiningTurretIndustrialAI(this));
+                if ((this as IndustrialTurret).TurretType == TurretType.Mining)
+                {
+                    AI.Push(new MiningIndustrialTurretAI(this));
+                }
+                else
+                {
+                    AI.Push(new HarvestingIndustrialTurretAI(this));
+                }
             }
             else if (IsStationary)
             {

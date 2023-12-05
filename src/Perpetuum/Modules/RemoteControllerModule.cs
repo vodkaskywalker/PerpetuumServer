@@ -158,9 +158,14 @@ namespace Perpetuum.Modules
             {
                 fieldTurret = (SentryTurret)Factory.CreateWithRandomEID(ammo.ED.Options.TurretId);
             }
-            else if (ammo.ED.Options.TurretType == TurretType.Mining)
+            else if (ammo.ED.Options.TurretType == TurretType.Mining || ammo.ED.Options.TurretType == TurretType.Harvesting)
             {
-                fieldTurret = (MiningTurret)Factory.CreateWithRandomEID(ammo.ED.Options.TurretId);
+                fieldTurret = (IndustrialTurret)Factory.CreateWithRandomEID(ammo.ED.Options.TurretId);
+                (fieldTurret as IndustrialTurret).SetTurretType(ammo.ED.Options.TurretType);
+            }
+            else
+            {
+                PerpetuumException.Create(ErrorCodes.InvalidAmmoDefinition);
             }
 
             fieldTurret.Owner = this.ParentRobot.Eid;

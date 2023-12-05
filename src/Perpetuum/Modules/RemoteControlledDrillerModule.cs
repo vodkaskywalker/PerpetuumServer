@@ -39,6 +39,22 @@ namespace Perpetuum.Modules
             }
         }
 
+        public override void UpdateProperty(AggregateField field)
+        {
+            switch (field)
+            {
+                case AggregateField.mining_amount_modifier:
+                case AggregateField.effect_mining_amount_modifier:
+                    {
+                        _miningAmountModifier.Update();
+
+                        return;
+                    }
+            }
+
+            base.UpdateProperty(field);
+        }
+
         public List<ItemInfo> Extract(MineralLayer layer, Point location, uint amount)
         {
             if (!layer.HasMineral(location))

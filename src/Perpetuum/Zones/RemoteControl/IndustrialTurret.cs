@@ -12,10 +12,17 @@ using System;
 
 namespace Perpetuum.Zones.RemoteControl
 {
-    public class MiningTurret : RemoteControlledTurret
+    public class IndustrialTurret : RemoteControlledTurret
     {
-        public MiningTurret()
+        public TurretType TurretType { get; private set; }
+
+        public IndustrialTurret()
         {
+        }
+
+        public void SetTurretType(TurretType turretType)
+        {
+            TurretType = turretType;
         }
 
         protected override bool IsHostileFor(Unit unit)

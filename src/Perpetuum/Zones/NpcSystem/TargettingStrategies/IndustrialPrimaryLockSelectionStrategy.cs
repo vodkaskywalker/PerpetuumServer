@@ -2,6 +2,7 @@
 {
     public enum IndustrialPrimaryLockSelectionStrategy
     {
-        RichestTileWithinOptimal,
+        RichestTile,
+        MostFertilePlantWithinOptimal,
     }
 }

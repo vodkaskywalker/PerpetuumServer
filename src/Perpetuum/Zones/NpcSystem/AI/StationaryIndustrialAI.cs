@@ -1,35 +1,25 @@
 ﻿using Perpetuum.Timers;
+using Perpetuum.Zones.NpcSystem.TargettingStrategies;
 using System;
 
 namespace Perpetuum.Zones.NpcSystem.AI
 {
     public class StationaryIndustrialAI : IndustrialAI
     {
-        private readonly IntervalTimer updateFrequency = new IntervalTimer(18000);
+        public readonly IntervalTimer UpdateFrequency = new IntervalTimer(18000);
 
         public StationaryIndustrialAI(SmartCreature smartCreature) : base(smartCreature) { }
 
-        public override void Update(TimeSpan time)
+        protected override IndustrialPrimaryLockSelectionStrategySelector InitSelector()
         {
-            FindIndustrialTargets(time);
-
-            base.Update(time);
+            return IndustrialPrimaryLockSelectionStrategySelector.Create()
+                .WithStrategy(IndustrialPrimaryLockSelectionStrategy.RichestTile, 1)
+                .Build();
         }
 
         protected override TimeSpan SetPrimaryDwellTime()
         {
             return FastRandom.NextTimeSpan(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(25));
-        }
-
-        private void FindIndustrialTargets(TimeSpan time)
-        {
-            updateFrequency.Update(time);
-
-            if (updateFrequency.Passed)
-            {
-                updateFrequency.Reset();
-                smartCreature.LookingForIndustrialTargets();
-            }
         }
     }
 }

@@ -847,7 +847,7 @@ namespace Perpetuum.Bootstrapper
             RegisterRobot<Npc>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
             RegisterRobot<Player>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
             RegisterRobot<SentryTurret>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
-            RegisterRobot<MiningTurret>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
+            RegisterRobot<IndustrialTurret>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
             RegisterRobot<PBSTurret>();
             RegisterRobot<PunchBag>();
 
@@ -952,6 +952,7 @@ namespace Perpetuum.Bootstrapper
 
             RegisterModule<DrillerModule>();
             RegisterModule<RemoteControlledDrillerModule>();
+            RegisterModule<RemoteControlledHarvesterModule>();
             RegisterModule<HarvesterModule>();
             RegisterModule<Module>();
             RegisterModule<WeaponModule>();
@@ -1117,6 +1118,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<MiningAmmo>(CategoryFlags.cf_mining_ammo);
                 ByCategoryFlags<RemoteControlledUnit>(CategoryFlags.cf_sentry_turret_units);
                 ByCategoryFlags<RemoteControlledUnit>(CategoryFlags.cf_mining_turret_units);
+                ByCategoryFlags<RemoteControlledUnit>(CategoryFlags.cf_harvesting_turret_units);
                 ByCategoryFlags<TileScannerAmmo>(CategoryFlags.cf_mining_probe_ammo_tile);
                 ByCategoryFlags<OneTileScannerAmmo>(CategoryFlags.cf_mining_probe_ammo_one_tile);
                 ByCategoryFlags<ArtifactScannerAmmo>(CategoryFlags.cf_mining_probe_ammo_artifact);
@@ -1197,7 +1199,8 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<EnergyTransfererModule>(CategoryFlags.cf_energy_transferers);
                 ByCategoryFlags<EnergyVampireModule>(CategoryFlags.cf_energy_vampires);
                 ByCategoryFlags<DrillerModule>(CategoryFlags.cf_drillers,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_mining_ammo));
-                ByCategoryFlags<RemoteControlledDrillerModule>(CategoryFlags.cf_mining_turret_drillers);
+                ByCategoryFlags<RemoteControlledDrillerModule>(CategoryFlags.cf_industrial_turret_drillers);
+                ByCategoryFlags<RemoteControlledHarvesterModule>(CategoryFlags.cf_industrial_turret_harvesters);
                 ByCategoryFlags<HarvesterModule>(CategoryFlags.cf_harvesters,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_harvesting_ammo));
                 ByCategoryFlags<GeoScannerModule>(CategoryFlags.cf_mining_probes,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_mining_probe_ammo));
                 ByCategoryFlags<UnitScannerModule>(CategoryFlags.cf_chassis_scanner);
@@ -1252,7 +1255,8 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<PunchBagDeployer>(CategoryFlags.cf_others);
                 ByCategoryFlags<BlobEmitterUnit>(CategoryFlags.cf_blob_emitter);
                 ByCategoryFlags<SentryTurret>(CategoryFlags.cf_sentry_turrets);
-                ByCategoryFlags<MiningTurret>(CategoryFlags.cf_mining_turrets);
+                ByCategoryFlags<IndustrialTurret>(CategoryFlags.cf_mining_turrets);
+                ByCategoryFlags<IndustrialTurret>(CategoryFlags.cf_harvesting_turrets);
                 ByCategoryFlags<Item>(CategoryFlags.cf_reactor_cores);
                 ByCategoryFlags<Kiosk>(CategoryFlags.cf_kiosk);
                 ByCategoryFlags<AlarmSwitch>(CategoryFlags.cf_alarm_switch);

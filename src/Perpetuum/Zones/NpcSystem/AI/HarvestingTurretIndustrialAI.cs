@@ -2,14 +2,14 @@
 
 namespace Perpetuum.Zones.NpcSystem.AI
 {
-    public class MiningTurretIndustrialAI : StationaryIndustrialAI
+    public class HarvestingTurretIndustrialAI : StationaryIndustrialAI
     {
-        public MiningTurretIndustrialAI(SmartCreature smartCreature) : base(smartCreature) { }
+        public HarvestingTurretIndustrialAI(SmartCreature smartCreature) : base(smartCreature) { }
 
         protected override IndustrialPrimaryLockSelectionStrategySelector InitSelector()
         {
             return IndustrialPrimaryLockSelectionStrategySelector.Create()
-                .WithStrategy(IndustrialPrimaryLockSelectionStrategy.RichestTileWithinOptimal, 1)
+                .WithStrategy(IndustrialPrimaryLockSelectionStrategy.MostFertilePlantWithinOptimal, 1)
                 .Build();
         }
     }

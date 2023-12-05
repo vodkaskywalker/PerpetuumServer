@@ -15,12 +15,15 @@ namespace Perpetuum.Zones.NpcSystem.AI
     {
         private const int UpdateFrequency = 1650;
         private readonly IntervalTimer processIndustrialTargetsTimer = new IntervalTimer(UpdateFrequency);
-        private readonly IntervalTimer primarySelectTimer = new IntervalTimer(UpdateFrequency);
+        private IntervalTimer primarySelectTimer;
         private List<ModuleActivator> moduleActivators;
         private TimeSpan industrialTargetsUpdateFrequency = TimeSpan.FromMilliseconds(UpdateFrequency);
         private IndustrialPrimaryLockSelectionStrategySelector stratSelector;
 
-        public IndustrialAI(SmartCreature smartCreature) : base(smartCreature) { }
+        public IndustrialAI(SmartCreature smartCreature) : base(smartCreature)
+        {
+            primarySelectTimer = new IntervalTimer((this.smartCreature.ActiveModules.Max(x => x?.CycleTime.Milliseconds) ?? 0) + UpdateFrequency);
+        }
 
         public override void Enter()
         {
@@ -44,7 +47,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
         protected virtual IndustrialPrimaryLockSelectionStrategySelector InitSelector()
         {
             return IndustrialPrimaryLockSelectionStrategySelector.Create()
-                .WithStrategy(IndustrialPrimaryLockSelectionStrategy.RichestTileWithinOptimal, 9)
+                .WithStrategy(IndustrialPrimaryLockSelectionStrategy.RichestTile, 9)
                 .Build();
         }
 

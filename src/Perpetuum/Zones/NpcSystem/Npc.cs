@@ -166,7 +166,7 @@ namespace Perpetuum.Zones.NpcSystem
             return true;
         }
 
-        internal override bool IsHostile(MiningTurret turret)
+        internal override bool IsHostile(IndustrialTurret turret)
         {
             return true;
         }

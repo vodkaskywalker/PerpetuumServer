@@ -1,29 +1,25 @@
-﻿using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Transactions;
-using Perpetuum.Data;
+﻿using Perpetuum.Data;
 using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
 using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Players;
-using Perpetuum.Services.MissionEngine.MissionTargets;
-using Perpetuum.Zones;
 using Perpetuum.Zones.Beams;
 using Perpetuum.Zones.Locking.Locks;
-using Perpetuum.Zones.Terrains;
 using Perpetuum.Zones.Terrains.Materials.Plants.Harvesters;
+using Perpetuum.Zones.Terrains;
+using Perpetuum.Zones;
+using System.Diagnostics;
+using System.Transactions;
 
 namespace Perpetuum.Modules
 {
-    public class HarvesterModule : GathererModule
+    public class RemoteControlledHarvesterModule : GathererModule
     {
-        private const int MAX_EP_PER_DAY = 1440;
         private readonly PlantHarvester.Factory _plantHarvesterFactory;
         private readonly HarvestingAmountModifierProperty _harverstingAmountModifier;
 
-        public HarvesterModule(CategoryFlags ammoCategoryFlags,PlantHarvester.Factory plantHarvesterFactory) : base(ammoCategoryFlags, true)
+        public RemoteControlledHarvesterModule(PlantHarvester.Factory plantHarvesterFactory) : base(CategoryFlags.undefined, true)
         {
             _plantHarvesterFactory = plantHarvesterFactory;
             _harverstingAmountModifier = new HarvestingAmountModifierProperty(this);
@@ -55,31 +51,6 @@ namespace Perpetuum.Modules
             }
         }
 
-        protected override int CalculateEp(int materialType)
-        {
-            var activeGathererModules = ParentRobot.ActiveModules.OfType<HarvesterModule>().Where(m => m.State.Type != ModuleStateType.Idle).ToArray();
-
-            if (activeGathererModules.Length == 0)
-            {
-                return 0;
-            }
-
-            var avgCycleTime = activeGathererModules.Select(m => m.CycleTime).Average();
-            var t = TimeSpan.FromDays(1).Divide(avgCycleTime);
-            var chance = (double)MAX_EP_PER_DAY / t.Ticks;
-
-            chance /= activeGathererModules.Length;
-
-            var rand = FastRandom.NextDouble();
-
-            if (rand <= chance)
-            {
-                return 1;
-            }
-
-            return 0;
-        }
-
         protected override void OnAction()
         {
             var zone = Zone;
@@ -90,7 +61,11 @@ namespace Perpetuum.Modules
             }
 
             DoHarvesting(zone);
-            ConsumeAmmo();
+        }
+
+        protected override int CalculateEp(int materialType)
+        {
+            return 0;
         }
 
         private void DoHarvesting(IZone zone)
@@ -117,10 +92,6 @@ namespace Perpetuum.Modules
                     Debug.Assert(container != null, "container != null");
                     container.EnlistTransaction();
 
-                    var player = ParentRobot as Player;
-
-                    Debug.Assert(player != null,"player != null");
-
                     foreach (var extractedMaterial in harvestedPlants)
                     {
                         var item = (Item)Factory.CreateWithRandomEID(extractedMaterial.Definition);
@@ -128,16 +99,9 @@ namespace Perpetuum.Modules
                         item.Owner = Owner;
                         item.Quantity = extractedMaterial.Quantity;
                         container.AddItem(item, true);
-
-                        var extractedHarvestDefinition = extractedMaterial.Definition;
-                        var extractedQuantity = extractedMaterial.Quantity;
-
-                        player.MissionHandler.EnqueueMissionEventInfo(new HarvestPlantEventInfo(player, extractedHarvestDefinition, extractedQuantity, terrainLock.Location));
-                        player.Zone?.HarvestLogHandler.EnqueueHarvestLog(extractedHarvestDefinition, extractedQuantity);
                     }
 
                     container.Save();
-                    OnGathererMaterial(zone, player, (int) plantInfo.type);
                     Transaction.Current.OnCommited(() => container.SendUpdateToOwnerAsync());
                     scope.Complete();
                 }
