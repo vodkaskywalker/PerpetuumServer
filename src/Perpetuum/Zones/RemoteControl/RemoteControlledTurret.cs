@@ -1,5 +1,6 @@
 ﻿using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
+using Perpetuum.Players;
 using Perpetuum.Units;
 using Perpetuum.Zones.Beams;
 using Perpetuum.Zones.NpcSystem;
@@ -15,6 +16,8 @@ namespace Perpetuum.Zones.RemoteControl
         private ItemProperty rcBandwidthUsage = ItemProperty.None;
 
         public event RemoteChannelEventHandler RemoteChannelDeactivated;
+
+        public Player Player { get; private set; }
 
         public double RemoteChannelBandwidthUsage
         {
@@ -38,6 +41,11 @@ namespace Perpetuum.Zones.RemoteControl
         public override bool IsStationary => true;
 
         public override double CallForHelpArmorThreshold => SentryTurretCallForHelpArmorThreshold;
+
+        public void SetPlayer(Player player)
+        {
+            Player = player;
+        }
 
         protected override void OnUpdate(TimeSpan time)
         {

@@ -1,6 +1,4 @@
-﻿using Perpetuum.ExportedTypes;
-using Perpetuum.Groups.Corporations;
-using Perpetuum.Items;
+﻿using Perpetuum.Groups.Corporations;
 using Perpetuum.Players;
 using Perpetuum.Services.Standing;
 using Perpetuum.Units;

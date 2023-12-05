@@ -12,6 +12,7 @@ using Perpetuum.Services.MissionEngine.MissionTargets;
 using Perpetuum.Zones;
 using Perpetuum.Zones.Beams;
 using Perpetuum.Zones.Locking.Locks;
+using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.Terrains;
 using Perpetuum.Zones.Terrains.Materials.Plants.Harvesters;
 
@@ -57,7 +58,10 @@ namespace Perpetuum.Modules
 
         protected override int CalculateEp(int materialType)
         {
-            var activeGathererModules = ParentRobot.ActiveModules.OfType<HarvesterModule>().Where(m => m.State.Type != ModuleStateType.Idle).ToArray();
+
+            var activeGathererModules = this is RemoteControlledHarvesterModule
+                ? ParentRobot.ActiveModules.OfType<RemoteControlledHarvesterModule>().Where(m => m.State.Type != ModuleStateType.Idle).ToArray()
+                : ParentRobot.ActiveModules.OfType<HarvesterModule>().Where(m => m.State.Type != ModuleStateType.Idle).ToArray();
 
             if (activeGathererModules.Length == 0)
             {
@@ -93,7 +97,7 @@ namespace Perpetuum.Modules
             ConsumeAmmo();
         }
 
-        private void DoHarvesting(IZone zone)
+        public void DoHarvesting(IZone zone)
         {
             var terrainLock = GetLock().ThrowIfNotType<TerrainLock>(ErrorCodes.InvalidLockType);
 
@@ -117,7 +121,9 @@ namespace Perpetuum.Modules
                     Debug.Assert(container != null, "container != null");
                     container.EnlistTransaction();
 
-                    var player = ParentRobot as Player;
+                    var player = ParentRobot is RemoteControlledTurret
+                        ? (ParentRobot as RemoteControlledTurret).Player
+                        : ParentRobot as Player;
 
                     Debug.Assert(player != null,"player != null");
 

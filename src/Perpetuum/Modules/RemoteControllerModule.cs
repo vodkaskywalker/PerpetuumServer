@@ -168,7 +168,7 @@ namespace Perpetuum.Modules
                 PerpetuumException.Create(ErrorCodes.InvalidAmmoDefinition);
             }
 
-            fieldTurret.Owner = this.ParentRobot.Eid;
+            fieldTurret.SetPlayer(this.ParentRobot as Player);
 
             HasFreeBandwidthFor(ammo).ThrowIfFalse(ErrorCodes.MaxBandwidthExceed);
             UseRemoteChannel(fieldTurret);

@@ -20,6 +20,7 @@ using Perpetuum.Zones.Terrains.Materials;
 using Perpetuum.Zones.Terrains;
 using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using Perpetuum.Zones.Terrains.Materials.Plants;
+using Perpetuum.Players;
 
 namespace Perpetuum.Zones.NpcSystem
 {
@@ -327,10 +328,10 @@ namespace Perpetuum.Zones.NpcSystem
 
         public void AddThreat(Unit hostile, Threat threat, bool spreadToGroup)
         {
-            //if (hostile.IsPlayer())
-            //{
-            //    BossInfo?.OnAggro(hostile as Player);
-            //}
+            if (hostile.IsPlayer())
+            {
+                BossInfo?.OnAggro(hostile as Player);
+            }
 
             threatManager.GetOrAddHostile(hostile).AddThreat(threat);
 
@@ -347,17 +348,17 @@ namespace Perpetuum.Zones.NpcSystem
                 return;
             }
 
-            //var multipliedThreat = Threat.Multiply(threat, 0.5);
+            var multipliedThreat = Threat.Multiply(threat, 0.5);
 
-            //foreach (var member in @group.Members)
-            //{
-            //    if (member == this)
-            //    {
-            //        continue;
-            //    }
+            foreach (var member in @group.Members)
+            {
+                if (member == this)
+                {
+                    continue;
+                }
 
-            //    member.AddThreat(hostile, multipliedThreat, false);
-            //}
+                member.AddThreat(hostile, multipliedThreat, false);
+            }
         }
 
         /// <summary>

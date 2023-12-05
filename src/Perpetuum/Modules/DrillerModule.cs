@@ -14,6 +14,7 @@ using Perpetuum.Services.MissionEngine.MissionTargets;
 using Perpetuum.Zones;
 using Perpetuum.Zones.Beams;
 using Perpetuum.Zones.Locking.Locks;
+using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.Terrains;
 using Perpetuum.Zones.Terrains.Materials;
 using Perpetuum.Zones.Terrains.Materials.Minerals;
@@ -94,9 +95,9 @@ namespace Perpetuum.Modules
 
         protected override int CalculateEp(int materialType)
         {
-            var activeGathererModules = ParentRobot.ActiveModules.OfType<DrillerModule>()
-                .Where(m => m.State.Type != ModuleStateType.Idle)
-                .ToArray();
+            var activeGathererModules = this is RemoteControlledDrillerModule
+                ? ParentRobot.ActiveModules.OfType<RemoteControlledDrillerModule>().Where(m => m.State.Type != ModuleStateType.Idle).ToArray()
+                : ParentRobot.ActiveModules.OfType<DrillerModule>().Where(m => m.State.Type != ModuleStateType.Idle).ToArray();
 
             if (activeGathererModules.Length == 0)
             {
@@ -124,18 +125,29 @@ namespace Perpetuum.Modules
             return 0;
         }
 
-        private void DoExtractMinerals(IZone zone)
+        public void DoExtractMinerals(IZone zone)
         {
             var terrainLock = GetLock().ThrowIfNotType<TerrainLock>(ErrorCodes.InvalidLockType);
 
-            MiningAmmo ammo = GetAmmo() as MiningAmmo;
+            MaterialType materialType;
 
-            if (ammo == null)
+            if (ParentRobot is RemoteControlledTurret)
             {
-                return;
+                materialType = zone.Terrain.GetMaterialTypeAtPosition(terrainLock.Location);
+            }
+            else
+            {
+                MiningAmmo ammo = GetAmmo() as MiningAmmo;
+
+                if (ammo == null)
+                {
+                    return;
+                }
+
+                materialType = ammo.MaterialType;
             }
 
-            var materialInfo = _materialHelper.GetMaterialInfo(ammo.MaterialType);
+            var materialInfo = _materialHelper.GetMaterialInfo(materialType);
 
             CheckEnablerEffect(materialInfo);
 
@@ -157,7 +169,9 @@ namespace Perpetuum.Modules
                 Debug.Assert(container != null, "container != null");
                 container.EnlistTransaction();
 
-                var player = ParentRobot as Player;
+                var player = ParentRobot is RemoteControlledTurret
+                    ? (ParentRobot as RemoteControlledTurret).Player
+                    : ParentRobot as Player;
 
                 Debug.Assert(player != null,"player != null");
 
