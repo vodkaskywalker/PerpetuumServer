@@ -69,6 +69,11 @@ namespace Perpetuum.Players
         public const int ARKHE_REQUEST_TIMER_MINUTES_PVP = 3;
         public const int ARKHE_REQUEST_TIMER_MINUTES_NPC = 1;
 
+        private bool HasAggressorEffect
+        {
+            get { return EffectHandler.ContainsEffect(EffectType.effect_aggressor); }
+        }
+
         public long CorporationEid { get; set; }
 
         public IZoneSession Session { get; private set; }
@@ -201,6 +206,7 @@ namespace Perpetuum.Players
                 }
 
                 var zone = Zone;
+
                 if (zone == null || States.Dead)
                 {
                     return;
@@ -256,7 +262,6 @@ namespace Perpetuum.Players
             packet.AppendByte((byte)module.ParentComponent.Type);
             packet.AppendByte((byte)module.Slot);
             packet.AppendInt((int)error);
-
             Session.SendPacket(packet);
         }
 
@@ -276,6 +281,7 @@ namespace Perpetuum.Players
         public void ApplyTeleportSicknessEffect()
         {
             var zone = Zone;
+
             if (zone == null || zone is TrainingZone)
             {
                 return;
@@ -426,7 +432,6 @@ namespace Perpetuum.Players
         public override void OnAggression(Unit victim)
         {
             base.OnAggression(victim);
-
             AddInCombatWith(victim);
 
             if (victim is ITaggable taggable)
@@ -447,7 +452,6 @@ namespace Perpetuum.Players
             }
 
             victimPlayer.Session.CancelLogout();
-
             ApplyPvPEffect();
 
             if (IsInSameCorporation(victimPlayer))
@@ -479,7 +483,6 @@ namespace Perpetuum.Players
             var zone = Zone;
 
             Debug.Assert(zone != null, "zone != null");
-
             Session.SendPacket(EnterPacketBuilder);
             Session.SendTerrainData();
             zone.SendBeamsToPlayer(this, GridDistricts.All);
@@ -492,9 +495,7 @@ namespace Perpetuum.Players
             {
                 Session.SendPacket(visibility.Target.EnterPacketBuilder);
 
-                var robot = visibility.Target as Robot;
-
-                if (robot == null)
+                if (!(visibility.Target is Robot robot))
                 {
                     continue;
                 }
@@ -524,7 +525,7 @@ namespace Perpetuum.Players
             {
                 LogType = LogType.Info,
                 Tag = "FQ",
-                Message = $"{InfoString} - {message}"
+                Message = $"{InfoString} - {message}",
             };
 
             Logger.Log(e);
@@ -582,31 +583,26 @@ namespace Perpetuum.Players
 
                 spawnPosition = zone.FixZ(spawnPosition);
 
-                // keresunk neki valami jo poziciot
                 var finder = new ClosestWalkablePositionFinder(zone, spawnPosition, player);
                 var validPosition = finder.FindOrThrow();
 
-                // parentoljuk a zonahoz <<< NAGYON FONTOS - TILOS MASHOGY kulonben bennmaradnak a (pbs) bazison a robotok, es pl letorlodnek amikor kilovik a bazist
                 var zoneStorage = zone.Configuration.GetStorage();
+
                 player.Parent = zoneStorage.Eid;
                 player.FullCoreRecharge();
-
-                // elmentjuk
                 player.Save();
 
-                // csak akkor rakjuk ki ha volt rendes commit
                 Transaction.Current.OnCommited(() =>
                 {
                     dockingBase?.LeaveChannel(character);
-
                     player.CorporationEid = character.CorporationEid;
                     zone.SetGang(player);
-
                     player.AddToZone(zone, validPosition, zoneEnterType);
                     player.ApplyInvulnerableEffect();
                 });
 
                 scope.Complete();
+
                 return player;
             }
         }
@@ -644,8 +640,11 @@ namespace Perpetuum.Players
             data.Add(k.timeOut, (int)timeout.TotalMilliseconds);
             data.Add(k.started, (long)start.TotalMilliseconds);
             data.Add(k.now, (long)start.TotalMilliseconds);
-
-            Message.Builder.SetCommand(Commands.AlarmStart).WithData(data).ToCharacter(Character).Send();
+            Message.Builder
+                .SetCommand(Commands.AlarmStart)
+                .WithData(data)
+                .ToCharacter(Character)
+                .Send();
         }
 
         public void SendEndProgressBar(Unit unit, bool success = true)
@@ -712,6 +711,40 @@ namespace Perpetuum.Players
         public override void UpdateVisibilityOf(Unit target)
         {
             target.UpdatePlayerVisibility(this);
+        }
+
+        public void SetCombatState(bool state)
+        {
+            States.Combat = state;
+            combatTimer.Reset();
+
+            if (state)
+            {
+                Session.ResetLogoutTimer();
+            }
+        }
+
+        public void AddInCombatWith(Unit enemy)
+        {
+            SetCombatState(true);
+
+            var enemyPlayer = enemy as Player;
+
+            enemyPlayer?.SetCombatState(true);
+        }
+
+        public bool IsInSameCorporation(Player player)
+        {
+            return (CorporationEid == player.CorporationEid) && !IsInDefaultCorporation();
+        }
+
+        public bool IsUnitPVPAggro(Unit unit)
+        {
+            return unit is MobileTeleport ||
+                unit is IPBSObject ||
+                unit is WallHealer ||
+                unit is ProximityDeviceBase ||
+                (unit is BlobEmitterUnit b && b.IsPlayerSpawned);
         }
 
         protected override void OnDead(Unit killer)
@@ -837,9 +870,7 @@ namespace Perpetuum.Players
 
                 if (@lock.State == LockState.Locked)
                 {
-                    var npc = u.Target as Npc;
-
-                    if (npc != null)
+                    if (u.Target is Npc npc)
                     {
                         MissionHandler.EnqueueMissionEventInfo(new LockUnitEventInfo(this, npc, npc.CurrentPosition));
                         MissionHandler.SignalParticipationByLocking(npc.GetMissionGuid());
@@ -890,12 +921,9 @@ namespace Perpetuum.Players
         {
             base.OnEnterZone(zone, enterType);
             check = PlayerMoveCheckQueue.Create(this, CurrentPosition);
-
             zone.SendPacketToGang(Gang, new GangUpdatePacketBuilder(Visibility.Visible, this));
-
             MissionHandler = missionHandlerFactory(zone, this);
             MissionHandler.InitMissions();
-
             Direction = FastRandom.NextDouble();
 
             var p = DynamicProperties.GetProperty<int>(k.pvpRemaining);
@@ -913,7 +941,6 @@ namespace Perpetuum.Players
         {
             Session.SendPacket(ExitPacketBuilder);
             zone.SendPacketToGang(Gang, new GangUpdatePacketBuilder(Visibility.Invisible, this));
-
             check.StopAndDispose();
 
             if (!States.LocalTeleport)
@@ -931,7 +958,6 @@ namespace Perpetuum.Players
             movement.Update(time);
             blobHandler.Update(time);
             MissionHandler.Update(time);
-
             combatLogger?.Update(time);
             despawnHelper?.Update(time, this);
         }
@@ -965,16 +991,6 @@ namespace Perpetuum.Players
             Session.SendPacket(packet);
         }
 
-        private bool HasAggressorEffect
-        {
-            get { return EffectHandler.ContainsEffect(EffectType.effect_aggressor); }
-        }
-
-        private void ApplyAggressorEffect()
-        {
-            ApplyEffect(NewEffectBuilder().SetType(EffectType.effect_aggressor));
-        }
-
         private void UpdateCombat(TimeSpan time)
         {
             if (!States.Combat)
@@ -990,26 +1006,6 @@ namespace Perpetuum.Players
             }
 
             SetCombatState(false);
-        }
-
-        private void SetCombatState(bool state)
-        {
-            States.Combat = state;
-            combatTimer.Reset();
-
-            if (state)
-            {
-                Session.ResetLogoutTimer();
-            }
-        }
-
-        private void AddInCombatWith(Unit enemy)
-        {
-            SetCombatState(true);
-
-            var enemyPlayer = enemy as Player;
-
-            enemyPlayer?.SetCombatState(true);
         }
 
         private void Reload()
@@ -1068,23 +1064,9 @@ namespace Perpetuum.Players
             }
         }
 
-        private bool IsInSameCorporation(Player player)
-        {
-            return (CorporationEid == player.CorporationEid) && !IsInDefaultCorporation();
-        }
-
         private void SendError(ErrorCodes error)
         {
             Session.SendPacket(new ErrorPacketBuilder(error));
-        }
-
-        private bool IsUnitPVPAggro(Unit unit)
-        {
-            return unit is MobileTeleport ||
-                unit is IPBSObject ||
-                unit is WallHealer ||
-                unit is ProximityDeviceBase ||
-                (unit is BlobEmitterUnit b && b.IsPlayerSpawned);
         }
 
         private Task HandlePlayerDeadAsync(IZone zone, Unit killer)

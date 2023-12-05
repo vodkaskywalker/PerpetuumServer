@@ -184,10 +184,14 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return true;
             }
 
+            this.smartCreature.ThreatManager.Hostiles
+                .Where(x => x.Threat == 0)
+                .ForEach(x => this.smartCreature.GetLockByUnit(x.Unit).Cancel());
+
             var weakestLock = this.smartCreature.ThreatManager.Hostiles
-                .SkipWhile(h => h != hostile)
+                .SkipWhile(x => x != hostile)
                 .Skip(1)
-                .Select(h => this.smartCreature.GetLockByUnit(h.Unit))
+                .Select(x => this.smartCreature.GetLockByUnit(x.Unit))
                 .LastOrDefault();
 
             if (weakestLock == null)
@@ -217,9 +221,9 @@ namespace Perpetuum.Zones.NpcSystem.AI
         private void SetLockForHostile(Hostile hostile)
         {
             var mostHated = GetPrimaryOrMostHatedHostile() == hostile;
-            var l = this.smartCreature.GetLockByUnit(hostile.Unit);
+            var combatLock = this.smartCreature.GetLockByUnit(hostile.Unit);
 
-            if (l == null)
+            if (combatLock == null)
             {
                 if (TryMakeFreeLockSlotFor(hostile))
                 {
@@ -228,9 +232,9 @@ namespace Perpetuum.Zones.NpcSystem.AI
             }
             else
             {
-                if (mostHated && !l.Primary)
+                if (mostHated && !combatLock.Primary)
                 {
-                    this.smartCreature.SetPrimaryLock(l.Id);
+                    this.smartCreature.SetPrimaryLock(combatLock.Id);
                 }
             }
         }

@@ -252,8 +252,6 @@ namespace Perpetuum.Units
 
         public bool HasNoTeleportWhilePVP => EffectHandler.Effects.Any(e => e.PropertyModifiers.Any(p => p.Field == AggregateField.pvp_no_teleport));
 
-        public bool HasRemoteControlEffect => EffectHandler.ContainsEffect(EffectType.effect_remote_control);
-
         public Position WorldPosition
         {
             get { return Zone?.ToWorldPosition(CurrentPosition) ?? CurrentPosition; }

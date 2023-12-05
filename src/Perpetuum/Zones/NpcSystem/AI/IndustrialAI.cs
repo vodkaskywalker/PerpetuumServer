@@ -69,6 +69,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
             if (primarySelectTimer.Passed)
             {
                 var success = SelectPrimaryTarget();
+
                 SetPrimaryUpdateDelay(success);
             }
         }
@@ -150,6 +151,16 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         protected virtual void ProcessIndustrialTargets()
         {
+            if (!this.smartCreature.IndustrialValueManager.IndustrialTargets.Any())
+            {
+                if (this.smartCreature.GetLocks().Any())
+                {
+                    this.smartCreature.ResetLocks();
+                }
+
+                return;
+            }
+
             var industrialTargetsEnumerator = this.smartCreature.IndustrialValueManager.IndustrialTargets.GetEnumerator();
 
             while (industrialTargetsEnumerator.MoveNext())
@@ -172,6 +183,10 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return true;
             }
 
+            this.smartCreature.IndustrialValueManager.IndustrialTargets
+                .Where(x => x.IndustrialValue == 0)
+                .ForEach(x => this.smartCreature.GetLockByPosition(x.Position).Cancel());
+
             var weakestLock = this.smartCreature.IndustrialValueManager.IndustrialTargets
                 .SkipWhile(h => h != industrialTarget)
                 .Skip(1)
@@ -188,7 +203,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
             return true;
         }
 
-        protected IndustrialTarget GetPrimaryOrMostValuableIndustrialTarget()
+        protected IndustrialTarget GetMostValuableIndustrialTarget()
         {
             var primaryTarget = this.smartCreature.IndustrialValueManager.IndustrialTargets
                 .Where(h => h.Position == (this.smartCreature.GetPrimaryLock() as TerrainLock)?.Location)
@@ -204,10 +219,10 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         private void SetLockForIndustrialTarget(IndustrialTarget industrialTarget)
         {
-            var mostValuable = GetPrimaryOrMostValuableIndustrialTarget() == industrialTarget;
-            var l = this.smartCreature.GetLockByPosition(industrialTarget.Position);
+            var mostValuable = GetMostValuableIndustrialTarget() == industrialTarget;
+            var industrialLock = this.smartCreature.GetLockByPosition(industrialTarget.Position);
 
-            if (l == null)
+            if (industrialLock == null)
             {
                 if (TryMakeFreeLockSlotFor(industrialTarget))
                 {
@@ -216,9 +231,9 @@ namespace Perpetuum.Zones.NpcSystem.AI
             }
             else
             {
-                if (mostValuable && !l.Primary)
+                if (mostValuable && !industrialLock.Primary)
                 {
-                    this.smartCreature.SetPrimaryLock(l.Id);
+                    this.smartCreature.SetPrimaryLock(industrialLock.Id);
                 }
             }
         }

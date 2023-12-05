@@ -3,6 +3,7 @@ using Perpetuum.Players;
 using Perpetuum.Services.Standing;
 using Perpetuum.Units;
 using Perpetuum.Zones.NpcSystem;
+using System;
 
 namespace Perpetuum.Zones.RemoteControl
 {
@@ -23,12 +24,17 @@ namespace Perpetuum.Zones.RemoteControl
 
         public override bool IsHostile(Player player)
         {
-            if (Owner == player.Eid)
+            if (Player == player)
             {
                 return false;
             }
 
             return IsHostileCorporation(player.CorporationEid);
+        }
+
+        public override void OnAggression(Unit victim)
+        {
+            this.Player.OnAggression(victim);
         }
 
         internal override bool IsHostile(Npc npc)

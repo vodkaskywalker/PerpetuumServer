@@ -303,7 +303,6 @@ namespace Perpetuum.Zones.NpcSystem
                 .Select(module => module.OptimalRange)
                 .Concat(new[] { MaxTargetingRange })
                 .Min();
-
             range *= BestComnatRangeModifier;
             range = Math.Max(3, range);
 
@@ -312,10 +311,10 @@ namespace Perpetuum.Zones.NpcSystem
 
         private int CalculateMaxCombatRange()
         {
-            double range = ActiveModules.Where(m => m.IsRanged)
-                         .Select(module => (int)(module.OptimalRange + module.Falloff))
-                         .Max();
-
+            double range = ActiveModules
+                .Where(m => m.IsRanged)
+                .Select(module => (int)(module.OptimalRange + module.Falloff))
+                .Max();
             range = Math.Max(3, range);
 
             return (int)range;

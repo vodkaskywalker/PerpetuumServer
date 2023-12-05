@@ -21,8 +21,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
         public void Visit(Player player)
         {
             if (smartCreature.Behavior.Type != BehaviorType.Aggressive &&
-                smartCreature.Behavior.Type != BehaviorType.RemoteControlled &&
-                !player.HasRemoteControlEffect)
+                smartCreature.Behavior.Type != BehaviorType.RemoteControlled)
             {
                 return;
             }

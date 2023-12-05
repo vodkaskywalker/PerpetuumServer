@@ -712,5 +712,6 @@ namespace Perpetuum
         MaxExpiringBasePerZonePerCorpReached,
         RespecTokenIsNotReadyYet,
         MaxBandwidthExceed,
+        RemoteControlledTurretInRange,
     }
 }

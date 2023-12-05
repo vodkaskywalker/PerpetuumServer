@@ -134,7 +134,12 @@ namespace Perpetuum.Modules
                 .OfType<SentryTurret>()
                 .WithinRange(zone.FixZ(targetPosition), SentryTurretDeployRange)
                 .Any()
-                .ThrowIfTrue(ErrorCodes.BlobEmitterInRange);
+                .ThrowIfTrue(ErrorCodes.RemoteControlledTurretInRange);
+            zone.Units
+                .OfType<IndustrialTurret>()
+                .WithinRange(zone.FixZ(targetPosition), SentryTurretDeployRange)
+                .Any()
+                .ThrowIfTrue(ErrorCodes.RemoteControlledTurretInRange);
 
             var r = zone.IsInLineOfSight(ParentRobot, targetPosition.AddToZ(SentryTurretHeight), false);
 
@@ -168,6 +173,7 @@ namespace Perpetuum.Modules
                 PerpetuumException.Create(ErrorCodes.InvalidAmmoDefinition);
             }
 
+            fieldTurret.Owner = this.Owner;
             fieldTurret.SetPlayer(this.ParentRobot as Player);
 
             HasFreeBandwidthFor(ammo).ThrowIfFalse(ErrorCodes.MaxBandwidthExceed);
@@ -190,22 +196,7 @@ namespace Perpetuum.Modules
 
             fieldTurret.AddToZone(zone, position, ZoneEnterType.Default, beamBuilder);
 
-            var effectBuilder = this.ParentRobot.NewEffectBuilder();
-
-            SetupEffect(effectBuilder);
-
-            effectBuilder
-                .WithToken(effectToken)
-                .WithDuration(despawnTime);
-
-            this.ParentRobot.ApplyEffect(effectBuilder);
-
             ConsumeAmmo();
-        }
-
-        protected void SetupEffect(EffectBuilder effectBuilder)
-        {
-            effectBuilder.SetType(EffectType.effect_remote_control);
         }
     }
 }
