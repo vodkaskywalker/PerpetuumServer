@@ -266,6 +266,7 @@ namespace Perpetuum.ExportedTypes
                     cf_large_industrial_aoe = 0x00000000030A070F,
                 cf_remote_controllers = 0x00000000000B070F,
                 cf_sentry_turret_guns = 0x00000000000C070F,
+                cf_artillery_cannons = 0x00000000000D070F,
             cf_terraforming_equipment = 0x000000000000080F,
                 cf_small_terraformer = 0x000000000001080F,
                 cf_terraforming_digger = 0x000000000002080F,

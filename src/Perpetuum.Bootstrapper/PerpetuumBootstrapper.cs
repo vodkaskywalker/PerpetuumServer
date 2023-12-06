@@ -1190,6 +1190,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<MissileWeaponModule>(CategoryFlags.cf_small_missile_launchers,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_small_missile_ammo));
                 ByCategoryFlags<MissileWeaponModule>(CategoryFlags.cf_medium_missile_launchers,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_medium_missile_ammo));
                 ByCategoryFlags<MissileWeaponModule>(CategoryFlags.cf_large_missile_launchers,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_large_missile_ammo));
+                ByCategoryFlags<WeaponModule>(CategoryFlags.cf_artillery_cannons, new NamedParameter("ammoCategoryFlags", CategoryFlags.cf_large_missile_ammo));
                 ByCategoryFlags<ShieldGeneratorModule>(CategoryFlags.cf_shield_generators);
                 ByCategoryFlags<ArmorRepairModule>(CategoryFlags.cf_armor_repair_systems);
                 ByCategoryFlags<RemoteArmorRepairModule>(CategoryFlags.cf_remote_armor_repairers);
