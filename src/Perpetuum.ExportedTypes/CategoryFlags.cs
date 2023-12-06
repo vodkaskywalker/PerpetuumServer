@@ -50,7 +50,8 @@ namespace Perpetuum.ExportedTypes
                 cf_syndicate_crawlers = 0x0000000000020F01,
                 cf_syndicate_mechs = 0x0000000000030F01,
                 cf_syndicate_heavymechs = 0x0000000000040F01,
-            cf_command_robots = 0x0000000000001001,
+                cf_syndicate_artillery = 0x0000000000050F01,
+        cf_command_robots = 0x0000000000001001,
                 cf_combat_command_robots = 0x0000000000011001,
 
         cf_ammo = 0x000000000000000A,
