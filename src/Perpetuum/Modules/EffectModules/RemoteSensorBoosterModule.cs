@@ -1,8 +1,10 @@
 ﻿using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
+using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Units;
 using Perpetuum.Zones.Effects;
 using Perpetuum.Zones.NpcSystem;
+using Perpetuum.Zones.NpcSystem.ThreatManaging;
 
 namespace Perpetuum.Modules.EffectModules
 {
@@ -22,9 +24,12 @@ namespace Perpetuum.Modules.EffectModules
         protected override bool CanApplyEffect(Unit target)
         {
             if (!ParentIsPlayer() || !(target is Npc))
+            {
                 return true;
+            }
 
             OnError(ErrorCodes.ThisModuleIsNotSupportedOnNPCs);
+
             return false;
         }
 
@@ -35,10 +40,11 @@ namespace Perpetuum.Modules.EffectModules
 
         protected override void SetupEffect(EffectBuilder effectBuilder)
         {
-            effectBuilder.SetType(EffectType.effect_remote_sensor_boost)
-                         .SetSource(ParentRobot)
-                         .WithPropertyModifier(_effectSensorBoosterLockingRangeModifier.ToPropertyModifier())
-                         .WithPropertyModifier(_effectSensorBoosterLockingTimeModifier.ToPropertyModifier());
+            effectBuilder
+                .SetType(EffectType.effect_remote_sensor_boost)
+                .SetSource(ParentRobot)
+                .WithPropertyModifier(_effectSensorBoosterLockingRangeModifier.ToPropertyModifier())
+                .WithPropertyModifier(_effectSensorBoosterLockingTimeModifier.ToPropertyModifier());
         }
     }
 }

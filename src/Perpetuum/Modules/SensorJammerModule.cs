@@ -1,11 +1,12 @@
 using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
+using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Robots;
 using Perpetuum.Units;
 using Perpetuum.Zones;
 using Perpetuum.Zones.DamageProcessors;
 using Perpetuum.Zones.Locking.Locks;
-using Perpetuum.Zones.NpcSystem;
+using Perpetuum.Zones.NpcSystem.ThreatManaging;
 
 namespace Perpetuum.Modules
 {
@@ -23,17 +24,19 @@ namespace Perpetuum.Modules
         public override void AcceptVisitor(IEntityVisitor visitor)
         {
             if (!TryAcceptVisitor(this, visitor))
+            {
                 base.AcceptVisitor(visitor);
+            }
         }
 
         protected override void OnAction()
         {
             var unitLock = GetLock().ThrowIfNotType<UnitLock>(ErrorCodes.InvalidLockType);
             var robot = unitLock.Target.ThrowIfNotType<Robot>(ErrorCodes.InvalidTarget);
-
             var success = false;
             var targetSensorStrength = robot.SensorStrength * FastRandom.NextDouble();
             var rangedEcmStrength = ModifyValueByOptimalRange(robot, _ecmStrength.Value);
+
             if (targetSensorStrength < rangedEcmStrength)
             {
                 robot.ResetLocks();
@@ -42,9 +45,9 @@ namespace Perpetuum.Modules
             }
 
             var packet = new CombatLogPacket(CombatLogType.Jammer, robot,ParentRobot,this);
+
             packet.AppendByte(success.ToByte());
             packet.Send(ParentRobot,robot);
-
             robot.OnCombatEvent(ParentRobot,new SensorJammerEventArgs(success));
         }
     }

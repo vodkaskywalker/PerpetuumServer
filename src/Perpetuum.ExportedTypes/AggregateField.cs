@@ -227,7 +227,12 @@ namespace Perpetuum.ExportedTypes
 		effect_sensor_booster_locking_time_modifier = 181,
 		effect_sensor_dampener_locking_range_modifier = 182,
 		effect_sensor_dampener_locking_time_modifier = 183,
-		effect_sensor_strength_modifier = 626,
+        trigger_mass = 667,
+        mine_detection_range = 668,
+        mine_detection_range_modifier = 669,
+        effect_mine_detection_range_modifier = 670,
+        effect_enhancer_mine_detection_range_modifier = 671,
+        effect_sensor_strength_modifier = 626,
 		effect_shield_absorbtion_modifier = 184,
 		effect_signature_radius_modifier = 185,
 		effect_speed_highway_modifier = 622,
@@ -427,6 +432,11 @@ namespace Perpetuum.ExportedTypes
 		turret_cycle_time_modifier = 335,
 		turret_fallof_modifier = 336,
 		turret_optimal_range_modifier = 337,
-		weapon_cycle_time_modifier = 540
-	}
+		weapon_cycle_time_modifier = 540,
+        remote_control_bandwidth_max = 672,
+        remote_control_bandwidth_max_modifier = 673,
+        remote_control_bandwidth_usage = 674,
+		remote_control_damage_modifier = 675,
+        remote_control_damage_modifier_modifier = 676,
+    }
 }

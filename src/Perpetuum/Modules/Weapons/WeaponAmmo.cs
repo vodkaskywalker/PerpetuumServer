@@ -3,6 +3,7 @@ using System.Threading;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
 using Perpetuum.Items.Ammos;
+using Perpetuum.Zones.RemoteControl;
 
 namespace Perpetuum.Modules.Weapons
 {
@@ -81,8 +82,10 @@ namespace Perpetuum.Modules.Weapons
 
             property = GetPropertyModifier(AggregateField.damage_explosive);
 
-            if (!property.HasValue) 
+            if (!property.HasValue)
+            {
                 return result;
+            }
 
             damageModifier.Modify(ref property);
             result.Add(new Damage(DamageType.Explosive, property.Value));

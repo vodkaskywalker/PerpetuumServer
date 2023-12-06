@@ -1,12 +1,13 @@
-using System.Collections.Generic;
-using System.Linq;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Log;
 using Perpetuum.Players;
 using Perpetuum.Players.ExtensionMethods;
 using Perpetuum.Zones;
 using Perpetuum.Zones.NpcSystem;
+using Perpetuum.Zones.NpcSystem.ThreatManaging;
 using Perpetuum.Zones.PBS;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Perpetuum.Units
 {
@@ -21,23 +22,25 @@ namespace Perpetuum.Units
                 unit.UpdateVisibilityOf(hostile);
             }
 
-            unit.AddThreat(hostile,new Threat(ThreatType.Direct, threatValue));
+            unit.AddThreat(hostile, new Threat(ThreatType.Direct, threatValue));
         }
 
-        public static void AddThreat(this Unit unit,Unit hostile,Threat threat)
+        public static void AddThreat(this Unit unit, Unit hostile, Threat threat)
         {
-            if (unit is Npc npc && npc.CanAddThreatTo(hostile, threat))
-                npc.AddThreat(hostile, threat, true);
+            if (unit is SmartCreature smartCreature && smartCreature.CanAddThreatTo(hostile, threat))
+            {
+                smartCreature.AddThreat(hostile, threat, true);
+            }
         }
 
-        public static bool TryGetConstructionRadius(this Unit unit,out int radius)
+        public static bool TryGetConstructionRadius(this Unit unit, out int radius)
         {
             radius = 0;
 
             if (unit?.ED.Config.constructionRadius == null)
                 return false;
 
-            radius = (int) unit.ED.Config.constructionRadius;
+            radius = (int)unit.ED.Config.constructionRadius;
             return true;
         }
 
@@ -51,7 +54,7 @@ namespace Perpetuum.Units
             if (unit == null || unit.ED.Config.item_work_range == null)
                 return 0;
 
-            return (int) unit.ED.Config.item_work_range;
+            return (int)unit.ED.Config.item_work_range;
         }
 
 
@@ -70,7 +73,7 @@ namespace Perpetuum.Units
                 return 0;
 
             if (unit.ED.Config.cycle_time != null)
-                return (int) unit.ED.Config.cycle_time;
+                return (int)unit.ED.Config.cycle_time;
 
             return 30000;
         }
@@ -92,7 +95,7 @@ namespace Perpetuum.Units
                 return 0;
 
             if (unit.ED.Config.constructionRadius != null)
-                return (int) unit.ED.Config.constructionRadius;
+                return (int)unit.ED.Config.constructionRadius;
 
             Logger.Error("consistency error. no construction radius was defined for definition: " + unit.Definition + " " + unit.ED.Name);
             return 10;
@@ -100,7 +103,7 @@ namespace Perpetuum.Units
 
 
 
-        public static void AddEffectsDebugInfo(this Unit unit, IDictionary<string,object> info)
+        public static void AddEffectsDebugInfo(this Unit unit, IDictionary<string, object> info)
         {
             var effects = new Dictionary<string, object>();
             var counter = 0;
@@ -120,9 +123,9 @@ namespace Perpetuum.Units
             return new Dictionary<string, object>
             {
                 {k.name, unit.Name},
-                {k.eid, unit.Eid}, 
-                {k.definitionName, unit.ED.Name}, 
-                {k.owner, unit.Owner}, 
+                {k.eid, unit.Eid},
+                {k.definitionName, unit.ED.Name},
+                {k.owner, unit.Owner},
                 {k.state, unit.States.ToString()}
             };
         }
@@ -133,7 +136,7 @@ namespace Perpetuum.Units
                 return 0;
 
             if (unit.ED.Config.transmitradius != null)
-                return (int) unit.ED.Config.transmitradius;
+                return (int)unit.ED.Config.transmitradius;
 
             Logger.Error("consistency error. no transmitRadius was defined for definition: " + unit.Definition + " " + unit.ED.Name);
             return 0;
@@ -150,20 +153,20 @@ namespace Perpetuum.Units
             Logger.Error("coreTransferred not defined for " + unit);
             return 100;
 
-            
+
         }
 
         public static double GetTransferEfficiency(this Unit unit)
         {
             if (unit.ED.Config.transferEfficiency != null)
-                return ((double) unit.ED.Config.transferEfficiency).Clamp();
+                return ((double)unit.ED.Config.transferEfficiency).Clamp();
 
             Logger.Error("transferEfficiency not defined for " + unit);
             return 0.8;
 
         }
 
-        public static void KillAll(this IEnumerable<Unit> units,Unit killer = null)
+        public static void KillAll(this IEnumerable<Unit> units, Unit killer = null)
         {
             foreach (var unit in units)
             {
@@ -171,17 +174,19 @@ namespace Perpetuum.Units
             }
         }
 
-        public static void SpreadAssistThreatToNpcs(this Unit unit, Unit assistant,Threat threat)
+        public static void SpreadAssistThreatToNpcs(this Unit unit, Unit assistant, Threat threat)
         {
-            if ( unit == null || assistant == null)
-                return;
-
-            foreach (var npc in unit.GetWitnessUnits<Npc>())
+            if (unit == null || assistant == null)
             {
-                npc.AddAssistThreat(assistant,unit,threat);
+                return;
+            }
+
+            foreach (var smartCreature in unit.GetWitnessUnits<SmartCreature>())
+            {
+                smartCreature.AddAssistThreat(assistant, unit, threat);
             }
         }
-        
+
         public static bool IsPlayer(this Unit unit) { return unit is Player; }
 
 
@@ -196,12 +201,12 @@ namespace Perpetuum.Units
         }
 
 
-        public static IEnumerable<T> WithinRange<T>(this IEnumerable<T> units,Position position,double distance) where T : Unit
+        public static IEnumerable<T> WithinRange<T>(this IEnumerable<T> units, Position position, double distance) where T : Unit
         {
             return units.Where(unit => unit.IsInRangeOf3D(position, distance));
         }
 
-        public static IEnumerable<T> WithinRange2D<T>(this IEnumerable<T> units,Position position,double distance) where T : Unit
+        public static IEnumerable<T> WithinRange2D<T>(this IEnumerable<T> units, Position position, double distance) where T : Unit
         {
             return units.Where(unit => unit.CurrentPosition.IsInRangeOf2D(position, distance));
         }
@@ -235,7 +240,7 @@ namespace Perpetuum.Units
             return nearestUnit;
         }
 
-        public static IEnumerable<T> GetAllByCategoryFlags<T>(this IEnumerable<T> units, CategoryFlags cf) where T:Unit
+        public static IEnumerable<T> GetAllByCategoryFlags<T>(this IEnumerable<T> units, CategoryFlags cf) where T : Unit
         {
             return units.Where(u => u.ED.CategoryFlags.IsCategory(cf)).ToArray();
         }

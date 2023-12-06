@@ -186,6 +186,9 @@ using Perpetuum.Services.Strongholds;
 using Perpetuum.Zones.NpcSystem.Presences.RandomExpiringPresence;
 using Perpetuum.Zones.NpcSystem.Presences.ExpiringStaticPresence;
 using Perpetuum.Zones.NpcSystem.Presences.GrowingPresences;
+using Perpetuum.Items.Helpers;
+using Perpetuum.Zones.LandMines;
+using Perpetuum.Zones.RemoteControl;
 
 namespace Perpetuum.Bootstrapper
 {
@@ -451,9 +454,7 @@ namespace Perpetuum.Bootstrapper
         {
             RegisterAutoActivate<HostOnlineStateWriter>(TimeSpan.FromSeconds(7));
             RegisterAutoActivate<ServerInfoService>(TimeSpan.FromMinutes(5));
-            //RegisterAutoActivate<CleanUpPayingCustomersService>(TimeSpan.FromHours(10));
             RegisterAutoActivate<MarketCleanUpService>(TimeSpan.FromHours(1));
-//            RegisterAutoActivate<AccountCreditHandler>(TimeSpan.FromSeconds(10));
             RegisterAutoActivate<SessionCountWriter>(TimeSpan.FromMinutes(5));
             RegisterAutoActivate<VolunteerCEOProcessor>(TimeSpan.FromMinutes(10));
             RegisterAutoActivate<GiveExtensionPointsService>(TimeSpan.FromMinutes(10));
@@ -799,7 +800,7 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<T>().PropertiesAutowired();
         }
 
-        protected void RegisterProximityProbe<T>() where T : ProximityProbeBase
+        protected void RegisterProximityDevices<T>() where T : ProximityDeviceBase
         {
             RegisterUnit<T>();
         }
@@ -845,9 +846,11 @@ namespace Perpetuum.Bootstrapper
 
             RegisterRobot<Npc>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
             RegisterRobot<Player>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
+            RegisterRobot<SentryTurret>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
+            RegisterRobot<IndustrialTurret>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
             RegisterRobot<PBSTurret>();
             RegisterRobot<PunchBag>();
-            
+
             _builder.RegisterType<EntityAggregateServices>().As<IEntityServices>().PropertiesAutowired().SingleInstance();
 
             
@@ -907,7 +910,10 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<RandomResearchKit>();
             RegisterEntity<Market>();
             RegisterEntity<LotteryItem>();
-            RegisterProximityProbe<VisibilityBasedProximityProbe>();
+
+            RegisterProximityDevices<ProximityProbe>();
+            RegisterProximityDevices<LandMine>();
+
             RegisterUnit<TeleportColumn>();
             RegisterUnit<LootContainer>().OnActivated(e => e.Instance.SetDespawnTime(TimeSpan.FromMinutes(15)));
             RegisterUnit<FieldContainer>().OnActivated(e => e.Instance.SetDespawnTime(TimeSpan.FromHours(1)));
@@ -921,8 +927,10 @@ namespace Perpetuum.Bootstrapper
 
             RegisterEntity<FieldContainerCapsule>();
             RegisterEntity<Ice>();
+            RegisterEntity<SparkTeleportDevice>();
             RegisterEntity<Ammo>();
             RegisterEntity<WeaponAmmo>();
+            RegisterEntity<RemoteControlledUnit>();
             RegisterEntity<MiningAmmo>();
             RegisterEntity<TileScannerAmmo>();
             RegisterEntity<OneTileScannerAmmo>();
@@ -936,7 +944,6 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<LimitedBoxContainer>();
             RegisterEntity<CorporateHangar>();
             RegisterEntity<CorporateHangarFolder>();
-            RegisterEntity<Item>();
             RegisterEntity<MobileTeleportDeployer>();
             RegisterEntity<PlantSeedDeployer>();
             RegisterEntity<PlantSeedDeployer>();
@@ -944,6 +951,8 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<MineralScanResultItem>();
 
             RegisterModule<DrillerModule>();
+            RegisterModule<RemoteControlledDrillerModule>();
+            RegisterModule<RemoteControlledHarvesterModule>();
             RegisterModule<HarvesterModule>();
             RegisterModule<Module>();
             RegisterModule<WeaponModule>();
@@ -962,6 +971,7 @@ namespace Perpetuum.Bootstrapper
             RegisterModule<SiegeHackModule>();
             RegisterModule<NeuralyzerModule>();
             RegisterModule<BlobEmissionModulatorModule>();
+            RegisterModule<RemoteControllerModule>();
             RegisterModule<TerraformMultiModule>();
             RegisterModule<WallBuilderModule>();
             RegisterModule<ConstructionModule>();
@@ -976,10 +986,9 @@ namespace Perpetuum.Bootstrapper
             RegisterEffectModule<DetectionModule>();
             RegisterEffectModule<GangModule>();
             RegisterEffectModule<ShieldGeneratorModule>();
+            RegisterEffectModule<MineDetectorModule>();
 
             RegisterEntity<SystemContainer>();
-            RegisterEntity<Item>();
-            RegisterEntity<Item>();
             RegisterEntity<PunchBagDeployer>();
 
             RegisterUnit<BlobEmitterUnit>();
@@ -1019,12 +1028,13 @@ namespace Perpetuum.Bootstrapper
             RegisterUnit<StrongholdExitRift>(); // OPP: Special rift for exiting strongholds
 
             RegisterEntity<Item>();
-            RegisterEntity<Item>();
             RegisterEntity<AreaBombDeployer>();
-            RegisterEntity<VisibilityBasedProbeDeployer>();
+
+            RegisterEntity<ProximityProbeDeployer>();
+            RegisterEntity<LandMineDeployer>();
+
             RegisterEntity<PBSDeployer>();
             RegisterEntity<WallHealerDeployer>();
-            RegisterEntity<Item>();
             RegisterEntity<VolumeWrapperContainer>();
             RegisterEntity<Kernel>();
             RegisterEntity<RandomMissionItem>();
@@ -1041,7 +1051,6 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<EPBoost>();
             RegisterEntity<Relic>();
             RegisterEntity<SAPRelic>();
-
 
             _builder.Register<Func<EntityDefault,Entity>>(x =>
             {
@@ -1107,6 +1116,9 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<WeaponAmmo>(CategoryFlags.cf_projectile_ammo);
                 ByCategoryFlags<WeaponAmmo>(CategoryFlags.cf_missile_ammo);
                 ByCategoryFlags<MiningAmmo>(CategoryFlags.cf_mining_ammo);
+                ByCategoryFlags<RemoteControlledUnit>(CategoryFlags.cf_sentry_turret_units);
+                ByCategoryFlags<RemoteControlledUnit>(CategoryFlags.cf_mining_turret_units);
+                ByCategoryFlags<RemoteControlledUnit>(CategoryFlags.cf_harvesting_turret_units);
                 ByCategoryFlags<TileScannerAmmo>(CategoryFlags.cf_mining_probe_ammo_tile);
                 ByCategoryFlags<OneTileScannerAmmo>(CategoryFlags.cf_mining_probe_ammo_one_tile);
                 ByCategoryFlags<ArtifactScannerAmmo>(CategoryFlags.cf_mining_probe_ammo_artifact);
@@ -1174,6 +1186,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<FirearmWeaponModule>(CategoryFlags.cf_small_single_projectile,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_small_projectile_ammo));
                 ByCategoryFlags<FirearmWeaponModule>(CategoryFlags.cf_medium_single_projectile,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_medium_projectile_ammo));
                 ByCategoryFlags<FirearmWeaponModule>(CategoryFlags.cf_large_single_projectile,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_large_projectile_ammo));
+                ByCategoryFlags<FirearmWeaponModule>(CategoryFlags.cf_sentry_turret_guns, new NamedParameter("ammoCategoryFlags", CategoryFlags.cf_large_projectile_ammo));
                 ByCategoryFlags<MissileWeaponModule>(CategoryFlags.cf_small_missile_launchers,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_small_missile_ammo));
                 ByCategoryFlags<MissileWeaponModule>(CategoryFlags.cf_medium_missile_launchers,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_medium_missile_ammo));
                 ByCategoryFlags<MissileWeaponModule>(CategoryFlags.cf_large_missile_launchers,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_large_missile_ammo));
@@ -1186,6 +1199,8 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<EnergyTransfererModule>(CategoryFlags.cf_energy_transferers);
                 ByCategoryFlags<EnergyVampireModule>(CategoryFlags.cf_energy_vampires);
                 ByCategoryFlags<DrillerModule>(CategoryFlags.cf_drillers,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_mining_ammo));
+                ByCategoryFlags<RemoteControlledDrillerModule>(CategoryFlags.cf_industrial_turret_drillers);
+                ByCategoryFlags<RemoteControlledHarvesterModule>(CategoryFlags.cf_industrial_turret_harvesters);
                 ByCategoryFlags<HarvesterModule>(CategoryFlags.cf_harvesters,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_harvesting_ammo));
                 ByCategoryFlags<GeoScannerModule>(CategoryFlags.cf_mining_probes,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_mining_probe_ammo));
                 ByCategoryFlags<UnitScannerModule>(CategoryFlags.cf_chassis_scanner);
@@ -1193,6 +1208,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<SiegeHackModule>(CategoryFlags.cf_siege_hack_modules);
                 ByCategoryFlags<NeuralyzerModule>(CategoryFlags.cf_neuralyzer);
                 ByCategoryFlags<BlobEmissionModulatorModule>(CategoryFlags.cf_blob_emission_modulator,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_blob_emission_modulator_ammo));
+                ByCategoryFlags<RemoteControllerModule>(CategoryFlags.cf_remote_controllers, new NamedParameter("ammoCategoryFlags", CategoryFlags.cf_remote_controlled_units));
                 ByCategoryFlags<WebberModule>(CategoryFlags.cf_webber);
                 ByCategoryFlags<SensorDampenerModule>(CategoryFlags.cf_sensor_dampeners);
                 ByCategoryFlags<RemoteSensorBoosterModule>(CategoryFlags.cf_remote_sensor_boosters);
@@ -1201,6 +1217,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<ArmorHardenerModule>(CategoryFlags.cf_armor_hardeners);
                 ByCategoryFlags<StealthModule>(CategoryFlags.cf_stealth_modules);
                 ByCategoryFlags<DetectionModule>(CategoryFlags.cf_detection_modules);
+                ByCategoryFlags<MineDetectorModule>(CategoryFlags.cf_landmine_detectors);
                 ByCategoryFlags<Module>(CategoryFlags.cf_armor_plates);
                 ByCategoryFlags<Module>(CategoryFlags.cf_core_batteries);
                 ByCategoryFlags<Module>(CategoryFlags.cf_core_rechargers);
@@ -1237,6 +1254,9 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<Item>(CategoryFlags.cf_robotshards);
                 ByCategoryFlags<PunchBagDeployer>(CategoryFlags.cf_others);
                 ByCategoryFlags<BlobEmitterUnit>(CategoryFlags.cf_blob_emitter);
+                ByCategoryFlags<SentryTurret>(CategoryFlags.cf_sentry_turrets);
+                ByCategoryFlags<IndustrialTurret>(CategoryFlags.cf_mining_turrets);
+                ByCategoryFlags<IndustrialTurret>(CategoryFlags.cf_harvesting_turrets);
                 ByCategoryFlags<Item>(CategoryFlags.cf_reactor_cores);
                 ByCategoryFlags<Kiosk>(CategoryFlags.cf_kiosk);
                 ByCategoryFlags<AlarmSwitch>(CategoryFlags.cf_alarm_switch);
@@ -1247,18 +1267,26 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<Item>(CategoryFlags.cf_mission_coin);
                 ByCategoryFlags<AreaBomb>(CategoryFlags.cf_area_bomb);
                 ByCategoryFlags<AreaBombDeployer>(CategoryFlags.cf_plasma_bomb);
-                ByCategoryFlags<VisibilityBasedProximityProbe>(CategoryFlags.cf_visibility_based_probe);
+                
+                ByCategoryFlags<ProximityProbe>(CategoryFlags.cf_proximity_probe);
+                ByCategoryFlags<LandMine>(CategoryFlags.cf_light_landmines);
+                ByCategoryFlags<LandMine>(CategoryFlags.cf_medium_landmines);
+                ByCategoryFlags<LandMine>(CategoryFlags.cf_heavy_landmines);
+
                 ByCategoryFlags<RandomResearchKit>(CategoryFlags.cf_random_research_kits);
                 ByCategoryFlags<LotteryItem>(CategoryFlags.cf_lottery_items);
                 ByCategoryFlags<Paint>(CategoryFlags.cf_paints); // OPP Robot paint!
                 ByCategoryFlags<CalibrationProgramCapsule>(CategoryFlags.cf_ct_capsules); // OPP CT capsules
                 ByCategoryFlags<EPBoost>(CategoryFlags.cf_ep_boosters); // OPP EP Boosters
                 ByCategoryFlags<Item>(CategoryFlags.cf_datashards); // OPP datashards
+                ByCategoryFlags<SparkTeleportDevice>(CategoryFlags.cf_spark_teleport_devices);
 
                 // OPP new Blinder module
                 ByNamePatternAndFlag<TargetBlinderModule>(DefinitionNames.STANDARD_BLINDER_MODULE, CategoryFlags.cf_target_painter);
 
-                ByCategoryFlags<VisibilityBasedProbeDeployer>(CategoryFlags.cf_proximity_probe_deployer);
+                ByCategoryFlags<ProximityProbeDeployer>(CategoryFlags.cf_proximity_probe_deployer);
+                ByCategoryFlags<LandMineDeployer>(CategoryFlags.cf_landmine_deployer);
+
                 ByCategoryFlags<Item>(CategoryFlags.cf_gift_packages);
                 ByCategoryFlags<PBSDeployer>(CategoryFlags.cf_pbs_capsules);
                 ByCategoryFlags<PBSEgg>(CategoryFlags.cf_pbs_egg);
@@ -1849,11 +1877,13 @@ namespace Perpetuum.Bootstrapper
             RegisterRequestHandler<SparkList>(Commands.SparkList);
             RegisterRequestHandler<SparkSetDefault>(Commands.SparkSetDefault);
             RegisterRequestHandler<SparkUnlock>(Commands.SparkUnlock);
-            RegisterRequestHandler<Undock>(Commands.Undock);
+            RegisterRequestHandler<Undock>(Commands.Undock)
+                ;
             RegisterRequestHandler<ProximityProbeRegisterSet>(Commands.ProximityProbeRegisterSet);
             RegisterRequestHandler<ProximityProbeSetName>(Commands.ProximityProbeSetName);
             RegisterRequestHandler<ProximityProbeList>(Commands.ProximityProbeList);
             RegisterRequestHandler<ProximityProbeGetRegistrationInfo>(Commands.ProximityProbeGetRegistrationInfo);
+
             RegisterRequestHandler<IntrusionEnabler>(Commands.IntrusionEnabler);
             RegisterRequestHandler<AccountGetTransactionHistory>(Commands.AccountGetTransactionHistory);
             RegisterRequestHandler<AccountList>(Commands.AccountList);
@@ -2833,7 +2863,9 @@ namespace Perpetuum.Bootstrapper
             RegisterZoneRequestHandler<GetRifts>(Commands.GetRifts);
             RegisterZoneRequestHandler<UseItem>(Commands.UseItem);
             RegisterZoneRequestHandler<GateSetName>(Commands.GateSetName);
+
             RegisterZoneRequestHandler<ProximityProbeRemove>(Commands.ProximityProbeRemove);
+
             RegisterZoneRequestHandler<FieldTerminalInfo>(Commands.FieldTerminalInfo);
 
             RegisterZoneRequestHandler<PBSFeedableInfo>(Commands.PBSFeedableInfo);

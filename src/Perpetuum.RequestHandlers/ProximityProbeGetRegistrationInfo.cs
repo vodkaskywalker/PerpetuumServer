@@ -18,7 +18,7 @@ namespace Perpetuum.RequestHandlers
             var probeEid = request.Data.GetOrDefault<long>(k.eid);
             var character = request.Session.Character;
 
-            var probe = _unitHelper.GetUnitOrThrow<ProximityProbeBase>(probeEid);
+            var probe = _unitHelper.GetUnitOrThrow<ProximityDeviceBase>(probeEid);
             probe.HasAccess(character).ThrowIfError();
 
             var result = probe.GetProbeRegistrationInfo();

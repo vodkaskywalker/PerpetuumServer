@@ -1,111 +1,81 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
 using Perpetuum.EntityFramework;
 using Perpetuum.Log;
 using Perpetuum.Services.Looting;
 using Perpetuum.Units;
 using Perpetuum.Zones.Finders.PositionFinders;
+using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using Perpetuum.Zones.NpcSystem.Presences;
 using Perpetuum.Zones.NpcSystem.Presences.InterzonePresences;
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace Perpetuum.Zones.NpcSystem.Flocks
 {
-    public interface INpcGroup
-    {
-        string Name { get; }
-        IEnumerable<Npc> Members { get; }
-        void AddDebugInfoToDictionary(IDictionary<string, object> dictionary);
-    }
-
-    public delegate Flock FlockFactory(IFlockConfiguration flockConfiguration,Presence presence);
+    public delegate Flock FlockFactory(IFlockConfiguration flockConfiguration, Presence presence);
 
     public class Flock
     {
+        private ImmutableList<Npc> members = ImmutableList<Npc>.Empty;
+
         public ILootService LootService { get; set; }
+
         public IEntityServices EntityService { get; set; }
 
-        private ImmutableList<Npc> _members = ImmutableList<Npc>.Empty;
-
         public IFlockConfiguration Configuration { get; }
+
         public Presence Presence { get; }
 
         public NpcBossInfo BossInfo { get { return Configuration.BossInfo; } }
+
         public bool IsBoss { get { return BossInfo != null; } }
 
         public int Id => Configuration.ID;
 
         public int HomeRange => Configuration.HomeRange;
 
+        public Position SpawnOrigin { get; }
+
+        public IReadOnlyCollection<Npc> Members => members;
+
+        public int MembersCount => members.Count;
+
+        public event Action<Flock> AllMembersDead;
+
+        public event Action<Npc> NpcCreated;
+
         public Flock(IFlockConfiguration configuration, Presence presence)
         {
             Configuration = configuration;
             Presence = presence;
-
             SpawnOrigin = SpawnOriginSelector(presence);
-        }
-
-        public Position SpawnOrigin { get; }
-
-        public IReadOnlyCollection<Npc> Members => _members;
-
-        private void AddMember(Npc npc)
-        {
-            ImmutableInterlocked.Update(ref _members, m => m.Add(npc));
-            npc.Dead += OnMemberDead;
-        }
-
-        private void RemoveMember(Npc npc)
-        {
-            ImmutableInterlocked.Update(ref _members, m => m.Remove(npc));
-        }
-
-
-        protected virtual void OnMemberDead(Unit killer,Unit npc)
-        {
-            RemoveMember((Npc) npc);
-
-            if (_members.Count <= 0)
-            {
-                OnAllMembersDead();
-            }
-        }
-
-        public event Action<Flock> AllMembersDead;
-
-        private void OnAllMembersDead()
-        {
-            AllMembersDead?.Invoke(this);
         }
 
         public virtual IDictionary<string, object> ToDictionary()
         {
-            var dictionary = new Dictionary<string, object> {
-                                                                    {k.ID, Configuration.ID},
-                                                                    {k.presenceID, Presence.Configuration.ID},
-                                                                    {k.definition, Configuration.EntityDefault.Definition},
-                                                                    {k.name, Configuration.Name},
-                                                                    {k.spawnRangeMin, Configuration.SpawnRange.Min},
-                                                                    {k.spawnRangeMax, Configuration.SpawnRange.Max},
-                                                                    {k.flockMemberCount, Configuration.FlockMemberCount},
-                                                                    {k.respawnSeconds, Configuration.RespawnTime.Seconds},
-                                                                    {k.homeRange, HomeRange},
-                                                                    {k.totalSpawnCount, Configuration.TotalSpawnCount},
-                                                                    {k.spawnOriginX,SpawnOrigin.intX},
-                                                                    {k.spawnOriginY,SpawnOrigin.intY}
-                                                            };
+            var dictionary = new Dictionary<string, object>
+            {
+                {k.ID, Configuration.ID},
+                {k.presenceID, Presence.Configuration.ID},
+                {k.definition, Configuration.EntityDefault.Definition},
+                {k.name, Configuration.Name},
+                {k.spawnRangeMin, Configuration.SpawnRange.Min},
+                {k.spawnRangeMax, Configuration.SpawnRange.Max},
+                {k.flockMemberCount, Configuration.FlockMemberCount},
+                {k.respawnSeconds, Configuration.RespawnTime.Seconds},
+                {k.homeRange, HomeRange},
+                {k.totalSpawnCount, Configuration.TotalSpawnCount},
+                {k.spawnOriginX,SpawnOrigin.intX},
+                {k.spawnOriginY,SpawnOrigin.intY}
+            };
+
             return dictionary;
-        }
-
-        public int MembersCount => _members.Count;
-
-        public virtual void Update(TimeSpan time)
-        {
         }
 
         public void SpawnAllMembers()
         {
             var totalToSpawn = Configuration.FlockMemberCount - MembersCount;
+
             for (var i = 0; i < totalToSpawn; i++)
             {
                 CreateMemberInZone();
@@ -114,13 +84,36 @@ namespace Perpetuum.Zones.NpcSystem.Flocks
             Log($"{Configuration.FlockMemberCount} NPCs created");
         }
 
+        public virtual void Update(TimeSpan time)
+        {
+        }
+
+        public override string ToString()
+        {
+            return $"{Configuration.Name}:{Configuration.ID}";
+        }
+
+        public void RemoveAllMembersFromZone(bool withTeleportExit = false)
+        {
+            foreach (var npc in Members)
+            {
+                if (withTeleportExit)
+                {
+                    npc.States.Teleport = true;
+                }
+
+                npc.RemoveFromZone();
+                RemoveMember(npc);
+            }
+        }
+
         protected virtual void CreateMemberInZone()
         {
             var npc = (Npc)EntityService.Factory.Create(Configuration.EntityDefault, EntityIDGenerator.Random);
-
             var zone = Presence.Zone;
             var spawnPosition = GetSpawnPosition(SpawnOrigin);
             var finder = new ClosestWalkablePositionFinder(zone, spawnPosition, npc);
+
             if (!finder.Find(out spawnPosition))
             {
                 Log($"invalid spawnposition in CreateMemberInZone: {spawnPosition} {Configuration.Name} {Presence.Configuration.Name} zone:{zone.Id}");
@@ -148,12 +141,22 @@ namespace Perpetuum.Zones.NpcSystem.Flocks
             Log($"member spawned to zone:{zone.Id} EID:{npc.Eid}");
         }
 
+        protected virtual void OnMemberDead(Unit killer, Unit npc)
+        {
+            RemoveMember((Npc)npc);
+
+            if (members.Count <= 0)
+            {
+                OnAllMembersDead();
+            }
+        }
+
         protected virtual Position GetSpawnPosition(Position spawnOrigin)
         {
             var spawnRangeMin = Configuration.SpawnRange.Min;
             var spawnRangeMax = Configuration.SpawnRange.Max.Min(HomeRange);
-
             var spawnPosition = spawnOrigin.GetRandomPositionInRange2D(spawnRangeMin, spawnRangeMax).Clamp(Presence.Zone.Size);
+
             return spawnPosition;
         }
 
@@ -162,32 +165,9 @@ namespace Perpetuum.Zones.NpcSystem.Flocks
             return spawnOrigin;
         }
 
-        public event Action<Npc> NpcCreated;
-
         protected virtual void OnNpcCreated(Npc npc)
         {
             NpcCreated?.Invoke(npc);
-        }
-
-        private NpcBehavior GetBehavior()
-        {
-
-            if( Presence is InterzonePresence)
-            {
-                return NpcBehavior.Create(Configuration.BehaviorType);
-            }
-            else if(Configuration.BehaviorType == NpcBehaviorType.Aggressive && Presence is DynamicPresenceExtended)
-            {
-                // This is needed to prevent the super class from matching the next condition, which overrides the behaviour type!
-                return NpcBehavior.Create(Configuration.BehaviorType);
-            }
-            else if (Configuration.BehaviorType == NpcBehaviorType.Aggressive && Presence is DynamicPresence)
-            {
-                // hogy ne tamadjanak be mindenkit rogton
-                return NpcBehavior.Create(NpcBehaviorType.Neutral);
-            }
-
-            return NpcBehavior.Create(Configuration.BehaviorType);
         }
 
         protected void Log(string message)
@@ -195,47 +175,64 @@ namespace Perpetuum.Zones.NpcSystem.Flocks
             Logger.Info($"[Flock] ({ToString()}) - {message}");
         }
 
-        public override string ToString()
+        private void AddMember(Npc npc)
         {
-            return $"{Configuration.Name}:{Configuration.ID}";
+            ImmutableInterlocked.Update(ref members, m => m.Add(npc));
+            npc.Dead += OnMemberDead;
         }
 
-        public void RemoveAllMembersFromZone(bool withTeleportExit = false)
+        private void RemoveMember(Npc npc)
         {
-            foreach (var npc in Members)
-            {
-                if (withTeleportExit)
-                    npc.States.Teleport = true;
+            ImmutableInterlocked.Update(ref members, m => m.Remove(npc));
+        }
 
-                npc.RemoveFromZone();
-                RemoveMember(npc);
+        private void OnAllMembersDead()
+        {
+            AllMembersDead?.Invoke(this);
+        }
+
+        private Behavior GetBehavior()
+        {
+
+            if (Presence is InterzonePresence)
+            {
+                return Behavior.Create(Configuration.BehaviorType);
             }
+            else if (Configuration.BehaviorType == BehaviorType.Aggressive && Presence is DynamicPresenceExtended)
+            {
+                return Behavior.Create(Configuration.BehaviorType);
+            }
+            else if (Configuration.BehaviorType == BehaviorType.Aggressive && Presence is DynamicPresence)
+            {
+                return Behavior.Create(BehaviorType.Neutral);
+            }
+
+            return Behavior.Create(Configuration.BehaviorType);
         }
 
         private Position SpawnOriginSelector(Presence presence)
         {
             switch (presence)
             {
-                case InterzonePresence ip:
-                {
-                    return Configuration.SpawnOrigin;
-                }
-                case DynamicPresence dp:
-                {
-                    return dp.DynamicPosition;
-                }
-                case RandomPresence rp:
-                {
-                    return rp.SpawnOriginForRandomPresence;
-                }
+                case InterzonePresence interzonePresense:
+                    {
+                        return Configuration.SpawnOrigin;
+                    }
+                case DynamicPresence dynamicPresence:
+                    {
+                        return dynamicPresence.DynamicPosition;
+                    }
+                case RandomPresence randomPresense:
+                    {
+                        return randomPresense.SpawnOriginForRandomPresence;
+                    }
                 case IRoamingPresence roaming:
-                {
-                    return roaming.SpawnOrigin;
-                }
+                    {
+                        return roaming.SpawnOrigin;
+                    }
             }
 
             return Configuration.SpawnOrigin;
         }
-
     }
 }

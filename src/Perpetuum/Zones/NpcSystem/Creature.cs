@@ -5,6 +5,7 @@ using Perpetuum.Robots;
 using Perpetuum.Units;
 using Perpetuum.Zones.Effects;
 using Perpetuum.Zones.Eggs;
+using Perpetuum.Zones.LandMines;
 using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
 
@@ -14,7 +15,7 @@ namespace Perpetuum.Zones.NpcSystem
     {
         protected override void UpdateUnitVisibility(Unit target)
         {
-            if (target is AreaBomb)
+            if (target is AreaBomb || target is LandMine)
             {
                 UpdateVisibility(target);
             }
@@ -94,6 +95,26 @@ namespace Perpetuum.Zones.NpcSystem
                 return primaryLock;
 
             return locks.RandomElement();
+        }
+
+        [CanBeNull]
+        public TerrainLock SelectOptimalLockIndustrialTargetFor(ActiveModule module)
+        {
+            var range = module.OptimalRange;
+            var locks = GetLocks().OfType<TerrainLock>().Where(industrialLock =>
+            {
+                if (industrialLock.State != LockState.Locked)
+                {
+                    return false;
+                }
+
+                return true;
+
+            }).ToArray();
+
+            var primaryLock = locks.FirstOrDefault(l => l.Primary);
+
+            return primaryLock;
         }
     }
 }

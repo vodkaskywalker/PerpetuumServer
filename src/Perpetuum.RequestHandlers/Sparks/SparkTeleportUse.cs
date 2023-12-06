@@ -32,13 +32,13 @@ namespace Perpetuum.RequestHandlers.Sparks
                 var character = request.Session.Character;
 
                 character.IsDocked.ThrowIfFalse(ErrorCodes.CharacterHasToBeDocked);
-                character.CheckNextAvailableUndockTimeAndThrowIfFailed();
-                CheckExtensionLevelAndThrowIfFailed(character);
+                //character.CheckNextAvailableUndockTimeAndThrowIfFailed();
+                //CheckExtensionLevelAndThrowIfFailed(character);
 
-                var sparkTeleport = _sparkTeleportHelper.Get(id);
+                var sparkTeleport = _sparkTeleportHelper.GetCommon(id);//.Get(id);
                 var currentDockingBase = character.GetCurrentDockingBase();
 
-                character.SubtractFromWallet(TransactionType.SparkTeleportUse, SparkTeleport.SPARK_TELEPORT_USE_FEE);
+                //character.SubtractFromWallet(TransactionType.SparkTeleportUse, SparkTeleport.SPARK_TELEPORT_USE_FEE);
 
                 if ( sparkTeleport.DockingBase == currentDockingBase)
                     throw new PerpetuumException(ErrorCodes.YouAreHereAlready);

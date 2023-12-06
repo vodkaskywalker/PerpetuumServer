@@ -7,6 +7,9 @@ namespace Perpetuum.Services.Sparks.Teleports
     public interface ISparkTeleportRepository : IRepository<int,SparkTeleport>
     {
         IEnumerable<SparkTeleport> GetAllByCharacter(Character character);
+
         IEnumerable<SparkTeleport> GetAllByDockingBase(DockingBase dockingBase);
+
+        SparkTeleport GetCommon(int id);
     }
 }

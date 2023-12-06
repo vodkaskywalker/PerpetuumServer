@@ -21,10 +21,10 @@ namespace Perpetuum.RequestHandlers
             var corporation = character.GetPrivateCorporationOrThrow();
             var role = corporation.GetMemberRole(character);
 
-            var allProbes = ProximityProbeBase.IsAllProbesVisible(role);
-            var probeEids = allProbes ? corporation.GetProximityProbeEids() : PBSRegisterHelper.PBSRegGetEidsByRegisteredCharacter(character);
+            var allProbes = ProximityDeviceBase.IsAllProbesVisible(role);
+            var probeEids = allProbes ? corporation.GetProximityProbeEids().Union(corporation.GetLandMineEids()) : PBSRegisterHelper.PBSRegGetEidsByRegisteredCharacter(character);
 
-            var probesDict = _zoneManager.Zones.GetUnits<ProximityProbeBase>()
+            var probesDict = _zoneManager.Zones.GetUnits<ProximityDeviceBase>()
                 .Where(probeBase => probeEids.Contains(probeBase.Eid))
                 .ToDictionary("c", p => p.ToDictionary());
 

@@ -196,7 +196,7 @@ namespace Perpetuum.Zones.PBS.Turrets
             get { return _blobEmitter.BlobEmissionRadius; }
         }
 
-        internal override bool IsHostile(Player player)
+        public override bool IsHostile(Player player)
         {
             return IsHostileCorporation(player.CorporationEid);
         }

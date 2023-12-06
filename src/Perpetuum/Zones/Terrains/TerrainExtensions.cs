@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -88,6 +90,22 @@ namespace Perpetuum.Zones.Terrains
                 }
             });
             return counter;
+        }
+
+        public static List<Position> GetPlantPositionsInArea(this IZone zone, PlantType plantType, Area area)
+        {
+            var result = new List<Position>();
+
+            zone.ForEachAreaInclusive(area, (x, y) =>
+            {
+                var pi = zone.Terrain.Plants.GetValue(x, y);
+                if (pi.type == plantType)
+                {
+                    result.Add(new Position(x, y));
+                }
+            });
+            
+            return result;
         }
 
         public static void ForEachAll(this IZone zone, Action<int, int> action)
@@ -297,6 +315,38 @@ namespace Perpetuum.Zones.Terrains
         public static MineralLayer GetMineralLayerOrThrow(this ITerrain terrain, MaterialType type)
         {
             return terrain.GetMaterialLayer(type).ThrowIfNotType<MineralLayer>(ErrorCodes.NoSuchMineralOnZone);
+        }
+
+        public static MaterialType GetMaterialTypeAtPosition(this ITerrain terrain, Position position)
+        {
+            MaterialType[] materials = Enum.GetValues(typeof(MaterialType)) as MaterialType[];
+
+            var layer = materials
+                .Select(x => terrain.GetMaterialLayer(x))
+                .Where(x => x is MineralLayer)
+                .FirstOrDefault(x => (x as MineralLayer).Nodes.Any(y => y.Area.Contains(position)));
+
+            return layer == null
+                ? MaterialType.Undefined
+                : (layer as MineralLayer).Type;
+        }
+
+        public static MaterialType[] GetAvailableMineralTypes(this ITerrain terrain)
+        {
+            MaterialType[] materials = Enum.GetValues(typeof(MaterialType)) as MaterialType[];
+
+            return materials
+                .Where(x => terrain.GetMaterialLayer(x) != null)
+                .ToArray();
+        }
+
+        public static PlantType[] GetAvailablePlantTypes(this ITerrain terrain)
+        {
+            PlantType[] materials = Enum.GetValues(typeof(PlantType)) as PlantType[];
+
+            return materials
+                .Where(x => terrain.Plants.RawData.Any(y => y.type == x && y.material > 0))
+                .ToArray();
         }
 
         private const int GZIP_THRESHOLD = 260;

@@ -1,9 +1,10 @@
 ﻿using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
+using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Units;
 using Perpetuum.Zones.Effects;
-using Perpetuum.Zones.NpcSystem;
+using Perpetuum.Zones.NpcSystem.ThreatManaging;
 
 namespace Perpetuum.Modules.EffectModules
 {
@@ -23,14 +24,17 @@ namespace Perpetuum.Modules.EffectModules
         public override void AcceptVisitor(IEntityVisitor visitor)
         {
             if (!TryAcceptVisitor(this, visitor))
+            {
                 base.AcceptVisitor(visitor);
+            }
         }
 
         protected override void SetupEffect(EffectBuilder effectBuilder)
         {
-            effectBuilder.SetType(EffectType.effect_sensor_boost)
-                                 .WithPropertyModifier(_effectSensorBoosterLockingRangeModifier.ToPropertyModifier())
-                                 .WithPropertyModifier(_effectSensorBoosterLockingTimeModifier.ToPropertyModifier());
+            effectBuilder
+                .SetType(EffectType.effect_sensor_boost)
+                .WithPropertyModifier(_effectSensorBoosterLockingRangeModifier.ToPropertyModifier())
+                .WithPropertyModifier(_effectSensorBoosterLockingTimeModifier.ToPropertyModifier());
         }
 
 

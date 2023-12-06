@@ -34,18 +34,16 @@ namespace Perpetuum.Zones.Terrains.Materials.Plants.Harvesters
 
                 if (pi.material <= 0)
                 {
-                    //elfogyott a material a novenybol
-                    //megoljuk erobol
                     pi.Clear();
-                    pi.state = 1; //force kidoles :)
-                    //kill the blocking as well
+                    pi.state = 1;
                     _zone.Terrain.ClearPlantBlocking(position);
                 }
 
-                //resulting material
                 var quantity = GetHarvestedAmountPerCycle(plantRule);
+
                 result.Add(new ItemInfo(plantRule.FruitDefinition, quantity));
                 result.AddRange(_rareMaterialHandler.GenerateRareMaterials(plantRule.FruitDefinition));
+
                 return pi;
             });
 
