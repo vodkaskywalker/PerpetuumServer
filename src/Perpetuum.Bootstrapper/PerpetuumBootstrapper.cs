@@ -931,6 +931,7 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<Ammo>();
             RegisterEntity<WeaponAmmo>();
             RegisterEntity<RemoteControlledUnit>();
+            RegisterEntity<ArtilleryWeaponAmmo>();
             RegisterEntity<MiningAmmo>();
             RegisterEntity<TileScannerAmmo>();
             RegisterEntity<OneTileScannerAmmo>();
@@ -958,6 +959,7 @@ namespace Perpetuum.Bootstrapper
             RegisterModule<WeaponModule>();
             RegisterModule<FirearmWeaponModule>(); // OPP: new subclass for firearms
             RegisterModule<MissileWeaponModule>();
+            RegisterModule<ArtilleryWeaponModule>();
             RegisterModule<ArmorRepairModule>();
             RegisterModule<RemoteArmorRepairModule>();
             RegisterModule<CoreBoosterModule>();
@@ -1115,6 +1117,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<WeaponAmmo>(CategoryFlags.cf_laser_ammo);
                 ByCategoryFlags<WeaponAmmo>(CategoryFlags.cf_projectile_ammo);
                 ByCategoryFlags<WeaponAmmo>(CategoryFlags.cf_missile_ammo);
+                ByCategoryFlags<ArtilleryWeaponAmmo>(CategoryFlags.cf_warhammer_shells);
                 ByCategoryFlags<MiningAmmo>(CategoryFlags.cf_mining_ammo);
                 ByCategoryFlags<RemoteControlledUnit>(CategoryFlags.cf_sentry_turret_units);
                 ByCategoryFlags<RemoteControlledUnit>(CategoryFlags.cf_mining_turret_units);
@@ -1190,7 +1193,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<MissileWeaponModule>(CategoryFlags.cf_small_missile_launchers,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_small_missile_ammo));
                 ByCategoryFlags<MissileWeaponModule>(CategoryFlags.cf_medium_missile_launchers,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_medium_missile_ammo));
                 ByCategoryFlags<MissileWeaponModule>(CategoryFlags.cf_large_missile_launchers,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_large_missile_ammo));
-                ByCategoryFlags<WeaponModule>(CategoryFlags.cf_artillery_cannons, new NamedParameter("ammoCategoryFlags", CategoryFlags.cf_large_missile_ammo));
+                ByCategoryFlags<ArtilleryWeaponModule>(CategoryFlags.cf_artillery_cannons, new NamedParameter("ammoCategoryFlags", CategoryFlags.cf_warhammer_shells));
                 ByCategoryFlags<ShieldGeneratorModule>(CategoryFlags.cf_shield_generators);
                 ByCategoryFlags<ArmorRepairModule>(CategoryFlags.cf_armor_repair_systems);
                 ByCategoryFlags<RemoteArmorRepairModule>(CategoryFlags.cf_remote_armor_repairers);

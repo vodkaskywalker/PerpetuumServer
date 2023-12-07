@@ -18,12 +18,12 @@ namespace Perpetuum.Modules.Weapons
             AddProperty(PlantDamageModifier);
         }
 
-        protected override bool CheckAccuracy(Unit victim)
+        public override bool CheckAccuracy(Unit victim)
         {
             return false;
         }
 
-        protected override IDamageBuilder GetDamageBuilder()
+        public override IDamageBuilder GetDamageBuilder()
         {
             return base.GetDamageBuilder()
                 .WithExplosionRadius(Accuracy.Value);

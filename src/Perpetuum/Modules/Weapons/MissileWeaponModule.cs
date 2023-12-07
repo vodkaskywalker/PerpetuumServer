@@ -55,37 +55,16 @@ namespace Perpetuum.Modules.Weapons
             base.UpdateProperty(field);
         }
 
-        protected override bool CheckAccuracy(Unit victim)
+        public override bool CheckAccuracy(Unit victim)
         {
             var rnd = FastRandom.NextDouble();
             var isMiss = rnd > ParentRobot.MissileHitChance;
             return isMiss;
         }
 
-        protected override IDamageBuilder GetDamageBuilder()
+        public override IDamageBuilder GetDamageBuilder()
         {
             return base.GetDamageBuilder().WithExplosionRadius(_propertyExplosionRadius.Value);
-        }
-
-        private class ExplosionRadiusProperty : ModuleProperty
-        {
-            private readonly MissileWeaponModule _module;
-
-            public ExplosionRadiusProperty(MissileWeaponModule module) : base(module,AggregateField.explosion_radius)
-            {
-                _module = module;
-            }
-
-            protected override double CalculateValue()
-            {
-                var ammo = (WeaponAmmo)_module.GetAmmo();
-                if (ammo == null) 
-                    return 0.0;
-
-                var property = ammo.GetExplosionRadius();
-                _module.ApplyRobotPropertyModifiers(ref property);
-                return property.Value;
-            }
         }
     }
 }

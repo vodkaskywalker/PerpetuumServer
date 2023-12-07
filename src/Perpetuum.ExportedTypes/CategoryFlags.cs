@@ -112,6 +112,8 @@ namespace Perpetuum.ExportedTypes
                 cf_sentry_turret_units = 0x000000000010200A,
                 cf_mining_turret_units = 0x000000000020200A,
                 cf_harvesting_turret_units = 0x000000000030200A,
+            cf_artillery_ammo = 0x000000000000300A,
+                cf_warhammer_shells = 0x000000000010300A,
 
         cf_robot_equipment = 0x000000000000000F,
             cf_armor_equipment = 0x000000000000010F,

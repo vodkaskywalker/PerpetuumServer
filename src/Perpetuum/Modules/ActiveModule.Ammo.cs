@@ -53,7 +53,7 @@ namespace Perpetuum.Modules
             SendAmmoUpdatePacketToPlayer();
         }
 
-        protected void ConsumeAmmo()
+        public void ConsumeAmmo()
         {
             if (!IsAmmoable || !ParentIsPlayer())
                 return;

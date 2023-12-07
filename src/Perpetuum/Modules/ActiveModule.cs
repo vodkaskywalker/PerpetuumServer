@@ -21,12 +21,11 @@ namespace Perpetuum.Modules
     public abstract partial class ActiveModule : Module
     {
         private Lock _lock;
+        private readonly CategoryFlags _ammoCategoryFlags;
         protected readonly ModuleProperty coreUsage;
         protected readonly CycleTimeProperty cycleTime;
         protected readonly ItemProperty falloff = ItemProperty.None;
         protected readonly ModuleProperty optimalRange;
-
-        private readonly CategoryFlags _ammoCategoryFlags;
 
         public Lock Lock
         {
@@ -172,17 +171,7 @@ namespace Perpetuum.Modules
             return result;
         }
 
-        protected abstract void OnAction();
-
-        protected virtual void HandleOffensivePVPCheck(Player parentPlayer, UnitLock unitLockTarget)
-        {
-            if (parentPlayer != null)
-            {
-                (unitLockTarget.Target as Player)?.CheckPvp().ThrowIfError();
-            }
-        }
-
-        protected Lock GetLock()
+        public Lock GetLock()
         {
             var currentLock = Lock.ThrowIfNull(ErrorCodes.LockTargetNotFound);
 
@@ -221,24 +210,125 @@ namespace Perpetuum.Modules
             return currentLock;
         }
 
-        protected void CreateBeam(Unit target, BeamState beamState)
+        public void CreateBeam(Unit target, BeamState beamState)
         {
             CreateBeam(target, beamState, 0, 0, 0);
         }
 
-        protected int CreateBeam(Unit target, BeamState beamState, int duration, double bulletTime)
-        {
-            return CreateBeam(target, beamState, duration, bulletTime, 0);
-        }
-
-        protected void CreateBeam(Position location, BeamState beamState)
+        public void CreateBeam(Position location, BeamState beamState)
         {
             CreateBeam(location, beamState, 0, 0, 0);
         }
 
-        protected int CreateBeam(Position location, BeamState beamState, int duration, double bulletTime)
+        public int CreateBeam(Unit target, BeamState beamState, int duration, double bulletTime)
         {
-            return CreateBeam(location, beamState, duration, bulletTime,0);
+            return CreateBeam(target, beamState, duration, bulletTime, 0);
+        }
+
+        public int CreateBeam(Position location, BeamState beamState, int duration, double bulletTime)
+        {
+            return CreateBeam(location, beamState, duration, bulletTime, 0);
+        }
+
+        public int CreateBeam(Unit target, BeamState beamState, int duration, double bulletTime, int visibility)
+        {
+            var delay = 0;
+            var beamType = GetBeamType();
+
+            if (beamType <= 0)
+            {
+                return delay;
+            }
+
+            delay = BeamHelper.GetBeamDelay(beamType);
+
+            if (duration == 0)
+            {
+                duration = (int)CycleTime.TotalMilliseconds;
+            }
+
+            Debug.Assert(ParentComponent != null, "ParentComponent != null");
+
+            var slot = ParentComponent.Type == RobotComponentType.Chassis ? Slot : 0xff; // -1
+            var builder = Beam.NewBuilder().WithType(beamType)
+                .WithSlot(slot)
+                .WithSource(ParentRobot)
+                .WithState(beamState)
+                .WithBulletTime(bulletTime)
+                .WithDuration(duration)
+                .WithTarget(target)
+                .WithVisibility(visibility);
+
+            Zone.CreateBeam(builder);
+
+            return delay;
+        }
+
+        public int CreateBeam(Position location, BeamState beamState, int duration, double bulletTime, int visibility)
+        {
+            var delay = 0;
+            var beamType = GetBeamType();
+
+            if (beamType <= 0)
+            {
+                return delay;
+            }
+
+            delay = BeamHelper.GetBeamDelay(beamType);
+
+            if (duration == 0)
+            {
+                duration = (int)CycleTime.TotalMilliseconds;
+            }
+
+            Debug.Assert(ParentComponent != null, "ParentComponent != null");
+
+            var slot = ParentComponent.Type == RobotComponentType.Chassis ? Slot : 0xff; // -1
+            var builder = Beam.NewBuilder().WithType(beamType)
+                .WithSlot(slot)
+                .WithSource(ParentRobot)
+                .WithState(beamState)
+                .WithBulletTime(bulletTime)
+                .WithDuration(duration)
+                .WithTargetPosition(location)
+                .WithVisibility(visibility);
+
+            Zone.CreateBeam(builder);
+
+            return delay;
+        }
+
+        public LOSResult GetLineOfSight(Unit target)
+        {
+            Debug.Assert(ParentRobot != null, "ParentRobot != null");
+
+            var visibility = ParentRobot.GetVisibility(target);
+
+            return visibility?.GetLineOfSight(IsCategory(CategoryFlags.cf_missiles)) ?? LOSResult.None;
+        }
+
+        public LOSResult GetLineOfSight(Position location)
+        {
+            Debug.Assert(ParentRobot != null, "ParentRobot != null");
+
+            var losResult = ParentRobot.Zone.IsInLineOfSight(ParentRobot, location, IsCategory(CategoryFlags.cf_missiles));
+
+            return losResult;
+        }
+
+        public void OnError(ErrorCodes error)
+        {
+            SendModuleErrorToPlayer(error);
+        }
+
+        protected abstract void OnAction();
+
+        protected virtual void HandleOffensivePVPCheck(Player parentPlayer, UnitLock unitLockTarget)
+        {
+            if (parentPlayer != null)
+            {
+                (unitLockTarget.Target as Player)?.CheckPvp().ThrowIfError();
+            }
         }
 
         protected override void OnUpdateProperty(AggregateField field)
@@ -303,24 +393,6 @@ namespace Perpetuum.Modules
             return value * m;
         }
 
-        protected LOSResult GetLineOfSight(Unit target)
-        {
-            Debug.Assert(ParentRobot != null, "ParentRobot != null");
-
-            var visibility = ParentRobot.GetVisibility(target);
-
-            return visibility?.GetLineOfSight(IsCategory(CategoryFlags.cf_missiles)) ?? LOSResult.None;
-        }
-
-        protected LOSResult GetLineOfSight(Position location)
-        {
-            Debug.Assert(ParentRobot != null, "ParentRobot != null");
-
-            var losResult = ParentRobot.Zone.IsInLineOfSight(ParentRobot,location,IsCategory(CategoryFlags.cf_missiles));
-
-            return losResult;
-        }
-
         protected bool LOSCheckAndCreateBeam(Unit target)
         {
             var result = GetLineOfSight(target);
@@ -337,11 +409,6 @@ namespace Perpetuum.Modules
             CreateBeam(target, BeamState.Hit);
 
             return true;
-        }
-
-        protected void OnError(ErrorCodes error)
-        {
-            SendModuleErrorToPlayer(error);
         }
 
         private void LockChangedHandler(Lock @lock)
@@ -399,74 +466,6 @@ namespace Perpetuum.Modules
             }
 
             player.Session.SendPacket(packet);
-        }
-
-        private int CreateBeam(Unit target, BeamState beamState, int duration, double bulletTime, int visibility)
-        {
-            var delay = 0;
-            var beamType = GetBeamType();
-
-            if (beamType <= 0)
-            {
-                return delay;
-            }
-
-            delay = BeamHelper.GetBeamDelay(beamType);
-
-            if (duration == 0)
-            {
-                duration = (int)CycleTime.TotalMilliseconds;
-            }
-
-            Debug.Assert(ParentComponent != null, "ParentComponent != null");
-
-            var slot = ParentComponent.Type == RobotComponentType.Chassis ? Slot : 0xff; // -1
-            var builder = Beam.NewBuilder().WithType(beamType)
-                .WithSlot(slot)
-                .WithSource(ParentRobot)
-                .WithState(beamState)
-                .WithBulletTime(bulletTime)
-                .WithDuration(duration)
-                .WithTarget(target)
-                .WithVisibility(visibility);
-
-            Zone.CreateBeam(builder);
-
-            return delay;
-        }
-
-        private int CreateBeam(Position location, BeamState beamState, int duration, double bulletTime, int visibility)
-        {
-            var delay = 0;
-            var beamType = GetBeamType();
-
-            if (beamType <= 0)
-            {
-                return delay;
-            }
-
-            delay = BeamHelper.GetBeamDelay(beamType);
-
-            if (duration == 0)
-            {
-                duration = (int)CycleTime.TotalMilliseconds;
-            }
-
-            Debug.Assert(ParentComponent != null, "ParentComponent != null");
-
-            var slot = ParentComponent.Type == RobotComponentType.Chassis ? Slot : 0xff; // -1
-            var builder = Beam.NewBuilder().WithType(beamType)
-                .WithSlot(slot)
-                .WithSource(ParentRobot)
-                .WithState(beamState)
-                .WithBulletTime(bulletTime)
-                .WithDuration(duration)
-                .WithTargetPosition(location)
-                .WithVisibility(visibility);
-
-            Zone.CreateBeam(builder);
-
-            return delay;
         }
 
         private void SendModuleErrorToPlayer(ErrorCodes error)

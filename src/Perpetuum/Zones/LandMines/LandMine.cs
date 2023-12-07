@@ -1,10 +1,6 @@
-﻿using Perpetuum.Accounting.Characters;
-using Perpetuum.EntityFramework;
-using Perpetuum.ExportedTypes;
-using Perpetuum.Log;
+﻿using Perpetuum.ExportedTypes;
 using Perpetuum.Modules.Weapons;
 using Perpetuum.Players;
-using Perpetuum.Robots;
 using Perpetuum.Timers;
 using Perpetuum.Units;
 using Perpetuum.Units.DockingBases;
@@ -14,7 +10,6 @@ using Perpetuum.Zones.Teleporting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Policy;
 
 namespace Perpetuum.Zones.LandMines
 {

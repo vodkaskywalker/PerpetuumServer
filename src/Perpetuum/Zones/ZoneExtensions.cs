@@ -217,7 +217,9 @@ namespace Perpetuum.Zones
 
             foreach (var unit in units)
             {
-                var losResult = zone.IsInLineOfSight(damageInfo.attacker, unit, false);
+                var losResult = damageInfo.attacker != null
+                    ? zone.IsInLineOfSight(damageInfo.attacker, unit, false)
+                    : zone.IsInLineOfSight(damageInfo.sourcePosition, unit, false);
                 if (losResult.hit)
                     continue;
 

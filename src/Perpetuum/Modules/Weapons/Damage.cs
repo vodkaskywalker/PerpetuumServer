@@ -22,9 +22,17 @@ namespace Perpetuum.Modules.Weapons
     public interface IDamageBuilder : IBuilder<DamageInfo>
     {
         IDamageBuilder WithAttacker(Unit attacker);
+
+        IDamageBuilder WithAttackerWithoutPosition(Unit attacker);
+
+        IDamageBuilder WithSourcePosition(Position position);
+
         IDamageBuilder WithExplosionRadius(double explosionRadius);
+
         IDamageBuilder WithOptimalRange(double optimalRange);
+
         IDamageBuilder WithFalloff(double falloff);
+
         IDamageBuilder WithDamage(Damage damage);
     }
 
@@ -165,7 +173,14 @@ namespace Perpetuum.Modules.Weapons
                 return this;
             }
 
-            private DamageBuilder WithSourcePosition(Position position)
+            public IDamageBuilder WithAttackerWithoutPosition(Unit attacker)
+            {
+                _attacker = attacker;
+
+                return this;
+            }
+
+            public IDamageBuilder WithSourcePosition(Position position)
             {
                 _sourcePosition = position;
                 return this;

@@ -1,26 +1,15 @@
-﻿using System.Collections.Generic;
-using System.Threading;
-using Perpetuum.ExportedTypes;
-using Perpetuum.Items;
+﻿using Perpetuum.ExportedTypes;
 using Perpetuum.Items.Ammos;
+using Perpetuum.Items;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace Perpetuum.Modules.Weapons
 {
-    public class WeaponAmmo : Ammo
+    public class ArtilleryWeaponAmmo : Ammo
     {
         private ItemProperty _optimalRangeModifier = ItemProperty.None;
         private IList<Damage> _cleanDamages;
-
-        public override void Initialize()
-        {
-            if (!IsCategory(CategoryFlags.cf_missile_ammo))
-            {
-                _optimalRangeModifier = new AmmoProperty<WeaponAmmo>(this,AggregateField.optimal_range_modifier);
-                AddProperty(_optimalRangeModifier);
-            }
-
-            base.Initialize();
-        }
 
         public override void UpdateAllProperties()
         {
@@ -36,6 +25,7 @@ namespace Perpetuum.Modules.Weapons
         public override void ModifyOptimalRange(ref ItemPropertyModifier property)
         {
             var optimalRangeMod = _optimalRangeModifier.ToPropertyModifier();
+
             optimalRangeMod.Modify(ref property);
         }
 
@@ -48,21 +38,9 @@ namespace Perpetuum.Modules.Weapons
         {
             var result = new List<Damage>();
 
-            if (!(GetParentModule() is WeaponModule weapon))
+            if (!(GetParentModule() is ArtilleryWeaponModule weapon))
             {
                 return result;
-            }
-            
-            if (weapon is FirearmWeaponModule firearm)
-            {
-                var plantDmgMod = firearm.PlantDamageModifier.ToPropertyModifier();
-                var plantDmgProperty = GetPropertyModifier(AggregateField.damage_toxic);
-
-                if (plantDmgProperty.HasValue)
-                {
-                    plantDmgMod.Modify(ref plantDmgProperty);
-                    result.Add(new Damage(DamageType.Toxic, plantDmgProperty.Value));
-                }
             }
 
             var damageModifier = weapon.DamageModifier.ToPropertyModifier();

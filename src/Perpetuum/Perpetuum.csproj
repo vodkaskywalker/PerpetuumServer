@@ -261,7 +261,10 @@
     <Compile Include="Modules\EffectModules\MineDetectorModule.cs" />
     <Compile Include="Modules\EffectModules\TargetBlinderModule.cs" />
     <Compile Include="Modules\GathererModule.cs" />
+    <Compile Include="Modules\ModuleActions\ArtilleryModuleAction.cs" />
+    <Compile Include="Modules\ModuleActions\ModuleAction.cs" />
     <Compile Include="Modules\ModuleProperties\CycleTimeProperty.cs" />
+    <Compile Include="Modules\ModuleProperties\ExplosionRadiusProperty.cs" />
     <Compile Include="Modules\ModuleProperties\FalloffProperty.cs" />
     <Compile Include="Modules\ModuleProperties\HarvestingAmountModifierProperty.cs" />
     <Compile Include="Modules\ModuleProperties\MiningAmountModifierProperty.cs" />
@@ -271,6 +274,8 @@
     <Compile Include="Modules\RemoteControlledDrillerModule.cs" />
     <Compile Include="Modules\RemoteControlledHarvesterModule.cs" />
     <Compile Include="Modules\RemoteControllerModule.cs" />
+    <Compile Include="Modules\Weapons\ArtilleryWeaponAmmo.cs" />
+    <Compile Include="Modules\Weapons\ArtilleryWeaponModule.cs" />
     <Compile Include="Network\ClientConnection.cs" />
     <Compile Include="Network\EncryptedTcpConnection.cs" />
     <Compile Include="Network\Http.cs" />

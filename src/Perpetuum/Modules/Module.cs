@@ -54,7 +54,7 @@ namespace Perpetuum.Modules
         public Robot ParentRobot => ParentComponent?.ParentRobot;
 
         [CanBeNull]
-        protected IZone Zone => ParentRobot?.Zone;
+        public IZone Zone => ParentRobot?.Zone;
 
         public bool ParentIsPlayer()
         {
