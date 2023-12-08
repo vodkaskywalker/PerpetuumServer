@@ -1,18 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Numerics;
-using System.Reflection;
-using System.Runtime;
-using System.Runtime.Caching;
-using System.Text;
-using System.Threading;
-using System.Transactions;
-using Autofac;
+﻿using Autofac;
 using Autofac.Builder;
 using Autofac.Core;
 using Newtonsoft.Json;
@@ -39,6 +25,7 @@ using Perpetuum.IDGenerators;
 using Perpetuum.IO;
 using Perpetuum.Items;
 using Perpetuum.Items.Ammos;
+using Perpetuum.Items.Helpers;
 using Perpetuum.Items.Templates;
 using Perpetuum.Log;
 using Perpetuum.Log.Formatters;
@@ -113,6 +100,7 @@ using Perpetuum.Services.Sparks;
 using Perpetuum.Services.Sparks.Teleports;
 using Perpetuum.Services.Standing;
 using Perpetuum.Services.Steam;
+using Perpetuum.Services.Strongholds;
 using Perpetuum.Services.TechTree;
 using Perpetuum.Services.Trading;
 using Perpetuum.Services.Weather;
@@ -133,10 +121,13 @@ using Perpetuum.Zones.Gates;
 using Perpetuum.Zones.Intrusion;
 using Perpetuum.Zones.NpcSystem;
 using Perpetuum.Zones.NpcSystem.Flocks;
-using Perpetuum.Zones.NpcSystem.Reinforcements;
 using Perpetuum.Zones.NpcSystem.Presences;
+using Perpetuum.Zones.NpcSystem.Presences.ExpiringStaticPresence;
+using Perpetuum.Zones.NpcSystem.Presences.GrowingPresences;
 using Perpetuum.Zones.NpcSystem.Presences.InterzonePresences;
 using Perpetuum.Zones.NpcSystem.Presences.PathFinders;
+using Perpetuum.Zones.NpcSystem.Presences.RandomExpiringPresence;
+using Perpetuum.Zones.NpcSystem.Reinforcements;
 using Perpetuum.Zones.NpcSystem.SafeSpawnPoints;
 using Perpetuum.Zones.PBS;
 using Perpetuum.Zones.PBS.ArmorRepairers;
@@ -168,6 +159,19 @@ using Perpetuum.Zones.Terrains.Terraforming;
 using Perpetuum.Zones.Training;
 using Perpetuum.Zones.Training.Reward;
 using Perpetuum.Zones.ZoneEntityRepositories;
+using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Numerics;
+using System.Reflection;
+using System.Runtime;
+using System.Runtime.Caching;
+using System.Text;
+using System.Threading;
 using ChangeAmmo = Perpetuum.RequestHandlers.ChangeAmmo;
 using CorporationDocumentConfig = Perpetuum.RequestHandlers.Corporations.CorporationDocumentConfig;
 using EquipAmmo = Perpetuum.RequestHandlers.EquipAmmo;
@@ -264,13 +268,13 @@ namespace Perpetuum.Bootstrapper
             {
                 sb.AppendLine($"{command.Text},{command.AccessLevel}");
             }
-           
-            File.WriteAllText(path,sb.ToString());
+
+            File.WriteAllText(path, sb.ToString());
         }
 
         public IEnumerable<Command> GetCommands()
         {
-            return  typeof(Commands).GetFields(BindingFlags.Static | BindingFlags.Public).Select(info => (Command)info.GetValue(null));
+            return typeof(Commands).GetFields(BindingFlags.Static | BindingFlags.Public).Select(info => (Command)info.GetValue(null));
         }
 
         public void Init(string gameRoot)
@@ -306,7 +310,7 @@ namespace Perpetuum.Bootstrapper
             CorporationData.CorporationManager = _container.Resolve<ICorporationManager>();
 
             Character.CharacterFactory = _container.Resolve<CharacterFactory>();
-            Character.CharacterCache = _container.Resolve<Func<string, ObjectCache>>().Invoke("CharacterCache");            
+            Character.CharacterCache = _container.Resolve<Func<string, ObjectCache>>().Invoke("CharacterCache");
 
             MissionHelper.Init(_container.Resolve<MissionDataCache>(), _container.Resolve<IStandingHandler>());
             MissionHelper.MissionProcessor = _container.Resolve<MissionProcessor>();
@@ -354,18 +358,18 @@ namespace Perpetuum.Bootstrapper
                 switch (state)
                 {
                     case HostState.Stopping:
-                    {
-                        _container.Resolve<IProcessManager>().Stop();
-                        NatDiscoverer.ReleaseAll();
-                        sender.State = HostState.Off;
-                        break;
-                    }
+                        {
+                            _container.Resolve<IProcessManager>().Stop();
+                            NatDiscoverer.ReleaseAll();
+                            sender.State = HostState.Off;
+                            break;
+                        }
                     case HostState.Starting:
-                    {
-                        _container.Resolve<IProcessManager>().Start();
-                        sender.State = HostState.Online;
-                        break;
-                    }
+                        {
+                            _container.Resolve<IProcessManager>().Start();
+                            sender.State = HostState.Online;
+                            break;
+                        }
                 }
             };
 
@@ -400,7 +404,7 @@ namespace Perpetuum.Bootstrapper
 
                 void Map(int port)
                 {
-                    var task = natDevice.CreatePortMapAsync(new Mapping(Protocol.Tcp,port,port)).ContinueWith(t =>
+                    var task = natDevice.CreatePortMapAsync(new Mapping(Protocol.Tcp, port, port)).ContinueWith(t =>
                     {
                         Logger.Info($"[UPNP] Port mapped: {port}");
                     });
@@ -509,7 +513,7 @@ namespace Perpetuum.Bootstrapper
             {
                 var cache = new MemoryCache("CharacterProfiles");
                 return new CachedReadOnlyRepository<int, CharacterProfile>(cache, c.Resolve<CharacterProfileRepository>());
-            }).AsSelf().As<IReadOnlyRepository<int,CharacterProfile>>().SingleInstance();
+            }).AsSelf().As<IReadOnlyRepository<int, CharacterProfile>>().SingleInstance();
 
             _builder.RegisterType<CachedCharacterProfileRepository>().As<ICharacterProfileRepository>();
 
@@ -568,7 +572,7 @@ namespace Perpetuum.Bootstrapper
 
             _builder.RegisterType<DbQuery>();
 
-            
+
             _builder.RegisterType<SparkTeleport>();
 
             _builder.RegisterType<ExtensionReader>().As<IExtensionReader>().SingleInstance();
@@ -780,12 +784,12 @@ namespace Perpetuum.Bootstrapper
         {
             return RegisterUnit<T>().OnActivated(e =>
             {
-                e.Instance.SetReinforceHandler(e.Context.Resolve<PBSReinforceHandler<PBSObject>>(new TypedParameter(typeof(PBSObject),e.Instance)));
-                e.Instance.SetPBSObjectHelper(e.Context.Resolve<PBSObjectHelper<PBSObject>>(new TypedParameter(typeof(PBSObject),e.Instance)));
+                e.Instance.SetReinforceHandler(e.Context.Resolve<PBSReinforceHandler<PBSObject>>(new TypedParameter(typeof(PBSObject), e.Instance)));
+                e.Instance.SetPBSObjectHelper(e.Context.Resolve<PBSObjectHelper<PBSObject>>(new TypedParameter(typeof(PBSObject), e.Instance)));
             });
         }
 
-        private IRegistrationBuilder<T,ConcreteReflectionActivatorData,SingleRegistrationStyle> RegisterPBSProductionFacilityNode<T>() where T : PBSProductionFacilityNode
+        private IRegistrationBuilder<T, ConcreteReflectionActivatorData, SingleRegistrationStyle> RegisterPBSProductionFacilityNode<T>() where T : PBSProductionFacilityNode
         {
             return RegisterPBSObject<T>().OnActivated(e =>
             {
@@ -853,7 +857,7 @@ namespace Perpetuum.Bootstrapper
 
             _builder.RegisterType<EntityAggregateServices>().As<IEntityServices>().PropertiesAutowired().SingleInstance();
 
-            
+
             RegisterEntity<Entity>();
             RegisterCorporation<DefaultCorporation>();
             RegisterCorporation<PrivateCorporation>();
@@ -869,7 +873,7 @@ namespace Perpetuum.Bootstrapper
             RegisterUnit<Outpost>().OnActivated(e =>
             {
 #if (DEBUG)
-                var intrusionWaitTime = TimeRange.FromLength(TimeSpan.FromSeconds(10),TimeSpan.FromSeconds(15));
+                var intrusionWaitTime = TimeRange.FromLength(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(15));
 #else
                 var intrusionWaitTime = TimeRange.FromLength(TimeSpan.FromHours(8), TimeSpan.FromHours(8));
 #endif
@@ -927,6 +931,7 @@ namespace Perpetuum.Bootstrapper
 
             RegisterEntity<FieldContainerCapsule>();
             RegisterEntity<Ice>();
+            RegisterEntity<RespecToken>();
             RegisterEntity<SparkTeleportDevice>();
             RegisterEntity<Ammo>();
             RegisterEntity<WeaponAmmo>();
@@ -1054,26 +1059,26 @@ namespace Perpetuum.Bootstrapper
             RegisterEntity<Relic>();
             RegisterEntity<SAPRelic>();
 
-            _builder.Register<Func<EntityDefault,Entity>>(x =>
+            _builder.Register<Func<EntityDefault, Entity>>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
 
                 var b = new ContainerBuilder();
 
-                void ByDefinition<T>(int definition,params Parameter[] parameters) where T:Entity
+                void ByDefinition<T>(int definition, params Parameter[] parameters) where T : Entity
                 {
                     b.Register(_ => ctx.Resolve<T>(parameters)).Keyed<Entity>(definition);
                 }
 
-                void ByCategoryFlags<T>(CategoryFlags cf,params Parameter[] parameters) where T : Entity
+                void ByCategoryFlags<T>(CategoryFlags cf, params Parameter[] parameters) where T : Entity
                 {
                     foreach (var entityDefault in ctx.Resolve<IEntityDefaultReader>().GetAll().GetByCategoryFlags(cf))
                     {
-                        ByDefinition<T>(entityDefault.Definition,parameters);
+                        ByDefinition<T>(entityDefault.Definition, parameters);
                     }
                 }
 
-                void ByName<T>(string name,params Parameter[] parameters) where T : Entity
+                void ByName<T>(string name, params Parameter[] parameters) where T : Entity
                 {
                     var ed = ctx.Resolve<IEntityDefaultReader>().GetByName(name);
                     ByDefinition<T>(ed.Definition, parameters);
@@ -1197,7 +1202,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<ShieldGeneratorModule>(CategoryFlags.cf_shield_generators);
                 ByCategoryFlags<ArmorRepairModule>(CategoryFlags.cf_armor_repair_systems);
                 ByCategoryFlags<RemoteArmorRepairModule>(CategoryFlags.cf_remote_armor_repairers);
-                ByCategoryFlags<CoreBoosterModule>(CategoryFlags.cf_core_boosters,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_core_booster_ammo));
+                ByCategoryFlags<CoreBoosterModule>(CategoryFlags.cf_core_boosters, new NamedParameter("ammoCategoryFlags", CategoryFlags.cf_core_booster_ammo));
                 ByCategoryFlags<SensorJammerModule>(CategoryFlags.cf_sensor_jammers);
                 ByCategoryFlags<EnergyNeutralizerModule>(CategoryFlags.cf_energy_neutralizers);
                 ByCategoryFlags<EnergyTransfererModule>(CategoryFlags.cf_energy_transferers);
@@ -1238,19 +1243,19 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<Module>(CategoryFlags.cf_eccm);
                 ByCategoryFlags<Module>(CategoryFlags.cf_resistance_plating);
 
-                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_speed,new NamedParameter("effectType",EffectType.effect_aura_gang_speed),new NamedParameter("effectModifier",AggregateField.effect_speed_max_modifier));
-                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_defense,new NamedParameter("effectType",EffectType.effect_aura_gang_armor_max),new NamedParameter("effectModifier",AggregateField.effect_armor_max_modifier));
-                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_information,new NamedParameter("effectType",EffectType.effect_aura_gang_locking_range),new NamedParameter("effectModifier",AggregateField.effect_locking_range_modifier));
-                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_industry,new NamedParameter("effectType",EffectType.effect_aura_gang_core_usage_gathering),new NamedParameter("effectModifier",AggregateField.effect_core_usage_gathering_modifier));
-                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_shared_dataprocessing,new NamedParameter("effectType",EffectType.effect_aura_gang_locking_time),new NamedParameter("effectModifier",AggregateField.effect_locking_time_modifier));
-                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_coordinated_manuevering,new NamedParameter("effectType",EffectType.effect_aura_gang_signature_radius),new NamedParameter("effectModifier",AggregateField.effect_signature_radius_modifier));
-                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_maintance,new NamedParameter("effectType",EffectType.effect_aura_gang_repaired_amount),new NamedParameter("effectModifier",AggregateField.effect_repair_amount_modifier));
-                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_precision_firing,new NamedParameter("effectType",EffectType.effect_aura_gang_critical_hit_chance),new NamedParameter("effectModifier",AggregateField.effect_critical_hit_chance_modifier));
-                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_core_management,new NamedParameter("effectType",EffectType.effect_aura_gang_core_recharge_time),new NamedParameter("effectModifier",AggregateField.effect_core_recharge_time_modifier));
-                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_shield_calculations,new NamedParameter("effectType",EffectType.effect_aura_gang_shield_absorbtion_ratio),new NamedParameter("effectModifier",AggregateField.effect_shield_absorbtion_modifier));
-                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_siege,new NamedParameter("effectType",EffectType.effect_aura_gang_siege),new NamedParameter("effectModifier",AggregateField.effect_weapon_cycle_time_modifier));
-                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_ewar,new NamedParameter("effectType",EffectType.effect_aura_gang_ewar_optimal),new NamedParameter("effectModifier",AggregateField.effect_ew_optimal_range_modifier));
-                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_fast_extracting,new NamedParameter("effectType",EffectType.effect_aura_gang_fast_extraction),new NamedParameter("effectModifier",AggregateField.effect_gathering_cycle_time_modifier));
+                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_speed, new NamedParameter("effectType", EffectType.effect_aura_gang_speed), new NamedParameter("effectModifier", AggregateField.effect_speed_max_modifier));
+                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_defense, new NamedParameter("effectType", EffectType.effect_aura_gang_armor_max), new NamedParameter("effectModifier", AggregateField.effect_armor_max_modifier));
+                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_information, new NamedParameter("effectType", EffectType.effect_aura_gang_locking_range), new NamedParameter("effectModifier", AggregateField.effect_locking_range_modifier));
+                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_industry, new NamedParameter("effectType", EffectType.effect_aura_gang_core_usage_gathering), new NamedParameter("effectModifier", AggregateField.effect_core_usage_gathering_modifier));
+                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_shared_dataprocessing, new NamedParameter("effectType", EffectType.effect_aura_gang_locking_time), new NamedParameter("effectModifier", AggregateField.effect_locking_time_modifier));
+                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_coordinated_manuevering, new NamedParameter("effectType", EffectType.effect_aura_gang_signature_radius), new NamedParameter("effectModifier", AggregateField.effect_signature_radius_modifier));
+                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_maintance, new NamedParameter("effectType", EffectType.effect_aura_gang_repaired_amount), new NamedParameter("effectModifier", AggregateField.effect_repair_amount_modifier));
+                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_precision_firing, new NamedParameter("effectType", EffectType.effect_aura_gang_critical_hit_chance), new NamedParameter("effectModifier", AggregateField.effect_critical_hit_chance_modifier));
+                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_core_management, new NamedParameter("effectType", EffectType.effect_aura_gang_core_recharge_time), new NamedParameter("effectModifier", AggregateField.effect_core_recharge_time_modifier));
+                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_shield_calculations, new NamedParameter("effectType", EffectType.effect_aura_gang_shield_absorbtion_ratio), new NamedParameter("effectModifier", AggregateField.effect_shield_absorbtion_modifier));
+                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_siege, new NamedParameter("effectType", EffectType.effect_aura_gang_siege), new NamedParameter("effectModifier", AggregateField.effect_weapon_cycle_time_modifier));
+                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_ewar, new NamedParameter("effectType", EffectType.effect_aura_gang_ewar_optimal), new NamedParameter("effectModifier", AggregateField.effect_ew_optimal_range_modifier));
+                ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_fast_extracting, new NamedParameter("effectType", EffectType.effect_aura_gang_fast_extraction), new NamedParameter("effectModifier", AggregateField.effect_gathering_cycle_time_modifier));
 
 
                 ByCategoryFlags<SystemContainer>(CategoryFlags.cf_logical_storage);
@@ -1283,6 +1288,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<CalibrationProgramCapsule>(CategoryFlags.cf_ct_capsules); // OPP CT capsules
                 ByCategoryFlags<EPBoost>(CategoryFlags.cf_ep_boosters); // OPP EP Boosters
                 ByCategoryFlags<Item>(CategoryFlags.cf_datashards); // OPP datashards
+                ByCategoryFlags<RespecToken>(CategoryFlags.cf_respec_tokens); // OPP respec tokens
                 ByCategoryFlags<SparkTeleportDevice>(CategoryFlags.cf_spark_teleport_devices);
 
                 // OPP new Blinder module
@@ -1334,15 +1340,15 @@ namespace Perpetuum.Bootstrapper
                 ByName<Trashcan>(DefinitionNames.ADMIN_TRASHCAN);
                 ByName<ZoneStorage>(DefinitionNames.ZONE_STORAGE);
                 ByName<PunchBagDeployer>(DefinitionNames.DEPLOY_PUNCHBAG);
-                ByName<TerraformMultiModule>(DefinitionNames.TERRAFORM_MULTI_MODULE,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_ammo_terraforming_multi));
-                ByName<WallBuilderModule>(DefinitionNames.STANDARD_WALL_BUILDER,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_wall_builder_ammo));
+                ByName<TerraformMultiModule>(DefinitionNames.TERRAFORM_MULTI_MODULE, new NamedParameter("ammoCategoryFlags", CategoryFlags.cf_ammo_terraforming_multi));
+                ByName<WallBuilderModule>(DefinitionNames.STANDARD_WALL_BUILDER, new NamedParameter("ammoCategoryFlags", CategoryFlags.cf_wall_builder_ammo));
                 ByName<PBSMillFacility>(DefinitionNames.PBS_FACILITY_MILL);
                 ByName<PBSPrototyperFacility>(DefinitionNames.PBS_FACILITY_PROTOTYPER);
                 ByName<PBSRefineryFacility>(DefinitionNames.PBS_FACILITY_REFINERY);
                 ByName<PBSRepairFacility>(DefinitionNames.PBS_FACILITY_REPAIR);
                 ByName<PBSReprocessorFacility>(DefinitionNames.PBS_FACILITY_REPROCESSOR);
                 ByName<PBSResearchLabFacility>(DefinitionNames.PBS_FACILITY_RESEARCH_LAB);
-                ByName<ConstructionModule>(DefinitionNames.PBS_CONSTRUCTION_MODULE,new NamedParameter("ammoCategoryFlags",CategoryFlags.cf_construction_ammo));
+                ByName<ConstructionModule>(DefinitionNames.PBS_CONSTRUCTION_MODULE, new NamedParameter("ammoCategoryFlags", CategoryFlags.cf_construction_ammo));
                 ByName<PlantSeedDeployer>(DefinitionNames.PLANT_SEED_DEVRINOL);
                 ByName<Gate>(DefinitionNames.GATE);
                 ByName<GateDeployer>(DefinitionNames.GATE_CAPSULE);
@@ -1405,7 +1411,7 @@ namespace Perpetuum.Bootstrapper
                 return ((directory, filename) =>
                 {
                     var formatter = new ChatLogFormatter();
-                    return ctx.Resolve<FileLogger<ChatLogEvent>.Factory>().Invoke(formatter,() => Path.Combine("chatlogs",directory,filename,DateTime.Now.ToString("yyyy-MM-dd"), $"{filename.RemoveSpecialCharacters()}.txt"));
+                    return ctx.Resolve<FileLogger<ChatLogEvent>.Factory>().Invoke(formatter, () => Path.Combine("chatlogs", directory, filename, DateTime.Now.ToString("yyyy-MM-dd"), $"{filename.RemoveSpecialCharacters()}.txt"));
                 });
             });
 
@@ -1460,8 +1466,8 @@ namespace Perpetuum.Bootstrapper
 
         }
 
-        private IRegistrationBuilder<T, ConcreteReflectionActivatorData, SingleRegistrationStyle> 
-            RegisterPresence<T>(PresenceType presenceType) where T:Presence
+        private IRegistrationBuilder<T, ConcreteReflectionActivatorData, SingleRegistrationStyle>
+            RegisterPresence<T>(PresenceType presenceType) where T : Presence
         {
             return _builder.RegisterType<T>().Keyed<Presence>(presenceType).PropertiesAutowired();
         }
@@ -1483,7 +1489,7 @@ namespace Perpetuum.Bootstrapper
 
             _builder.RegisterType<FlockConfiguration>().As<IFlockConfiguration>();
             _builder.RegisterType<FlockConfigurationBuilder>();
-            _builder.RegisterType<IntIDGenerator>().Named<IIDGenerator<int>>("directFlockIDGenerator").SingleInstance().WithParameter("startID",25000);
+            _builder.RegisterType<IntIDGenerator>().Named<IIDGenerator<int>>("directFlockIDGenerator").SingleInstance().WithParameter("startID", 25000);
 
 
             _builder.RegisterType<FlockConfigurationRepository>().OnActivated(e =>
@@ -1524,7 +1530,7 @@ namespace Perpetuum.Bootstrapper
                 return zone =>
                 {
                     var presenceFactory = ctx.Resolve<PresenceFactory>();
-                    var presenceService = ctx.Resolve<PresenceManager.Factory>().Invoke(zone,presenceFactory);
+                    var presenceService = ctx.Resolve<PresenceManager.Factory>().Invoke(zone, presenceFactory);
                     return presenceService;
                 };
             });
@@ -1578,7 +1584,7 @@ namespace Perpetuum.Bootstrapper
                     if (!ctx.IsRegisteredWithKey<Presence>(configuration.PresenceType))
                         return null;
 
-                    var p = ctx.ResolveKeyed<Presence>(configuration.PresenceType,TypedParameter.From(zone),TypedParameter.From(configuration));
+                    var p = ctx.ResolveKeyed<Presence>(configuration.PresenceType, TypedParameter.From(zone), TypedParameter.From(configuration));
 
                     if (p is IRoamingPresence roamingPresence)
                     {
@@ -1640,7 +1646,7 @@ namespace Perpetuum.Bootstrapper
         }
 
         private void InitRelayManager()
-        {            
+        {
             _builder.RegisterType<MarketHelper>().SingleInstance();
             _builder.RegisterType<MarketHandler>().SingleInstance();
 
@@ -1721,7 +1727,7 @@ namespace Perpetuum.Bootstrapper
 
             _builder.RegisterType<SparkTeleportRepository>().As<ISparkTeleportRepository>();
             _builder.RegisterType<SparkTeleportHelper>();
- 
+
             _builder.RegisterType<SparkExtensionsReader>().As<ISparkExtensionsReader>();
             _builder.RegisterType<SparkRepository>().As<ISparkRepository>();
             _builder.RegisterType<SparkHelper>();
@@ -1783,8 +1789,8 @@ namespace Perpetuum.Bootstrapper
             _builder.RegisterType<EpForActivityLogger>();
         }
 
-        private IRegistrationBuilder<TRequestHandler, ConcreteReflectionActivatorData, SingleRegistrationStyle> 
-            RegisterRequestHandler<TRequestHandler,TRequest>(Command command) where TRequestHandler:IRequestHandler<TRequest> where TRequest : IRequest
+        private IRegistrationBuilder<TRequestHandler, ConcreteReflectionActivatorData, SingleRegistrationStyle>
+            RegisterRequestHandler<TRequestHandler, TRequest>(Command command) where TRequestHandler : IRequestHandler<TRequest> where TRequest : IRequest
         {
             var res = _builder.RegisterType<TRequestHandler>();
 
@@ -1891,7 +1897,7 @@ namespace Perpetuum.Bootstrapper
             RegisterRequestHandler<IntrusionEnabler>(Commands.IntrusionEnabler);
             RegisterRequestHandler<AccountGetTransactionHistory>(Commands.AccountGetTransactionHistory);
             RegisterRequestHandler<AccountList>(Commands.AccountList);
-            
+
             RegisterRequestHandler<AccountEpForActivityHistory>(Commands.AccountEpForActivityHistory);
             RegisterRequestHandler<RedeemableItemList>(Commands.RedeemableItemList);
             RegisterRequestHandler<RedeemableItemRedeem>(Commands.RedeemableItemRedeem);
@@ -2325,11 +2331,11 @@ namespace Perpetuum.Bootstrapper
                         var config = new GravelConfiguration(zone);
                         var layer = new GravelLayer(zone.Size.Width, zone.Size.Height, config, repo);
                         layer.LoadMineralNodes();
-                        return new[] {layer};
+                        return new[] { layer };
                     }
 
                     var nodeGeneratorFactory = new MineralNodeGeneratorFactory(zone);
-                    
+
                     var materialLayers = new List<IMaterialLayer>();
 
                     foreach (var configuration in reader.ReadAll().Where(c => c.ZoneId == zone.Id))
@@ -2338,19 +2344,19 @@ namespace Perpetuum.Bootstrapper
                         switch (configuration.ExtractionType)
                         {
                             case MineralExtractionType.Solid:
-                            {
-                                var layer = new OreLayer(zone.Size.Width, zone.Size.Height, configuration, repo, nodeGeneratorFactory, eventListenerService);
-                                layer.LoadMineralNodes();
-                                materialLayers.Add(layer);
-                                break;
-                            }
+                                {
+                                    var layer = new OreLayer(zone.Size.Width, zone.Size.Height, configuration, repo, nodeGeneratorFactory, eventListenerService);
+                                    layer.LoadMineralNodes();
+                                    materialLayers.Add(layer);
+                                    break;
+                                }
                             case MineralExtractionType.Liquid:
-                            {
-                                var layer = new LiquidLayer(zone.Size.Width, zone.Size.Height, configuration, repo, nodeGeneratorFactory, eventListenerService);
-                                layer.LoadMineralNodes();
-                                materialLayers.Add(layer);
-                                break;
-                            }
+                                {
+                                    var layer = new LiquidLayer(zone.Size.Width, zone.Size.Height, configuration, repo, nodeGeneratorFactory, eventListenerService);
+                                    layer.LoadMineralNodes();
+                                    materialLayers.Add(layer);
+                                    break;
+                                }
                             default:
                                 throw new ArgumentOutOfRangeException();
                         }
@@ -2415,10 +2421,10 @@ namespace Perpetuum.Bootstrapper
                     terrain.Materials = ctx.Resolve<Func<IZone, IEnumerable<IMaterialLayer>>>().Invoke(zone).ToDictionary(m => m.Type);
 
                     var layerSavers = new CompositeProcess();
-                    layerSavers.AddProcess(ctx.Resolve<IntervalLayerSaver<BlockingInfo>.Factory>().Invoke(terrain.Blocks,zone));
-                    layerSavers.AddProcess(ctx.Resolve<IntervalLayerSaver<TerrainControlInfo>.Factory>().Invoke(terrain.Controls,zone));
-                    layerSavers.AddProcess(ctx.Resolve<IntervalLayerSaver<PlantInfo>.Factory>().Invoke(terrain.Plants,zone));
-                    layerSavers.AddProcess(ctx.Resolve<IntervalLayerSaver<ushort>.Factory>().Invoke(terrain.Altitude,zone));
+                    layerSavers.AddProcess(ctx.Resolve<IntervalLayerSaver<BlockingInfo>.Factory>().Invoke(terrain.Blocks, zone));
+                    layerSavers.AddProcess(ctx.Resolve<IntervalLayerSaver<TerrainControlInfo>.Factory>().Invoke(terrain.Controls, zone));
+                    layerSavers.AddProcess(ctx.Resolve<IntervalLayerSaver<PlantInfo>.Factory>().Invoke(terrain.Plants, zone));
+                    layerSavers.AddProcess(ctx.Resolve<IntervalLayerSaver<ushort>.Factory>().Invoke(terrain.Altitude, zone));
 
                     ctx.Resolve<IProcessManager>().AddProcess(layerSavers.ToAsync().AsTimed(TimeSpan.FromHours(2)));
                     ctx.Resolve<IProcessManager>().AddProcess(terrain.Materials.Values.OfType<IProcess>().ToCompositeProcess().ToAsync().AsTimed(TimeSpan.FromMinutes(2)));
@@ -2470,7 +2476,7 @@ namespace Perpetuum.Bootstrapper
             _builder.Register<Func<IZone, IRiftManager>>(x =>
             {
                 var ctx = x.Resolve<IComponentContext>();
-                return zone => 
+                return zone =>
                 {
                     if (zone is TrainingZone)
                         return null;
@@ -2481,7 +2487,7 @@ namespace Perpetuum.Bootstrapper
                         var strongHoldExitConfigCount = Db.Query().CommandText("SELECT COUNT(*) FROM strongholdexitconfig WHERE zoneid = @zoneId;")
                         .SetParameter("@zoneId", zone.Id)
                         .ExecuteScalar<int>();
-                        if (strongHoldExitConfigCount < 1) 
+                        if (strongHoldExitConfigCount < 1)
                         {
                             return null;
                         }
@@ -2493,7 +2499,7 @@ namespace Perpetuum.Bootstrapper
                     var zoneConfigs = Db.Query().CommandText("SELECT maxrifts FROM zoneriftsconfig WHERE zoneid = @zoneId")
                     .SetParameter("@zoneId", zone.Id)
                     .Execute();
-                    if (zoneConfigs.Count < 1) 
+                    if (zoneConfigs.Count < 1)
                     {
                         return null;
                     }
@@ -2501,14 +2507,14 @@ namespace Perpetuum.Bootstrapper
                     var record = zoneConfigs[0];
                     var maxrifts = record.GetValue<int>("maxrifts");
 
-                    if (maxrifts < 1) 
+                    if (maxrifts < 1)
                     {
                         return null;
                     }
 
                     var spawnTime = TimeRange.FromLength(TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5));
                     var finder = ctx.Resolve<Func<IZone, RiftSpawnPositionFinder>>().Invoke(zone);
-                    return ctx.Resolve<RiftManager>(new TypedParameter(typeof(IZone),zone),new NamedParameter("spawnTime",spawnTime),new NamedParameter("spawnPositionFinder",finder));
+                    return ctx.Resolve<RiftManager>(new TypedParameter(typeof(IZone), zone), new NamedParameter("spawnTime", spawnTime), new NamedParameter("spawnPositionFinder", finder));
                 };
             });
         }
@@ -2598,8 +2604,8 @@ namespace Perpetuum.Bootstrapper
                 {
                     return new ZoneUnitService
                     {
-                        DefaultRepository = ctx.Resolve<DefaultZoneUnitRepository>(new TypedParameter(typeof(IZone),zone)),
-                        UserRepository = ctx.Resolve<UserZoneUnitRepository>(new TypedParameter(typeof(IZone),zone))
+                        DefaultRepository = ctx.Resolve<DefaultZoneUnitRepository>(new TypedParameter(typeof(IZone), zone)),
+                        UserRepository = ctx.Resolve<UserZoneUnitRepository>(new TypedParameter(typeof(IZone), zone))
                     };
                 };
             });
@@ -2609,7 +2615,7 @@ namespace Perpetuum.Bootstrapper
             _builder.RegisterType<HarvestLogHandler>();
             _builder.RegisterType<MineralConfigurationReader>().As<IMineralConfigurationReader>().SingleInstance();
 
-            void RegisterZone<T>(ZoneType type) where T:Zone
+            void RegisterZone<T>(ZoneType type) where T : Zone
             {
                 _builder.RegisterType<T>().Keyed<Zone>(type).OnActivated(e =>
                 {
@@ -2659,7 +2665,7 @@ namespace Perpetuum.Bootstrapper
                     zone.EnterQueueService = ctx.Resolve<ZoneEnterQueueService.Factory>().Invoke(zone);
                     zone.Terrain = ctx.Resolve<TerrainFactory>().Invoke(zone);
                     zone.PresenceManager = ctx.Resolve<Func<IZone, IPresenceManager>>().Invoke(zone);
-                    zone.DecorHandler = ctx.Resolve<DecorHandler>(new TypedParameter(typeof(IZone),zone));
+                    zone.DecorHandler = ctx.Resolve<DecorHandler>(new TypedParameter(typeof(IZone), zone));
                     zone.Environment = ctx.Resolve<ZoneEnvironmentHandler>(new TypedParameter(typeof(IZone), zone));
                     zone.SafeSpawnPoints = ctx.Resolve<ISafeSpawnPointsRepository>(new TypedParameter(typeof(IZone), zone));
                     zone.ZoneSessionFactory = ctx.Resolve<ZoneSession.Factory>();

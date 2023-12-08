@@ -1,5 +1,3 @@
-using System.Linq;
-using System.Transactions;
 using Perpetuum.Accounting.Characters;
 using Perpetuum.Common.Loggers.Transaction;
 using Perpetuum.Data;
@@ -10,6 +8,8 @@ using Perpetuum.Players;
 using Perpetuum.Robots;
 using Perpetuum.Services.ExtensionService;
 using Perpetuum.Services.Sparks.Teleports;
+using System.Linq;
+using System.Transactions;
 
 namespace Perpetuum.RequestHandlers.Sparks
 {
@@ -18,7 +18,7 @@ namespace Perpetuum.RequestHandlers.Sparks
         private readonly IExtensionReader _extensionReader;
         private readonly SparkTeleportHelper _sparkTeleportHelper;
 
-        public SparkTeleportUse(IExtensionReader extensionReader,SparkTeleportHelper sparkTeleportHelper)
+        public SparkTeleportUse(IExtensionReader extensionReader, SparkTeleportHelper sparkTeleportHelper)
         {
             _extensionReader = extensionReader;
             _sparkTeleportHelper = sparkTeleportHelper;
@@ -35,16 +35,16 @@ namespace Perpetuum.RequestHandlers.Sparks
                 //character.CheckNextAvailableUndockTimeAndThrowIfFailed();
                 //CheckExtensionLevelAndThrowIfFailed(character);
 
-                var sparkTeleport = _sparkTeleportHelper.GetCommon(id);//.Get(id);
+                var sparkTeleport = _sparkTeleportHelper.GetCommon(id);
                 var currentDockingBase = character.GetCurrentDockingBase();
 
                 //character.SubtractFromWallet(TransactionType.SparkTeleportUse, SparkTeleport.SPARK_TELEPORT_USE_FEE);
 
-                if ( sparkTeleport.DockingBase == currentDockingBase)
+                if (sparkTeleport.DockingBase == currentDockingBase)
                     throw new PerpetuumException(ErrorCodes.YouAreHereAlready);
 
                 sparkTeleport.DockingBase.IsDockingAllowed(character).ThrowIfError();
-                sparkTeleport.DockingBase.DockIn(character,Player.NormalUndockDelay);
+                sparkTeleport.DockingBase.DockIn(character, Player.NormalUndockDelay);
 
                 var robot = sparkTeleport.DockingBase.GetPublicContainerWithItems(character)
                     .GetFullTree()
@@ -61,11 +61,11 @@ namespace Perpetuum.RequestHandlers.Sparks
                         .WithData(sparkTeleport.ToDictionary())
                         .Send();
                 });
-                
+
                 scope.Complete();
             }
         }
-        
+
         private void CheckExtensionLevelAndThrowIfFailed(Character character)
         {
             var liveSparkTeleports = _sparkTeleportHelper.GetAllSparkTeleports(character);
