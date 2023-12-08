@@ -60,9 +60,13 @@ namespace Perpetuum.RequestHandlers
             {
                 HandleCalibrationTemplateItem(request, itemEid);
             }
+            else if (item is RespecToken)
+            {
+                HandleRespecToken(request, itemEid);
+            }
             else if (item is SparkTeleportDevice)
             {
-                HandleSparkTeleportToken(request, itemEid);
+                HandleSparkTeleportDevice(request, itemEid);
             }
         }
 
@@ -241,10 +245,8 @@ namespace Perpetuum.RequestHandlers
             }
         }
 
-        private void HandleSparkTeleportToken(IRequest request, long itemEid)
+        private void HandleRespecToken(IRequest request, long itemEid)
         {
-            var baseId = 0;
-
             using (var scope = Db.CreateTransaction())
             {
                 var containerEid = request.Data.GetOrDefault<long>(k.containerEID);
@@ -256,7 +258,63 @@ namespace Perpetuum.RequestHandlers
                 (character.IsDocked).ThrowIfFalse(ErrorCodes.CharacterHasToBeDocked);
 
                 var container = Container.GetWithItems(containerEid, character);
+                var containerItem = (RespecToken)container
+                    .GetItemOrThrow(itemEid, true)
+                    .Unstack(1);
 
+                containerItem.Activate(accountManager, account, character);
+
+                entityServices.Repository.Delete(containerItem);
+                container.Save();
+                LogActivation(character, container, containerItem);
+
+                Transaction.Current.OnCommited(() =>
+                {
+                    accountRepository.Update(account);
+                });
+
+                scope.Complete();
+            }
+
+            var relogMessage = new Dictionary<string, object>
+            {
+                { k.message, "You will be automatically relogged in 5 seconds" },
+                { k.translate, "relog_in_5_seconds" },
+            };
+
+            Message.Builder
+                .SetCommand(Commands.ServerMessage)
+                .WithData(relogMessage)
+                .ToCharacter(request.Session.Character)
+                .Send();
+
+            var delay = TimeSpan.FromSeconds(5);
+
+            Task.Delay(delay).ContinueWith(t =>
+            {
+                using (var scope = Db.CreateTransaction())
+                {
+                    var session = request.Session;
+                    session.DeselectCharacter();
+                    scope.Complete();
+                }
+            });
+        }
+
+        private void HandleSparkTeleportDevice(IRequest request, long itemEid)
+        {
+            var baseId = 0;
+            using (var scope = Db.CreateTransaction())
+            {
+                var containerEid = request.Data.GetOrDefault<long>(k.containerEID);
+                var character = request.Session.Character;
+                var account = accountManager.Repository
+                    .Get(request.Session.AccountId)
+                    .ThrowIfNull(ErrorCodes.AccountNotFound);
+
+                (character.IsDocked).ThrowIfFalse(ErrorCodes.CharacterHasToBeDocked);
+
+                var container = Container.GetWithItems(containerEid, character);
                 var containerItem = (SparkTeleportDevice)container
                     .GetItemOrThrow(itemEid, true)
                     .Unstack(1);
@@ -276,9 +334,9 @@ namespace Perpetuum.RequestHandlers
             }
 
             var sparkTeleportData = new Dictionary<string, object>
-                {
-                    { k.ID, baseId },
-                };
+            {
+                { k.ID, baseId },
+            };
 
             var sparkTeleportRequest = new Request();
             sparkTeleportRequest.Command = Commands.SparkTeleportUse;

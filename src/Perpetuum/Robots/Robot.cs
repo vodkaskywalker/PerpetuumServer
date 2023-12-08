@@ -189,6 +189,55 @@ namespace Perpetuum.Robots
             return info;
         }
 
+        public bool IsSelected => RobotHelper.IsSelected(this);
+
+        public override double Health
+        {
+            get
+            {
+                if (IsRepackaged)
+                {
+                    return base.Health;
+                }
+
+                return ArmorMax > 0.0 && Armor > 0.0
+                    ? Armor.Ratio(ArmorMax) * 100
+                    : base.Health;
+            }
+        }
+
+        public override double Mass
+        {
+            get { return RobotComponents.Sum(c => c.Mass); }
+        }
+
+        protected virtual void OnLockStateChanged(Lock @lock)
+        {
+            States.LockSomething = _lockHandler.Count > 0;
+
+            var unitLock = @lock as UnitLock;
+            if (unitLock != null)
+            {
+                UpdateTypes |= UnitUpdateTypes.Lock;
+                UpdateVisibilityOf(unitLock.Target);
+            }
+
+            var builder = new AnonymousBuilder<Packet>(() => LockPacketBuilder.BuildPacket(@lock));
+            OnBroadcastPacket(builder.ToProxy());
+        }
+
+        protected override void OnUpdate(TimeSpan time)
+        {
+            base.OnUpdate(time);
+
+            _lockHandler.Update(time);
+
+            foreach (var robotComponent in RobotComponents)
+            {
+                robotComponent.Update(time);
+            }
+        }
+
         public void FullArmorRepair()
         {
             DynamicProperties.Update(k.armor, 1.0);

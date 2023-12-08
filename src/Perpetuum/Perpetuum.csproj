@@ -225,6 +225,7 @@
     <Compile Include="Items\IPropertyModifierCollection.cs" />
     <Compile Include="Items\Paint.cs" />
     <Compile Include="Items\PropertyModifierCollection.cs" />
+    <Compile Include="Items\RespecToken.cs" />
     <Compile Include="Items\SparkTeleportDevice.cs" />
     <Compile Include="Items\Templates\CachedRobotTemplateReader.cs" />
     <Compile Include="Items\Templates\IRobotTemplateReader.cs" />
