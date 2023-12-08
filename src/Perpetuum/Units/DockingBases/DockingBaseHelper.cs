@@ -3,7 +3,7 @@ using System.Linq;
 using Perpetuum.Containers;
 using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
-using Perpetuum.Items;
+using Perpetuum.Items.Helpers;
 using Perpetuum.Log;
 using Perpetuum.Services.ItemShop;
 using Perpetuum.Services.MarketEngine;

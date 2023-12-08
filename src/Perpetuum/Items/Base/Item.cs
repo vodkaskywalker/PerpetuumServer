@@ -4,102 +4,33 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Perpetuum.Accounting.Characters;
-using Perpetuum.Data;
 using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 
 namespace Perpetuum.Items
 {
-    public class DefaultPropertyModifierReader
-    {
-        private ILookup<int, ItemPropertyModifier> _modifiers;
-
-        public void Init()
-        {
-            _modifiers = Db.Query().CommandText("select * from aggregatevalues").Execute().ToLookup(r => r.GetValue<int>("definition"),r =>
-            {
-                var field = r.GetValue<AggregateField>("field");
-                var value = r.GetValue<double>("value");
-                return ItemPropertyModifier.Create(field, value);
-            });
-        }
-
-        public ItemPropertyModifier[] GetByDefinition(int definition)
-        {
-            return _modifiers.GetOrEmpty(definition);
-        }
-    }
-
-    public interface IPropertyModifierCollection
-    {
-        bool TryGetPropertyModifier(AggregateField field, out ItemPropertyModifier modifier);
-        ItemPropertyModifier GetPropertyModifier(AggregateField field);
-        IEnumerable<ItemPropertyModifier> All { get; }
-    }
-
-    public static class PropertyModifierCollectionExtensions
-    {
-        public static IPropertyModifierCollection Combine(this IPropertyModifierCollection source,IPropertyModifierCollection target)
-        {
-            var x = source.All.Select(s => ItemPropertyModifier.Modify(s, target.GetPropertyModifier(s.Field)));
-            return new PropertyModifierCollection(x);
-        }
-    }
-
     public delegate IPropertyModifierCollection PropertyModifierCollectionFactory(int definition);
-
-    public class PropertyModifierCollection : IPropertyModifierCollection
-    {
-        public static readonly PropertyModifierCollection Empty = new PropertyModifierCollection();
-        private readonly Dictionary<AggregateField, ItemPropertyModifier> _modifiers = new Dictionary<AggregateField, ItemPropertyModifier>();
-
-        private PropertyModifierCollection()
-        {
-            
-        }
-
-        public PropertyModifierCollection(IEnumerable<ItemPropertyModifier> modifiers)
-        {
-            _modifiers = modifiers.ToDictionary(m => m.Field);
-        }
-
-        public bool TryGetPropertyModifier(AggregateField field, out ItemPropertyModifier modifier)
-        {
-            return _modifiers.TryGetValue(field, out modifier);
-        }
-
-        public ItemPropertyModifier GetPropertyModifier(AggregateField field)
-        {
-            if (TryGetPropertyModifier(field,out ItemPropertyModifier m))
-                return m;
-
-            return ItemPropertyModifier.Create(field);
-        }
-
-        public IEnumerable<ItemPropertyModifier> All => _modifiers.Values;
-    }
-
 
     public delegate void ItemEventHandler<in T>(Item unit, T args);
 
     public class Item : Entity
     {
-        private readonly List<ItemProperty> _properties = new List<ItemProperty>();
-        private ImmutableHashSet<ItemProperty> _changedProperties = ImmutableHashSet<ItemProperty>.Empty;
+        private readonly List<ItemProperty> properties = new List<ItemProperty>();
+        private ImmutableHashSet<ItemProperty> changedProperties = ImmutableHashSet<ItemProperty>.Empty;
 
         public IPropertyModifierCollection BasePropertyModifiers { get; set; }
 
-        public IEnumerable<ItemProperty> Properties => _properties;
+        public IEnumerable<ItemProperty> Properties => properties;
 
         public void AddProperty(ItemProperty property)
         {
-            _properties.Add(property);
+            properties.Add(property);
             property.PropertyChanged += OnPropertyChanged;
         }
 
         public virtual void UpdateRelatedProperties(AggregateField field)
         {
-            foreach (var property in _properties)
+            foreach (var property in properties)
             {
                 property.UpdateIfRelated(field);
             }
@@ -107,7 +38,7 @@ namespace Perpetuum.Items
 
         public virtual void UpdateAllProperties()
         {
-            foreach (var property in _properties)
+            foreach (var property in properties)
             {
                 property.Update();
             }
@@ -117,13 +48,15 @@ namespace Perpetuum.Items
 
         protected virtual void OnPropertyChanged(ItemProperty property)
         {
-            ImmutableInterlocked.Update(ref _changedProperties,c => c.Add(property));
+            ImmutableInterlocked.Update(ref changedProperties,c => c.Add(property));
             PropertyChanged?.Invoke(this, property);
         }
 
         protected ImmutableHashSet<ItemProperty> GetChangedProperties()
         {
-            return Interlocked.CompareExchange(ref _changedProperties, ImmutableHashSet<ItemProperty>.Empty,_changedProperties);
+            return Interlocked.CompareExchange(
+                ref changedProperties,
+                ImmutableHashSet<ItemProperty>.Empty,changedProperties);
         }
 
         public void AddPropertiesToDictionary(IDictionary<string, object> dictionary)
@@ -149,12 +82,14 @@ namespace Perpetuum.Items
             {
                 property.AddToDictionary(d);
             }
+
             return d;
         }
 
         public ItemPropertyModifier GetBasePropertyModifier(AggregateField field)
         {
             var modifier = BasePropertyModifiers.GetPropertyModifier(field);
+
             return modifier;
         }
 
@@ -178,10 +113,14 @@ namespace Perpetuum.Items
             get
             {
                 if (ED.AttributeFlags.AlwaysStackable)
+                {
                     return true;
+                }
 
                 if (ED.AttributeFlags.NonStackable)
+                {
                     return false;
+                }
 
                 return !IsDamaged;
             }
@@ -215,13 +154,17 @@ namespace Perpetuum.Items
         public override void AcceptVisitor(IEntityVisitor visitor)
         {
             if (!TryAcceptVisitor(this, visitor))
+            {
                 base.AcceptVisitor(visitor);
+            }
         }
 
         public void CheckOwnerCharacterAndCorporationAndThrowIfFailed(Character character)
         {
             if (Owner == 0)
+            {
                 return;
+            }
 
             if (Owner != character.CorporationEid)
             {
@@ -232,7 +175,9 @@ namespace Perpetuum.Items
         public void CheckOwnerOnlyCharacterAndThrowIfFailed(Character character)
         {
             if (Owner == 0)
+            {
                 return;
+            }
 
             Owner.ThrowIfNotEqual(character.Eid, ErrorCodes.OwnerMismatch);
         }
@@ -241,35 +186,46 @@ namespace Perpetuum.Items
         {
             var dictionary = base.ToDictionary();
             AddPropertiesToDictionary(dictionary);
+
             return dictionary;
         }
 
         public ErrorCodes CanStackTo(Item target)
         {
             if (target.Eid == Eid)
+            {
                 return ErrorCodes.WTFErrorMedicalAttentionSuggested;
+            }
 
             //they must be the same type
             if (target.ED != ED)
+            {
                 return ErrorCodes.ItemTypeMismatch;
+            }
 
             //non stackable flag check
             if (target.ED.AttributeFlags.NonStackable)
+            {
                 return ErrorCodes.ItemNotStackable;
+            }
 
             if (Math.Abs(target.Health - Health) > double.Epsilon)
+            {
                 return ErrorCodes.ItemHealthMismatch;
+            }
 
             //if stackable is it repackaged?
-            if (!target.ED.AttributeFlags.AlwaysStackable)
+            if (!target.ED.AttributeFlags.AlwaysStackable &&
+                (!target.IsRepackaged || !IsRepackaged))
             {
-                if (!target.IsRepackaged || !IsRepackaged)
-                    return ErrorCodes.ItemHasToBeRepackaged;
+                return ErrorCodes.ItemHasToBeRepackaged;
             }
 
             var sumQty = (decimal)target.Quantity + Quantity;
             if (sumQty > int.MaxValue)
+            {
                 return ErrorCodes.MaximumStackSizeExceeded;
+            }
 
             return ErrorCodes.NoError;
         }
@@ -300,7 +256,9 @@ namespace Perpetuum.Items
         public Item Unstack(int amount)
         {
             if (Quantity <= amount)
+            {
                 return this;
+            }
 
             amount.ThrowIfLess(1, ErrorCodes.AccessDenied);
 
@@ -322,7 +280,9 @@ namespace Perpetuum.Items
         [NotNull]
         public static Item GetOrThrow(long itemEid)
         {
-            return (Item)Repository.LoadTree(itemEid, null).ThrowIfNull(ErrorCodes.ItemNotFound);
+            return (Item)Repository
+                .LoadTree(itemEid, null)
+                .ThrowIfNull(ErrorCodes.ItemNotFound);
         }
 
         public static Item CreateWithRandomEid(ItemInfo itemInfo)
@@ -331,42 +291,8 @@ namespace Perpetuum.Items
             item.Quantity = itemInfo.Quantity;
             item.Health = itemInfo.Health;
             item.IsRepackaged = itemInfo.IsRepackaged;
+
             return item;
-        }
-    }
-
-    public class ItemHelper
-    {
-        private readonly IEntityServices _entityServices;
-
-        public ItemHelper(IEntityServices entityServices)
-        {
-            _entityServices = entityServices;
-        }
-
-        [NotNull]
-        public Item LoadItemOrThrow(long itemEid)
-        {
-            var item = LoadItem(itemEid);
-            if (item == null)
-                throw new PerpetuumException(ErrorCodes.ItemNotFound);
-            return item;
-        }
-
-        [CanBeNull]
-        public Item LoadItem(long itemEid)
-        {
-            return (Item) _entityServices.Repository.LoadTree(itemEid, null);
-        }
-
-        public Item CreateItem(EntityDefault entityDefault, EntityIDGenerator idGenerator)
-        {
-            return (Item) _entityServices.Factory.Create(entityDefault, idGenerator);
-        }
-
-        public Item CreateItem(int definition, EntityIDGenerator idGenerator)
-        {
-            return (Item) _entityServices.Factory.Create(definition, idGenerator);
         }
     }
 }
