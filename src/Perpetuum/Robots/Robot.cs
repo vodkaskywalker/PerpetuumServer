@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 using Perpetuum.Accounting.Characters;
 using Perpetuum.Builders;
 using Perpetuum.Common;
@@ -16,6 +17,7 @@ using Perpetuum.Services.Insurance;
 using Perpetuum.Units;
 using Perpetuum.Zones;
 using Perpetuum.Zones.DamageProcessors;
+using Perpetuum.Zones.Effects;
 using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
 
@@ -376,9 +378,9 @@ namespace Perpetuum.Robots
             return RobotComponents.Sum(c => c.ComputeHeight());
         }
 
-        protected override void OnDamageTaken(Unit source, DamageTakenEventArgs e)
+        protected override void OnDamageTaken(Unit source, DamageTakenEventArgs args)
         {
-            base.OnDamageTaken(source, e);
+            base.OnDamageTaken(source, args);
 
             var decayChance = this.decayChance.Value;
             var random = FastRandom.NextDouble();
@@ -392,6 +394,28 @@ namespace Perpetuum.Robots
                     d--;
                     Decay = d;
                 }
+            }
+
+            this.Core -= args.TotalEnergyDamage;
+
+            if (args.TotalSpeedDamage > 0)
+            {
+                var effectProperty = ItemPropertyModifier.Create(AggregateField.effect_massivness_speed_max_modifier, args.TotalSpeedDamage);
+                effectProperty.Add(this.Massiveness);
+
+                if (effectProperty.Value >= 1.0)
+                {
+                    effectProperty.ResetToDefaultValue();
+                }
+
+                var effectBuilder = this.NewEffectBuilder();
+                var _token = EffectToken.NewToken();
+
+                effectBuilder
+                    .WithToken(_token)
+                    .SetType(EffectType.effect_demobilizer)
+                    .WithPropertyModifier(effectProperty);
+                this.ApplyEffect(effectBuilder);
             }
         }
 

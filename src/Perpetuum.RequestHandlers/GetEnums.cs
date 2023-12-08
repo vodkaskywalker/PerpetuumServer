@@ -10,6 +10,7 @@ using Perpetuum.Host;
 using Perpetuum.Host.Requests;
 using Perpetuum.Modules;
 using Perpetuum.Modules.Weapons;
+using Perpetuum.Modules.Weapons.Damages;
 using Perpetuum.Services.Channels;
 using Perpetuum.Services.MissionEngine;
 using Perpetuum.Services.MissionEngine.TransportAssignments;

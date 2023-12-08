@@ -6,6 +6,7 @@ using Perpetuum.Items;
 using Perpetuum.Log;
 using Perpetuum.Modules;
 using Perpetuum.Modules.Weapons;
+using Perpetuum.Modules.Weapons.Damages;
 using Perpetuum.Players;
 using Perpetuum.Robots;
 using Perpetuum.Timers;

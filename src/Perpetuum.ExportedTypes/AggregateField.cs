@@ -436,7 +436,7 @@ namespace Perpetuum.ExportedTypes
         remote_control_bandwidth_max = 672,
         remote_control_bandwidth_max_modifier = 673,
         remote_control_bandwidth_usage = 674,
-		remote_control_damage_modifier = 675,
-        remote_control_damage_modifier_modifier = 676,
+        artillery_strike_accuracy = 675,
+        damage_energy = 676,
     }
 }

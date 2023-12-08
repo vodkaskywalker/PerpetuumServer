@@ -2,6 +2,7 @@
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
 using Perpetuum.Modules.ModuleProperties;
+using Perpetuum.Modules.Weapons.Damages;
 using Perpetuum.Units;
 
 namespace Perpetuum.Modules.Weapons

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Log;
 using Perpetuum.Modules.Weapons;
+using Perpetuum.Modules.Weapons.Damages;
 using Perpetuum.Zones.Beams;
 using Perpetuum.Zones.Terrains.Materials;
 using Perpetuum.Zones.Terrains.Materials.Minerals;

@@ -1,4 +1,4 @@
-﻿namespace Perpetuum.Modules.Weapons
+﻿namespace Perpetuum.Modules.Weapons.Damages
 {
     public enum DamageType
     {
@@ -6,6 +6,8 @@
         Kinetic,
         Thermal,
         Explosive,
-        Toxic
+        Toxic,
+        Energy,
+        Speed,
     }
 }

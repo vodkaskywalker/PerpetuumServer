@@ -1,5 +1,6 @@
 ﻿using Perpetuum.ExportedTypes;
 using Perpetuum.Modules.Weapons;
+using Perpetuum.Modules.Weapons.Damages;
 using Perpetuum.Players;
 using Perpetuum.Timers;
 using Perpetuum.Units;

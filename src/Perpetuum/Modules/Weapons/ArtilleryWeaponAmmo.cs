@@ -3,6 +3,7 @@ using Perpetuum.Items.Ammos;
 using Perpetuum.Items;
 using System.Collections.Generic;
 using System.Threading;
+using Perpetuum.Modules.Weapons.Damages;
 
 namespace Perpetuum.Modules.Weapons
 {
@@ -44,7 +45,22 @@ namespace Perpetuum.Modules.Weapons
             }
 
             var damageModifier = weapon.DamageModifier.ToPropertyModifier();
-            var property = GetPropertyModifier(AggregateField.damage_chemical);
+            var property = GetPropertyModifier(AggregateField.damage_energy);
+
+            if (property.HasValue)
+            {
+                damageModifier.Modify(ref property);
+                result.Add(new Damage(DamageType.Energy, property.Value));
+            }
+
+            property = GetPropertyModifier(AggregateField.effect_massivness_speed_max_modifier);
+
+            if (property.HasValue)
+            {
+                result.Add(new Damage(DamageType.Speed, property.Value));
+            }
+
+            property = GetPropertyModifier(AggregateField.damage_chemical);
 
             if (property.HasValue)
             {

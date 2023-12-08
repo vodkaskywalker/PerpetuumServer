@@ -7,6 +7,7 @@ using Perpetuum.Zones;
 using System;
 using System.Threading.Tasks;
 using Perpetuum.ExportedTypes;
+using Perpetuum.Modules.Weapons.Damages;
 
 namespace Perpetuum.Modules.ModuleActions
 {

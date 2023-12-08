@@ -36,9 +36,6 @@ namespace Perpetuum.Modules
             bandwidthMax = new ModuleProperty(this, AggregateField.remote_control_bandwidth_max);
             this.AddProperty(bandwidthMax);
 
-            var remoteControlDamageModifier = new ModuleProperty(this, AggregateField.remote_control_damage_modifier);
-            this.AddProperty(remoteControlDamageModifier);
-
             InitBandwidthHandler(this);
         }
 

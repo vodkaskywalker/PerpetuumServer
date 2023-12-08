@@ -3,6 +3,7 @@ using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Modules.ModuleActions;
 using Perpetuum.Modules.ModuleProperties;
+using Perpetuum.Modules.Weapons.Damages;
 using Perpetuum.Units;
 
 namespace Perpetuum.Modules.Weapons
@@ -21,8 +22,6 @@ namespace Perpetuum.Modules.Weapons
         {
             _action = new ModuleAction(this);
             DamageModifier = new ModuleProperty(this,AggregateField.damage_modifier);
-            AddProperty(DamageModifier);
-            RemoteControlDamageModifier = new ModuleProperty(this, AggregateField.remote_control_damage_modifier);
             AddProperty(DamageModifier);
             Accuracy = new ModuleProperty(this, AggregateField.accuracy);
             AddProperty(Accuracy);

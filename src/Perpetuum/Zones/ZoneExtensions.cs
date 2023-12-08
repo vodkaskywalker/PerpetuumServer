@@ -10,6 +10,7 @@ using Perpetuum.Groups.Corporations;
 using Perpetuum.IO;
 using Perpetuum.Log;
 using Perpetuum.Modules.Weapons;
+using Perpetuum.Modules.Weapons.Damages;
 using Perpetuum.Units;
 using Perpetuum.Zones.Terrains;
 

@@ -3,6 +3,7 @@ using System.Threading;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
 using Perpetuum.Items.Ammos;
+using Perpetuum.Modules.Weapons.Damages;
 
 namespace Perpetuum.Modules.Weapons
 {

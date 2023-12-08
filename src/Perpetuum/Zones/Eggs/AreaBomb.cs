@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Modules.Weapons;
+using Perpetuum.Modules.Weapons.Damages;
 using Perpetuum.Players;
 using Perpetuum.Units;
 using Perpetuum.Zones.Beams;

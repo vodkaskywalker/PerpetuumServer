@@ -9,9 +9,17 @@ namespace Perpetuum.Zones.DamageProcessors
     public class DamageTakenEventArgs : CombatEventArgs
     {
         public double TotalDamage { get; set; }
+
         public double TotalCoreDamage { get; set; }
+
         public double TotalKers { get; set; }
+
+        public double TotalEnergyDamage { get; set; }
+
+        public double TotalSpeedDamage { get; set; }
+
         public bool IsCritical { get; set; }
+
         public bool IsKillingBlow { get; set; }
     }
 

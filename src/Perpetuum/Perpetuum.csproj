@@ -277,6 +277,10 @@
     <Compile Include="Modules\RemoteControllerModule.cs" />
     <Compile Include="Modules\Weapons\ArtilleryWeaponAmmo.cs" />
     <Compile Include="Modules\Weapons\ArtilleryWeaponModule.cs" />
+    <Compile Include="Modules\Weapons\Damages\DamageBuilder.cs" />
+    <Compile Include="Modules\Weapons\Damages\DamageBuilderExtensions.cs" />
+    <Compile Include="Modules\Weapons\Damages\DamageInfo.cs" />
+    <Compile Include="Modules\Weapons\Damages\IDamageBuilder.cs" />
     <Compile Include="Network\ClientConnection.cs" />
     <Compile Include="Network\EncryptedTcpConnection.cs" />
     <Compile Include="Network\Http.cs" />
@@ -949,8 +953,8 @@
     <Compile Include="Modules\SlotFlags.cs" />
     <Compile Include="Modules\Terraforming\TerraformingMultiModule.cs" />
     <Compile Include="Modules\Terraforming\WallBuilderModule.cs" />
-    <Compile Include="Modules\Weapons\Damage.cs" />
-    <Compile Include="Modules\Weapons\DamageType.cs" />
+    <Compile Include="Modules\Weapons\Damages\Damage.cs" />
+    <Compile Include="Modules\Weapons\Damages\DamageType.cs" />
     <Compile Include="Modules\Weapons\FirearmWeaponModule.cs" />
     <Compile Include="Modules\Weapons\MissileWeaponModule.cs" />
     <Compile Include="Modules\Weapons\WeaponAmmo.cs" />
