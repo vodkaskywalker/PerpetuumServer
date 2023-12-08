@@ -11,7 +11,5 @@ namespace Perpetuum.Services.Sparks.Teleports
         IEnumerable<SparkTeleport> GetAllByCharacter(Character character);
 
         IEnumerable<SparkTeleport> GetAllByDockingBase(DockingBase dockingBase);
-
-        SparkTeleport GetCommon(int id);
     }
 }
