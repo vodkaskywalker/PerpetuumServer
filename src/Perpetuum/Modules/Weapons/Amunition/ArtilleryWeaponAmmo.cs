@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Perpetuum.Modules.Weapons.Damages;
 
-namespace Perpetuum.Modules.Weapons
+namespace Perpetuum.Modules.Weapons.Amunition
 {
     public class ArtilleryWeaponAmmo : Ammo
     {
@@ -58,6 +58,13 @@ namespace Perpetuum.Modules.Weapons
             if (property.HasValue)
             {
                 result.Add(new Damage(DamageType.Speed, property.Value));
+            }
+
+            property = GetPropertyModifier(AggregateField.damage_acid);
+
+            if (property.HasValue)
+            {
+                result.Add(new Damage(DamageType.Acid, property.Value));
             }
 
             property = GetPropertyModifier(AggregateField.damage_chemical);

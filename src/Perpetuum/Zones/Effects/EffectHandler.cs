@@ -19,18 +19,13 @@ namespace Perpetuum.Zones.Effects
         private readonly ConcurrentQueue<Effect> _expiredEffects = new ConcurrentQueue<Effect>();
         private int _dirty;
 
-        public EffectHandler(Unit unit)
-        {
-            _unit = unit;
-        }
-
         public IEnumerable<Effect> Effects => _effects;
 
         public event EffectEventHandler<bool> EffectChanged;
 
-        private void OnEffectChanged(Effect effect, bool apply)
+        public EffectHandler(Unit unit)
         {
-            EffectChanged?.Invoke(effect, apply);
+            _unit = unit;
         }
 
         public void Apply(EffectBuilder effectBuilder)
@@ -50,7 +45,7 @@ namespace Perpetuum.Zones.Effects
             if (Interlocked.CompareExchange(ref _dirty, 0, 1) == 1)
             {
                 var effects = new List<Effect>(_effects);
-                var helper = new EffectPropertyUpdateHelper();
+                var effectPropertyUpdateHelper = new EffectPropertyUpdateHelper();
                 var updated = false;
 
                 try
@@ -58,14 +53,14 @@ namespace Perpetuum.Zones.Effects
                     foreach (var removedEffect in ProcessExpiredEffects(effects))
                     {
                         updated = true;
-                        helper.AddEffect(removedEffect);
+                        effectPropertyUpdateHelper.AddEffect(removedEffect);
                         OnEffectChanged(removedEffect,false);
                     }
 
                     foreach (var newEffect in ProcessNewEffects(effects))
                     {
                         updated = true;
-                        helper.AddEffect(newEffect);
+                        effectPropertyUpdateHelper.AddEffect(newEffect);
                         OnEffectChanged(newEffect,true);
                     }
                 }
@@ -74,7 +69,7 @@ namespace Perpetuum.Zones.Effects
                     if (updated)
                     {
                         _effects = effects;
-                        helper.Update(_unit);
+                        effectPropertyUpdateHelper.Update(_unit);
                     }
                 }
             }
@@ -82,72 +77,6 @@ namespace Perpetuum.Zones.Effects
             foreach (var effect in _effects)
             {
                 effect.Update(time);
-            }
-        }
-
-        private IEnumerable<Effect> ProcessNewEffects(List<Effect> effects)
-        {
-            while (_newEffects.TryDequeue(out EffectBuilder effectBuilder))
-            {
-                var effect = GetEffectByToken(effectBuilder.Token);
-                if (effect != null)
-                {
-                    if (effect.IsAura)
-                        continue;
-
-                    var effectTimer = effect.Timer;
-                    if (effectTimer == null)
-                        continue;
-
-                    effectTimer.Reset();
-                    yield return effect;
-                }
-                else
-                {
-                    effect = effectBuilder.Build();
-
-                    if (!CanApplyEffect(effects, effect))
-                        continue;
-
-                    effect.Removed += Remove;
-                    effects.Add(effect);
-                    yield return effect;
-                }
-            }
-        }
-
-        private static bool CanApplyEffect(List<Effect> effects,Effect effect)
-        {
-            var mask = 0x8000000000000000;
-            do
-            {
-                var flag = (ulong)effect.Category & mask;
-                if (flag > 0)
-                {
-                    var category = (EffectCategory)flag;
-                    var maxLevel = EffectHelper.EffectCategoryLevels[category];
-                    if (maxLevel > 0)
-                    {
-                        var currentLevel = effects.Count(e => e.Category.HasFlag(category));
-                        if (currentLevel >= maxLevel)
-                            return false;
-                    }
-                }
-
-                mask >>= 1;
-            } while (mask > 0);
-
-            return true;
-        }
-
-        private IEnumerable<Effect> ProcessExpiredEffects(List<Effect> effects)
-        {
-            while (_expiredEffects.TryDequeue(out Effect expiredEffect))
-            {
-                if (!effects.Remove(expiredEffect))
-                    continue;
-
-                yield return expiredEffect;
             }
         }
 
@@ -161,19 +90,14 @@ namespace Perpetuum.Zones.Effects
             RemoveEffects(GetEffectsByCategory(category));
         }
 
-        private void RemoveEffects(IEnumerable<Effect> effects)
-        {
-            foreach (var effect in effects)
-            {
-                Remove(effect);
-            }
-        }
-
         public void RemoveEffectByToken(EffectToken token)
         {
             var effect = GetEffectByToken(token);
-            if ( effect == null )
+
+            if ( effect == null)
+            {
                 return;
+            }
 
             Remove(effect);
         }
@@ -214,26 +138,100 @@ namespace Perpetuum.Zones.Effects
             return _effects.FirstOrDefault(e => e.Token == token);
         }
 
-        private class EffectPropertyUpdateHelper
+        private void OnEffectChanged(Effect effect, bool apply)
         {
-            private readonly HashSet<AggregateField> _relatedFields = new HashSet<AggregateField>();
+            EffectChanged?.Invoke(effect, apply);
+        }
 
-            public void AddEffect(Effect effect)
+        private void RemoveEffects(IEnumerable<Effect> effects)
+        {
+            foreach (var effect in effects)
             {
-                foreach (var modifier in effect.PropertyModifiers)
-                {
-                    _relatedFields.Add(modifier.Field);
-                }
+                Remove(effect);
             }
+        }
 
-            public void Update(Unit unit)
+        private IEnumerable<Effect> ProcessExpiredEffects(List<Effect> effects)
+        {
+            while (_expiredEffects.TryDequeue(out Effect expiredEffect))
             {
-                if ( _relatedFields.Count == 0 )
-                    return;
-
-                foreach (var modifier in _relatedFields)
+                if (!effects.Remove(expiredEffect))
                 {
-                    unit.UpdateRelatedProperties(modifier);
+                    continue;
+                }
+
+                yield return expiredEffect;
+            }
+        }
+
+        private static bool CanApplyEffect(List<Effect> effects, Effect effect)
+        {
+            var mask = 0x8000000000000000;
+
+            do
+            {
+                var flag = (ulong)effect.Category & mask;
+
+                if (flag > 0)
+                {
+                    var category = (EffectCategory)flag;
+                    var maxLevel = EffectHelper.EffectCategoryLevels[category];
+
+                    if (maxLevel > 0)
+                    {
+                        var currentLevel = effects.Count(e => e.Category.HasFlag(category));
+
+                        if (currentLevel >= maxLevel)
+                        {
+                            return false;
+                        }
+                    }
+                }
+
+                mask >>= 1;
+            }
+            while (mask > 0);
+
+            return true;
+        }
+
+        private IEnumerable<Effect> ProcessNewEffects(List<Effect> effects)
+        {
+            while (_newEffects.TryDequeue(out EffectBuilder effectBuilder))
+            {
+                var effect = GetEffectByToken(effectBuilder.Token);
+
+                if (effect != null)
+                {
+                    if (effect.IsAura)
+                    {
+                        continue;
+                    }
+
+                    var effectTimer = effect.Timer;
+
+                    if (effectTimer == null)
+                    {
+                        continue;
+                    }
+
+                    effectTimer.Reset();
+
+                    yield return effect;
+                }
+                else
+                {
+                    effect = effectBuilder.Build();
+
+                    if (!CanApplyEffect(effects, effect))
+                    {
+                        continue;
+                    }
+
+                    effect.Removed += Remove;
+                    effects.Add(effect);
+
+                    yield return effect;
                 }
             }
         }

@@ -1,5 +1,6 @@
 ﻿using Perpetuum.ExportedTypes;
 using Perpetuum.Modules.Weapons;
+using Perpetuum.Modules.Weapons.Amunition;
 
 namespace Perpetuum.Modules.ModuleProperties
 {

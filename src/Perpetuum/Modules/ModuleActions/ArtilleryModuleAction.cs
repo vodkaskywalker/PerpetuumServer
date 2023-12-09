@@ -8,6 +8,7 @@ using System;
 using System.Threading.Tasks;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Modules.Weapons.Damages;
+using Perpetuum.Modules.Weapons.Amunition;
 
 namespace Perpetuum.Modules.ModuleActions
 {
@@ -59,18 +60,18 @@ namespace Perpetuum.Modules.ModuleActions
         private void DoDamageToPosition(Position location)
         {
             _weapon.Zone.CreateBeam(
-                        BeamType.sap_scanner_beam,
+                        BeamType.teleport_storm,
                         builder => builder
                             .WithPosition(location)
                             .WithState(BeamState.AlignToTerrain)
-                            .WithDuration(1000));
+                            .WithDuration(100));
 
             var distance = _weapon.ParentRobot.CurrentPosition.TotalDistance3D(location);
             var bulletTime = _weapon.GetAmmo().BulletTime;
             var flyTime = (int)((distance / bulletTime) * 1000);
             var beamTime = (int)Math.Max(flyTime, _weapon.CycleTime.TotalMilliseconds);
 
-            flyTime += _weapon.CreateBeam(location, BeamState.Hit, beamTime, bulletTime, 20);
+            flyTime += _weapon.CreateBeam(location, BeamState.Hit, beamTime, bulletTime);
 
             var damage = GetExplosionDamageBuilder(location);
 

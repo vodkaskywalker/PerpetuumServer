@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
+using Perpetuum.Modules.Weapons.Damages;
 using Perpetuum.Timers;
 using Perpetuum.Units;
 
@@ -18,17 +19,30 @@ namespace Perpetuum.Zones.Effects
     /// </summary>
     public class Effect 
     {
+        private readonly IntervalTimer _tickTimer = new IntervalTimer(TimeSpan.FromSeconds(2));
+        protected IEnumerable<ItemPropertyModifier> propertyModifiers = new ItemPropertyModifier[] { };
+        
         public int Id { get; internal set; }
+
         public EffectType Type { get; internal set; }
+
         public EffectCategory Category { get; internal set; }
+
         public EffectToken Token { get; internal set; }
+
         public Unit Owner { get; internal set; }
+
         public Unit Source { get; set; }
+
         public bool EnableModifiers { get; set; }
+
         public bool Display { get; set; }
+
         public bool IsAura { get; set; }
 
-        protected IEnumerable<ItemPropertyModifier> propertyModifiers = new ItemPropertyModifier[]{};
+        public double DamagePerTick { get; internal set; }
+
+        public event EffectEventHandler Removed;
 
         public IEnumerable<ItemPropertyModifier> PropertyModifiers
         {
@@ -48,15 +62,6 @@ namespace Perpetuum.Zones.Effects
             EnableModifiers = true;
         }
 
-        public event EffectEventHandler Removed;
-
-        protected virtual void OnRemoved()
-        {
-            Removed?.Invoke(this);
-        }
-
-        private readonly IntervalTimer _tickTimer = new IntervalTimer(TimeSpan.FromSeconds(2));
-
         public void Update(TimeSpan time)
         {
             if (Timer != null)
@@ -66,6 +71,7 @@ namespace Perpetuum.Zones.Effects
                 if (Timer.Passed)
                 {
                     OnRemoved();
+
                     return;
                 }
             }
@@ -76,15 +82,15 @@ namespace Perpetuum.Zones.Effects
         public void ApplyTo(ref ItemPropertyModifier propertyModifier,AggregateField modifierField)
         {
             if (!EnableModifiers)
+            {
                 return;
+            }
 
             foreach (var modifier in PropertyModifiers.Where(pp => pp.Field == modifierField))
             {
                 modifier.Modify(ref propertyModifier);
             }
         }
-
-        protected virtual void OnTick() { }
 
         public void AppendToStream(BinaryStream stream)
         {
@@ -93,9 +99,11 @@ namespace Perpetuum.Zones.Effects
             stream.AppendLong(Owner.Eid);
 
             var sourceEid = Source?.Eid ?? 0L;
+
             stream.AppendLong(sourceEid);
 
             var timer = Timer;
+
             if (timer != null)
             {
                 stream.AppendInt((int)timer.Interval.TotalMilliseconds);
@@ -113,6 +121,13 @@ namespace Perpetuum.Zones.Effects
             {
                 property.AppendToPacket(stream);
             }
+        }
+
+        protected virtual void OnTick() { }
+
+        protected virtual void OnRemoved()
+        {
+            Removed?.Invoke(this);
         }
     }
 }

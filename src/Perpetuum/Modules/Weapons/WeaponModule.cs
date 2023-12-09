@@ -3,6 +3,7 @@ using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Modules.ModuleActions;
 using Perpetuum.Modules.ModuleProperties;
+using Perpetuum.Modules.Weapons.Amunition;
 using Perpetuum.Modules.Weapons.Damages;
 using Perpetuum.Units;
 

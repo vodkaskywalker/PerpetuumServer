@@ -129,6 +129,7 @@ namespace Perpetuum.Zones.DamageProcessors
                 TotalKers = totalKers,
                 TotalEnergyDamage = damageInfo.damages.FirstOrDefault(x=>x.type == DamageType.Energy).value,
                 TotalSpeedDamage = damageInfo.damages.FirstOrDefault(x => x.type == DamageType.Speed).value,
+                TotalAcidDamage = damageInfo.damages.FirstOrDefault(x => x.type == DamageType.Acid).value,
                 IsCritical = damageInfo.IsCritical,
                 IsKillingBlow = false
             };

@@ -275,7 +275,7 @@
     <Compile Include="Modules\RemoteControlledDrillerModule.cs" />
     <Compile Include="Modules\RemoteControlledHarvesterModule.cs" />
     <Compile Include="Modules\RemoteControllerModule.cs" />
-    <Compile Include="Modules\Weapons\ArtilleryWeaponAmmo.cs" />
+    <Compile Include="Modules\Weapons\Amunition\ArtilleryWeaponAmmo.cs" />
     <Compile Include="Modules\Weapons\ArtilleryWeaponModule.cs" />
     <Compile Include="Modules\Weapons\Damages\DamageBuilder.cs" />
     <Compile Include="Modules\Weapons\Damages\DamageBuilderExtensions.cs" />
@@ -671,6 +671,8 @@
     <Compile Include="Zones\CombatLogs\CombatLogSaver.cs" />
     <Compile Include="Zones\CombatLogs\CombatSummary.cs" />
     <Compile Include="Zones\CombatLogs\ICombatLogSaver.cs" />
+    <Compile Include="Zones\Effects\DamageOverTimeEffect.cs" />
+    <Compile Include="Zones\Effects\EffectPropertyUpdateHelper.cs" />
     <Compile Include="Zones\Effects\ZoneEffects\IZoneEffectHandler.cs" />
     <Compile Include="Zones\Effects\ZoneEffects\ZoneEffect.cs" />
     <Compile Include="Zones\Effects\ZoneEffects\ZoneEffectHandler.cs" />
@@ -957,7 +959,7 @@
     <Compile Include="Modules\Weapons\Damages\DamageType.cs" />
     <Compile Include="Modules\Weapons\FirearmWeaponModule.cs" />
     <Compile Include="Modules\Weapons\MissileWeaponModule.cs" />
-    <Compile Include="Modules\Weapons\WeaponAmmo.cs" />
+    <Compile Include="Modules\Weapons\Amunition\WeaponAmmo.cs" />
     <Compile Include="Modules\Weapons\WeaponModule.cs" />
     <Compile Include="Players\ExtensionMethods\PlayerExtensions.cs" />
     <Compile Include="Players\Player.cs" />

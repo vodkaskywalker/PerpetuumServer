@@ -55,5 +55,6 @@ namespace Perpetuum.ExportedTypes
         effcat_zone_effects = 0x0000100000000000, // OPP: New Zone effects
         effcat_environmental_effects = 0x0000200000000000, // OPP: New Zone effects
         effcat_mine_detection = 0x0000400000000000, // OPP: Mine detection
+        effcat_effect_over_time = 0x0000800000000000, // OPP: effects-over-time
     }
 }

@@ -5,7 +5,7 @@ using Perpetuum.Items;
 using Perpetuum.Items.Ammos;
 using Perpetuum.Modules.Weapons.Damages;
 
-namespace Perpetuum.Modules.Weapons
+namespace Perpetuum.Modules.Weapons.Amunition
 {
     public class WeaponAmmo : Ammo
     {

@@ -9,5 +9,6 @@
         Toxic,
         Energy,
         Speed,
+        Acid,
     }
 }

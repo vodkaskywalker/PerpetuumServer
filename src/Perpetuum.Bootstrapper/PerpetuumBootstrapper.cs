@@ -193,6 +193,7 @@ using Perpetuum.Zones.NpcSystem.Presences.GrowingPresences;
 using Perpetuum.Items.Helpers;
 using Perpetuum.Zones.LandMines;
 using Perpetuum.Zones.RemoteControl;
+using Perpetuum.Modules.Weapons.Amunition;
 
 namespace Perpetuum.Bootstrapper
 {
@@ -747,6 +748,7 @@ namespace Perpetuum.Bootstrapper
             _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_beta2_bonus);
             _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_alpha_bonus);
             _builder.RegisterType<AuraEffect>().Keyed<Effect>(EffectType.effect_alpha2_bonus);
+            _builder.RegisterType<DamageOverTimeEffect>().Keyed<Effect>(EffectType.effect_acid_damage);
 
             _builder.Register<EffectFactory>(x =>
             {

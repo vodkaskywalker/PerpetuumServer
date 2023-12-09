@@ -438,5 +438,6 @@ namespace Perpetuum.ExportedTypes
         remote_control_bandwidth_usage = 674,
         artillery_strike_accuracy = 675,
         damage_energy = 676,
+        damage_acid = 677,
     }
 }

@@ -417,6 +417,20 @@ namespace Perpetuum.Robots
                     .WithPropertyModifier(effectProperty);
                 this.ApplyEffect(effectBuilder);
             }
+
+            if (args.TotalAcidDamage > 0)
+            {
+                var effectBuilder = this.NewEffectBuilder();
+                var _token = EffectToken.NewToken();
+
+                effectBuilder
+                    .WithToken(_token)
+                    .SetType(EffectType.effect_acid_damage)
+                    .WithDuration(TimeSpan.FromSeconds(10))
+                    .WithDamagePerTick(args.TotalAcidDamage);
+                    
+                this.ApplyEffect(effectBuilder);
+            }
         }
 
         protected override bool IsDetected(Unit target)

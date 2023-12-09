@@ -18,6 +18,8 @@ namespace Perpetuum.Zones.DamageProcessors
 
         public double TotalSpeedDamage { get; set; }
 
+        public double TotalAcidDamage { get; set; }
+
         public bool IsCritical { get; set; }
 
         public bool IsKillingBlow { get; set; }
