@@ -264,6 +264,7 @@
     <Compile Include="Modules\GathererModule.cs" />
     <Compile Include="Modules\ModuleActions\ArtilleryModuleAction.cs" />
     <Compile Include="Modules\ModuleActions\ModuleAction.cs" />
+    <Compile Include="Modules\ModuleActions\ModuleActionFactory.cs" />
     <Compile Include="Modules\ModuleProperties\CycleTimeProperty.cs" />
     <Compile Include="Modules\ModuleProperties\ExplosionRadiusProperty.cs" />
     <Compile Include="Modules\ModuleProperties\FalloffProperty.cs" />

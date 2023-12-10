@@ -11,18 +11,18 @@ namespace Perpetuum.Modules.ModuleActions
 {
     public class ModuleAction : ILockVisitor
     {
-        private readonly WeaponModule _weapon;
+        public WeaponModule Weapon { get; private set; }
 
         public ModuleAction(WeaponModule weapon)
         {
-            _weapon = weapon;
+            Weapon = weapon;
         }
 
-        public void DoAction()
+        public virtual void DoAction()
         {
-            _weapon.ParentRobot.HasShieldEffect.ThrowIfTrue(ErrorCodes.ShieldIsActive);
+            Weapon.ParentRobot.HasShieldEffect.ThrowIfTrue(ErrorCodes.ShieldIsActive);
 
-            var currentLock = _weapon.GetLock();
+            var currentLock = Weapon.GetLock();
 
             currentLock?.AcceptVisitor(this);
         }
@@ -31,7 +31,7 @@ namespace Perpetuum.Modules.ModuleActions
         {
         }
 
-        public void VisitUnitLock(UnitLock unitLock)
+        public virtual void VisitUnitLock(UnitLock unitLock)
         {
             var victim = unitLock.Target;
 
@@ -46,57 +46,57 @@ namespace Perpetuum.Modules.ModuleActions
             }
 
             victim.IsInvulnerable.ThrowIfTrue(ErrorCodes.TargetIsInvulnerable);
-            _weapon.ConsumeAmmo();
+            Weapon.ConsumeAmmo();
 
-            var result = _weapon.GetLineOfSight(victim);
+            var result = Weapon.GetLineOfSight(victim);
 
             if (result.hit)
             {
                 DoDamageToPosition(result.position);
-                _weapon.OnError(ErrorCodes.LOSFailed);
+                Weapon.OnError(ErrorCodes.LOSFailed);
 
                 return;
             }
 
-            var distance = _weapon.ParentRobot.GetDistance(victim);
-            var bulletTime = _weapon.GetAmmo().BulletTime;
+            var distance = Weapon.ParentRobot.GetDistance(victim);
+            var bulletTime = Weapon.GetAmmo().BulletTime;
             var flyTime = (int)((distance / bulletTime) * 1000);
-            var beamTime = (int)Math.Max(flyTime, _weapon.CycleTime.TotalMilliseconds);
-            var miss = _weapon.CheckAccuracy(victim);
+            var beamTime = (int)Math.Max(flyTime, Weapon.CycleTime.TotalMilliseconds);
+            var miss = Weapon.CheckAccuracy(victim);
 
             if (miss)
             {
-                _weapon.CreateBeam(victim, BeamState.Miss, beamTime, bulletTime);
-                _weapon.OnError(ErrorCodes.AccuracyCheckFailed);
+                Weapon.CreateBeam(victim, BeamState.Miss, beamTime, bulletTime);
+                Weapon.OnError(ErrorCodes.AccuracyCheckFailed);
 
                 return;
             }
 
-            var delay = _weapon.CreateBeam(victim, BeamState.Hit, beamTime, bulletTime);
+            var delay = Weapon.CreateBeam(victim, BeamState.Hit, beamTime, bulletTime);
 
             flyTime += delay;
 
-            var builder = _weapon.GetDamageBuilder();
+            var builder = Weapon.GetDamageBuilder();
 
             Task.Delay(flyTime).ContinueWith(t => victim.TakeDamage(builder.Build()));
         }
 
-        public void VisitTerrainLock(TerrainLock terrainLock)
+        public virtual void VisitTerrainLock(TerrainLock terrainLock)
         {
             var location = terrainLock.Location;
 
-            _weapon.ConsumeAmmo();
+            Weapon.ConsumeAmmo();
 
-            var blockingInfo = _weapon?.ParentRobot?.Zone?.Terrain.Blocks.GetValue(terrainLock.Location) ?? BlockingInfo.None;
+            var blockingInfo = Weapon?.ParentRobot?.Zone?.Terrain.Blocks.GetValue(terrainLock.Location) ?? BlockingInfo.None;
 
             location = location.AddToZ(Math.Min(blockingInfo.Height, 20));
 
-            var losResult = _weapon.GetLineOfSight(location);
+            var losResult = Weapon.GetLineOfSight(location);
 
             if (losResult.hit && !location.IsEqual2D(losResult.position))
             {
                 location = losResult.position;
-                _weapon.OnError(ErrorCodes.LOSFailed);
+                Weapon.OnError(ErrorCodes.LOSFailed);
             }
 
             DoDamageToPosition(location);
@@ -104,21 +104,21 @@ namespace Perpetuum.Modules.ModuleActions
 
         private void DoDamageToPosition(Position location)
         {
-            var distance = _weapon.ParentRobot.CurrentPosition.TotalDistance3D(location);
-            var bulletTime = _weapon.GetAmmo().BulletTime;
+            var distance = Weapon.ParentRobot.CurrentPosition.TotalDistance3D(location);
+            var bulletTime = Weapon.GetAmmo().BulletTime;
             var flyTime = (int)((distance / bulletTime) * 1000);
-            var beamTime = (int)Math.Max(flyTime, _weapon.CycleTime.TotalMilliseconds);
+            var beamTime = (int)Math.Max(flyTime, Weapon.CycleTime.TotalMilliseconds);
 
-            flyTime += _weapon.CreateBeam(location, BeamState.Hit, beamTime, bulletTime);
+            flyTime += Weapon.CreateBeam(location, BeamState.Hit, beamTime, bulletTime);
 
-            var damage = _weapon.GetDamageBuilder().Build().CalculatePlantDamages();
+            var damage = Weapon.GetDamageBuilder().Build().CalculatePlantDamages();
 
             if (damage <= 0.0)
             {
                 return;
             }
 
-            var zone = _weapon.Zone;
+            var zone = Weapon.Zone;
 
             if (zone == null)
             {

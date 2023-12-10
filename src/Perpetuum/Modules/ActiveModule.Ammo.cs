@@ -11,7 +11,7 @@ namespace Perpetuum.Modules
     {
         private Ammo _ammo;
 
-        public bool IsAmmoable => _ammoCategoryFlags > 0 && AmmoCapacity > 0;
+        public bool IsAmmoable => AmmoCategoryFlags > 0 && AmmoCapacity > 0;
 
         public int AmmoCapacity { get; private set; }
 
@@ -100,7 +100,7 @@ namespace Perpetuum.Modules
                 return false;
 
             var ammoEntityDefault = EntityDefault.GetOrThrow(ammoDefinition);
-            return ammoEntityDefault.CategoryFlags.IsCategory(_ammoCategoryFlags);
+            return ammoEntityDefault.CategoryFlags.IsCategory(AmmoCategoryFlags);
         }
 
         [CanBeNull]

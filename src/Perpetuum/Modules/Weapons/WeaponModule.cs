@@ -21,7 +21,7 @@ namespace Perpetuum.Modules.Weapons
 
         public WeaponModule(CategoryFlags ammoCategoryFlags) : base(ammoCategoryFlags, true)
         {
-            _action = new ModuleAction(this);
+            _action = new ModuleActionFactory().Create(this);
             DamageModifier = new ModuleProperty(this,AggregateField.damage_modifier);
             AddProperty(DamageModifier);
             Accuracy = new ModuleProperty(this, AggregateField.accuracy);

@@ -21,11 +21,12 @@ namespace Perpetuum.Modules
     public abstract partial class ActiveModule : Module
     {
         private Lock _lock;
-        private readonly CategoryFlags _ammoCategoryFlags;
         protected readonly ModuleProperty coreUsage;
         protected readonly CycleTimeProperty cycleTime;
         protected readonly ItemProperty falloff = ItemProperty.None;
         protected readonly ModuleProperty optimalRange;
+
+        public CategoryFlags AmmoCategoryFlags { get; private set; }
 
         public Lock Lock
         {
@@ -89,7 +90,7 @@ namespace Perpetuum.Modules
                 AddProperty(falloff);
             }
 
-            _ammoCategoryFlags = ammoCategoryFlags;
+            AmmoCategoryFlags = ammoCategoryFlags;
         }
 
         protected ActiveModule(bool ranged) : this(CategoryFlags.undefined, ranged)
@@ -156,7 +157,7 @@ namespace Perpetuum.Modules
         {
             var result = base.ToDictionary();
 
-            result.Add(k.ammoCategoryFlags, (long)_ammoCategoryFlags);
+            result.Add(k.ammoCategoryFlags, (long)AmmoCategoryFlags);
 
             var ammo = GetAmmo();
 

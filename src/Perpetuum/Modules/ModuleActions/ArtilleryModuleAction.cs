@@ -12,45 +12,30 @@ using Perpetuum.Modules.Weapons.Amunition;
 
 namespace Perpetuum.Modules.ModuleActions
 {
-    public class ArtilleryModuleAction : ILockVisitor
+    public class ArtilleryModuleAction : ModuleAction
     {
         private const int BeamDistance = 600;
-        private readonly ArtilleryWeaponModule _weapon;
 
-        public ArtilleryModuleAction(ArtilleryWeaponModule weapon)
-        {
-            _weapon = weapon;
-        }
-
-        public void DoAction()
-        {
-            _weapon.ParentRobot.HasShieldEffect.ThrowIfTrue(ErrorCodes.ShieldIsActive);
-
-            var currentLock = _weapon.GetLock();
-
-            currentLock?.AcceptVisitor(this);
-        }
-
-        public void VisitLock(Lock @lock)
+        public ArtilleryModuleAction(ArtilleryWeaponModule weapon) : base(weapon)
         {
         }
 
-        public void VisitUnitLock(UnitLock unitLock)
+        public override void VisitUnitLock(UnitLock unitLock)
         {
             var victimPosition = unitLock.Target.CurrentPosition;
             var positionNearby = victimPosition.GetRandomPositionInRange2D(3, 8);
-            var terrainLock = new TerrainLock(this._weapon.ParentRobot, positionNearby);
+            var terrainLock = new TerrainLock(this.Weapon.ParentRobot, positionNearby);
             
             VisitTerrainLock(terrainLock);
         }
 
-        public void VisitTerrainLock(TerrainLock terrainLock)
+        public override void VisitTerrainLock(TerrainLock terrainLock)
         {
             var location = terrainLock.Location;
 
-            _weapon.ConsumeAmmo();
+            Weapon.ConsumeAmmo();
 
-            var blockingInfo = _weapon?.ParentRobot?.Zone?.Terrain.Blocks.GetValue(terrainLock.Location) ?? BlockingInfo.None;
+            var blockingInfo = Weapon?.ParentRobot?.Zone?.Terrain.Blocks.GetValue(terrainLock.Location) ?? BlockingInfo.None;
 
             location = location.AddToZ(Math.Min(blockingInfo.Height, 20));
 
@@ -59,23 +44,23 @@ namespace Perpetuum.Modules.ModuleActions
 
         private void DoDamageToPosition(Position location)
         {
-            _weapon.Zone.CreateBeam(
+            Weapon.Zone.CreateBeam(
                         BeamType.teleport_storm,
                         builder => builder
                             .WithPosition(location)
                             .WithState(BeamState.AlignToTerrain)
                             .WithDuration(100));
 
-            var distance = _weapon.ParentRobot.CurrentPosition.TotalDistance3D(location);
-            var bulletTime = _weapon.GetAmmo().BulletTime;
+            var distance = Weapon.ParentRobot.CurrentPosition.TotalDistance3D(location);
+            var bulletTime = Weapon.GetAmmo().BulletTime;
             var flyTime = (int)((distance / bulletTime) * 1000);
-            var beamTime = (int)Math.Max(flyTime, _weapon.CycleTime.TotalMilliseconds);
+            var beamTime = (int)Math.Max(flyTime, Weapon.CycleTime.TotalMilliseconds);
 
-            flyTime += _weapon.CreateBeam(location, BeamState.Hit, beamTime, bulletTime);
+            flyTime += Weapon.CreateBeam(location, BeamState.Hit, beamTime, bulletTime);
 
             var damage = GetExplosionDamageBuilder(location);
 
-            var zone = _weapon.Zone;
+            var zone = Weapon.Zone;
 
             if (zone == null)
             {
@@ -103,12 +88,12 @@ namespace Perpetuum.Modules.ModuleActions
         {
             var radius = 10.0;
             var damageBuilder = DamageInfo.Builder
-                .WithAttackerWithoutPosition(_weapon.ParentRobot)
+                .WithAttackerWithoutPosition(Weapon.ParentRobot)
                 .WithSourcePosition(location)
                 .WithOptimalRange(1)
                 .WithFalloff(radius)
                 .WithExplosionRadius(radius);
-            var ammo = (ArtilleryWeaponAmmo)_weapon.GetAmmo();
+            var ammo = (ArtilleryWeaponAmmo)Weapon.GetAmmo();
             var damages = ammo.GetCleanDamages();
 
             damageBuilder.WithDamages(damages);

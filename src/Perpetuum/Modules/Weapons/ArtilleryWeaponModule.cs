@@ -1,30 +1,13 @@
 ﻿using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
-using Perpetuum.Modules.ModuleActions;
-using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Zones.Locking.Locks;
-using System;
-using System.Collections.Generic;
 
 namespace Perpetuum.Modules.Weapons
 {
-    public class ArtilleryWeaponModule : ActiveModule
+    public class ArtilleryWeaponModule : WeaponModule
     {
-        private readonly ArtilleryModuleAction _action;
-
-        public ModuleProperty DamageModifier { get; }
-
-        public ModuleProperty Accuracy { get; }
-
-        public ArtilleryWeaponModule(CategoryFlags ammoCategoryFlags) : base(ammoCategoryFlags, true)
+        public ArtilleryWeaponModule(CategoryFlags ammoCategoryFlags) : base(ammoCategoryFlags)
         {
-            _action = new ArtilleryModuleAction(this);
-            DamageModifier = new ModuleProperty(this, AggregateField.damage_modifier);
-            AddProperty(DamageModifier);
-            Accuracy = new ModuleProperty(this, AggregateField.accuracy);
-            AddProperty(Accuracy);
-
-            cycleTime.AddEffectModifier(AggregateField.effect_weapon_cycle_time_modifier);
         }
 
         public override void AcceptVisitor(IEntityVisitor visitor)
@@ -46,7 +29,7 @@ namespace Perpetuum.Modules.Weapons
                 return;
             }
             
-            _action.DoAction();
+            base.OnAction();
         }
     }
 }
