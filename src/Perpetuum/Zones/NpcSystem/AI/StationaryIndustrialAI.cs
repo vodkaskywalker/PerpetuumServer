@@ -6,7 +6,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
 {
     public class StationaryIndustrialAI : IndustrialAI
     {
-        public readonly IntervalTimer UpdateFrequency = new IntervalTimer(18000);
+        public readonly IntervalTimer UpdateFrequency = new IntervalTimer(5000);
 
         public StationaryIndustrialAI(SmartCreature smartCreature) : base(smartCreature) { }
 
@@ -19,7 +19,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         protected override TimeSpan SetPrimaryDwellTime()
         {
-            return FastRandom.NextTimeSpan(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(25));
+            return FastRandom.NextTimeSpan(TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5));
         }
     }
 }

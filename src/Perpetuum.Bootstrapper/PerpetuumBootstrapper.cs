@@ -186,11 +186,6 @@ using SetItemName = Perpetuum.RequestHandlers.SetItemName;
 using TrashItems = Perpetuum.RequestHandlers.TrashItems;
 using UnpackItems = Perpetuum.RequestHandlers.UnpackItems;
 using UnstackAmount = Perpetuum.RequestHandlers.UnstackAmount;
-using Perpetuum.Services.Strongholds;
-using Perpetuum.Zones.NpcSystem.Presences.RandomExpiringPresence;
-using Perpetuum.Zones.NpcSystem.Presences.ExpiringStaticPresence;
-using Perpetuum.Zones.NpcSystem.Presences.GrowingPresences;
-using Perpetuum.Items.Helpers;
 using Perpetuum.Zones.LandMines;
 using Perpetuum.Zones.RemoteControl;
 

@@ -1,6 +1,7 @@
 ﻿using Perpetuum.Log;
 using Perpetuum.Players;
 using Perpetuum.Units;
+using Perpetuum.Zones.RemoteControl;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -72,7 +73,7 @@ namespace Perpetuum.Zones.Effects.ZoneEffects
 
         private Func<Unit, bool> CanApplyEffect(ZoneEffect effect)
         {
-            return u => !u.EffectHandler.ContainsEffect(effect.Effect) && (!effect.PlayerOnly || u is Player);
+            return u => !u.EffectHandler.ContainsEffect(effect.Effect) && (!effect.PlayerOnly || u is Player || u is RemoteControlledTurret);
         }
 
         public void OnEnterZone(Unit unit)

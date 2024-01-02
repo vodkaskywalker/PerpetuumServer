@@ -189,12 +189,14 @@ namespace Perpetuum.Modules
 
             var finder = new ClosestWalkablePositionFinder(zone, targetPosition);
             var position = finder.FindOrThrow();
-            var beamBuilder = Beam.NewBuilder()
-                .WithType(BeamType.deploy_device_01)
-                .WithPosition(targetPosition)
+            var deployBeamBuilder = Beam.NewBuilder()
+                .WithType(BeamType.dock_in)
+                .WithSource(fieldTurret.Player)
+                .WithTarget(fieldTurret)
+                .WithState(BeamState.Hit)
                 .WithDuration(TimeSpan.FromSeconds(5));
 
-            fieldTurret.AddToZone(zone, position, ZoneEnterType.Default, beamBuilder);
+            fieldTurret.AddToZone(zone, position, ZoneEnterType.Deploy, deployBeamBuilder);
 
             ConsumeAmmo();
         }
