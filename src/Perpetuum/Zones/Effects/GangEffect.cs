@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.Linq;
 using Perpetuum.Groups.Gangs;
 using Perpetuum.Players;
 using Perpetuum.Units;
+using Perpetuum.Zones.RemoteControl;
 
 namespace Perpetuum.Zones.Effects
 {
@@ -15,10 +17,11 @@ namespace Perpetuum.Zones.Effects
             if (Owner != Source)
             {
                 var gang = ((Player)Owner).Gang;
-                // ha nincs mar gangben vagy a forras mar nincs gangben
+
                 if (gang == null || !gang.IsMember((Player)Source))
                 {
                     OnRemoved();
+
                     return;
                 }
             }
@@ -29,7 +32,11 @@ namespace Perpetuum.Zones.Effects
         protected override IEnumerable<Unit> GetTargets(IZone zone)
         {
             var player = (Player)Owner;
-            return zone.GetGangMembers(player.Gang).WithinRange(Owner.CurrentPosition, Radius);
+            var gangMembers = zone.GetGangMembers(player.Gang);
+            var alliedTurrets = zone.GetAlliedTurretsByPlayers(new[] { player }.Union(gangMembers));
+            var alliedUnits = (gangMembers).Union<Unit>(alliedTurrets);
+
+            return alliedUnits.WithinRange(Owner.CurrentPosition, Radius);
         }
 
     }

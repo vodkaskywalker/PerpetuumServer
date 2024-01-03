@@ -4,6 +4,7 @@ using System.Linq;
 using Perpetuum.Builders;
 using Perpetuum.Groups.Gangs;
 using Perpetuum.Players;
+using Perpetuum.Zones.RemoteControl;
 
 namespace Perpetuum.Zones
 {
@@ -31,6 +32,19 @@ namespace Perpetuum.Zones
         public static IEnumerable<Player> GetGangMembers(this IZone zone, Gang gang)
         {
             return gang == null ? new Player[0] : zone.Players.Where(player => player.Gang == gang);
+        }
+
+        public static IEnumerable<RemoteControlledTurret> GetAlliedTurretsByPlayers(this IZone zone, IEnumerable<Player> players)
+        {
+            return !players.Any()
+                ? new RemoteControlledTurret[0]
+                : zone.Units
+                    .Where(x => x is RemoteControlledTurret)
+                    .Join(
+                        players,
+                        turret => ((RemoteControlledTurret)turret).Player,
+                        player => player,
+                        (turret, player) => (RemoteControlledTurret)turret);
         }
 
         public static void SendPacketToGang(this IZone zone, Gang gang, IBuilder<Packet> packetBuidler, long exceptMemberEid = 0L)
