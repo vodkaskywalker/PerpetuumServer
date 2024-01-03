@@ -16,7 +16,11 @@ namespace Perpetuum.Zones.Effects
         {
             if (Owner != Source)
             {
-                var gang = ((Player)Owner).Gang;
+                var gang = Owner is Player player
+                    ? player.Gang
+                    : Owner is RemoteControlledTurret turret
+                        ? turret.Player.Gang
+                        : null;
 
                 if (gang == null || !gang.IsMember((Player)Source))
                 {
@@ -24,6 +28,7 @@ namespace Perpetuum.Zones.Effects
 
                     return;
                 }
+
             }
 
             base.OnTick();

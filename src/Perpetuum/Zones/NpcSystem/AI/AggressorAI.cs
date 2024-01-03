@@ -74,7 +74,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
                 var findNewTargetPosition = false;
 
-                if (!smartCreature.IsInRangeOf3D(mostHated.Unit, smartCreature.BestCombatRange))
+                if (!smartCreature.IsInRangeOf3D(mostHated.Unit, smartCreature.BestActionRange))
                 {
                     findNewTargetPosition = true;
                 }
@@ -136,7 +136,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         private List<Point> FindNewAttackPosition(Unit hostile, CancellationToken cancellationToken)
         {
-            var end = hostile.CurrentPosition.GetRandomPositionInRange2D(0, smartCreature.BestCombatRange - 1).ToPoint();
+            var end = hostile.CurrentPosition.GetRandomPositionInRange2D(0, smartCreature.BestActionRange - 1).ToPoint();
 
             smartCreature.StopMoving();
 
@@ -203,7 +203,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
         {
             var position3 = smartCreature.Zone.FixZ(position.ToPosition()).AddToZ(smartCreature.Height);
 
-            if (!hostile.CurrentPosition.IsInRangeOf3D(position3, smartCreature.BestCombatRange))
+            if (!hostile.CurrentPosition.IsInRangeOf3D(position3, smartCreature.BestActionRange))
             {
                 return false;
             }

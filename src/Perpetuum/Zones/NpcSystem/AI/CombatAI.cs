@@ -260,7 +260,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return false;
             }
 
-            return unitLock.Target.GetDistance(this.smartCreature) < this.smartCreature.MaxCombatRange;
+            return unitLock.Target.GetDistance(this.smartCreature) < this.smartCreature.MaxActionRange;
         }
 
         private UnitLock[] GetValidLocks()

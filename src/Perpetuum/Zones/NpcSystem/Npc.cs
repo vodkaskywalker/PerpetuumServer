@@ -62,7 +62,7 @@ namespace Perpetuum.Zones.NpcSystem
             info.Add("homeDistance", homeDistance);
             info.Add("coreMax", CoreMax);
             info.Add("coreCurrent", Core);
-            info.Add("bestCombatRange", BestCombatRange);
+            info.Add("bestCombatRange", BestActionRange);
 
             var currentAI = AI.Current;
 

@@ -29,15 +29,14 @@ namespace Perpetuum.Zones.NpcSystem
         private const double AggroRange = 30;
         private const double BestComnatRangeModifier = 0.9;
         private const double BaseCallForHelpArmorThreshold = 0.2;
-        private const int IndustrialScanRange = 30;
         private readonly ThreatManager threatManager;
         private readonly PseudoThreatManager pseudoThreatManager;
         private readonly IndustrialValueManager industrialValueManager;
         private readonly TimeKeeper debounceBodyPull = new TimeKeeper(TimeSpan.FromSeconds(2.5));
         private readonly TimeKeeper debounceLockChange = new TimeKeeper(TimeSpan.FromSeconds(2.5));
         private readonly IntervalTimer pseudoUpdateFreq = new IntervalTimer(TimeSpan.FromMilliseconds(650));
-        private Lazy<int> maxCombatRange;
-        private Lazy<int> optimalCombatRange;
+        private Lazy<int> maxActionRange;
+        private Lazy<int> optimalActionRange;
         private TimeSpan lastHelpCalled;
 
         [CanBeNull]
@@ -66,27 +65,19 @@ namespace Perpetuum.Zones.NpcSystem
             get { return industrialValueManager; }
         }
 
-        public int BestCombatRange
+        public int BestActionRange
         {
-            get { return this.optimalCombatRange.Value; }
+            get { return this.optimalActionRange.Value; }
         }
 
-        public int MaxCombatRange
+        public int MaxActionRange
         {
-            get { return this.maxCombatRange.Value; }
+            get { return this.maxActionRange.Value; }
         }
 
         public bool IsInHomeRange
         {
             get { return CurrentPosition.IsInRangeOf2D(HomePosition, HomeRange); }
-        }
-
-        public int MaxIndustrialRange
-        {
-            get
-            {
-                return IndustrialScanRange;
-            }
         }
 
         public ISmartCreatureGroup Group
@@ -127,7 +118,7 @@ namespace Perpetuum.Zones.NpcSystem
         {
             IndustrialValueManager.Clear();
 
-            var area = Zone.CreateArea(CurrentPosition, IndustrialScanRange);
+            var area = Zone.CreateArea(CurrentPosition, BestActionRange);
 
             var availableMaterialTypes = Zone.Terrain.GetAvailableMineralTypes();
 
@@ -150,7 +141,7 @@ namespace Perpetuum.Zones.NpcSystem
                             .GetPositions()
                             .Where(x => mineralLayer.HasMineral(x))
                             .Select(x=>Zone.FixZ(x))
-                            .Where(x => x.IsInRangeOf3D(this.PositionWithHeight, this.BestCombatRange));
+                            .Where(x => x.IsInRangeOf3D(this.PositionWithHeight, this.BestActionRange));
 
                         foreach (var valuablePosition in valuablePositions)
                         {
@@ -167,7 +158,7 @@ namespace Perpetuum.Zones.NpcSystem
         {
             IndustrialValueManager.Clear();
 
-            var area = Zone.CreateArea(CurrentPosition, IndustrialScanRange);
+            var area = Zone.CreateArea(CurrentPosition, BestActionRange);
 
             var availablePlantTypes = Zone.Terrain.GetAvailablePlantTypes();
 
@@ -179,7 +170,7 @@ namespace Perpetuum.Zones.NpcSystem
                 {
                     var valuablePositions = Zone.GetPlantPositionsInArea(plantType, area)
                         .Select(x => Zone.FixZ(x))
-                        .Where(x => x.IsInRangeOf2D(this.CurrentPosition, this.BestCombatRange));
+                        .Where(x => x.IsInRangeOf2D(this.CurrentPosition, this.BestActionRange));
 
                     foreach (var valuablePosition in valuablePositions)
                     {
@@ -206,12 +197,12 @@ namespace Perpetuum.Zones.NpcSystem
 
         public void RecalculateOptimalCombatRange()
         {
-            optimalCombatRange = new Lazy<int>(CalculateCombatRange);
+            optimalActionRange = new Lazy<int>(CalculateCombatRange);
         }
 
         public void RecalculateMaxCombatRange()
         {
-            maxCombatRange = new Lazy<int>(CalculateMaxCombatRange);
+            maxActionRange = new Lazy<int>(CalculateMaxCombatRange);
         }
 
         protected override void OnPropertyChanged(ItemProperty property)

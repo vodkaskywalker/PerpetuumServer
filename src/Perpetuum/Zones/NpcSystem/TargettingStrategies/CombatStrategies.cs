@@ -51,7 +51,7 @@ namespace Perpetuum.Zones.NpcSystem.TargettingStrategies
             return TrySetPrimaryLock(
                 smartCreature,
                 locks
-                    .Where(k => k.Target.GetDistance(smartCreature) < smartCreature.BestCombatRange)
+                    .Where(k => k.Target.GetDistance(smartCreature) < smartCreature.BestActionRange)
                     .RandomElement());
         }
 

@@ -245,7 +245,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return false;
             }
 
-            return industrialLock.Location.IsInRangeOf2D(this.smartCreature.PositionWithHeight, this.smartCreature.MaxIndustrialRange);
+            return industrialLock.Location.IsInRangeOf2D(this.smartCreature.PositionWithHeight, this.smartCreature.MaxActionRange);
         }
 
         private TerrainLock[] GetValidLocks()
