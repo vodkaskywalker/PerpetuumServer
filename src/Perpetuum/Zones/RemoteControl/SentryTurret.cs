@@ -3,7 +3,6 @@ using Perpetuum.Players;
 using Perpetuum.Services.Standing;
 using Perpetuum.Units;
 using Perpetuum.Zones.NpcSystem;
-using System;
 
 namespace Perpetuum.Zones.RemoteControl
 {
@@ -24,12 +23,17 @@ namespace Perpetuum.Zones.RemoteControl
 
         public override bool IsHostile(Player player)
         {
-            if (Player == player)
+            if (Player != null && Player == player)
             {
                 return false;
             }
 
-            return IsHostileCorporation(player.CorporationEid);
+            if (Player.Gang != null && Player.Gang.IsMember(player.Character))
+            {
+                return false;
+            }
+
+            return IsHostilePlayer(player.Eid);
         }
 
         public override void OnAggression(Unit victim)
@@ -50,14 +54,9 @@ namespace Perpetuum.Zones.RemoteControl
             }
         }
 
-        private bool IsHostileCorporation(long corporationEid)
+        private bool IsHostilePlayer(long playerEid)
         {
-            if (DefaultCorporationDataCache.IsCorporationDefault(corporationEid))
-            {
-                return true;
-            }
-
-            var standing = standingHandler.GetStanding(Owner, corporationEid);
+            var standing = standingHandler.GetStanding(Owner, playerEid);
 
             return StandingLimit >= standing;
         }

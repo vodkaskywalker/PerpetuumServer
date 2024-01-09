@@ -1,4 +1,5 @@
-﻿using Perpetuum.ExportedTypes;
+﻿using Perpetuum.Data;
+using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
 using Perpetuum.Players;
 using Perpetuum.Units;
@@ -13,30 +14,31 @@ namespace Perpetuum.Zones.RemoteControl
     {
         private const double SentryTurretCallForHelpArmorThreshold = 0.8;
         private UnitDespawnHelper despawnHelper;
-        private ItemProperty rcBandwidthUsage = ItemProperty.None;
+        private ItemProperty remoteChannelBandwidthUsage = ItemProperty.None;
 
         public event RemoteChannelEventHandler RemoteChannelDeactivated;
 
         public Player Player { get; private set; }
 
-        public double RemoteChannelBandwidthUsage
-        {
-            get { return rcBandwidthUsage.Value; }
-        }
+        public double RemoteChannelBandwidthUsage { get; private set; }
 
         public TimeSpan DespawnTime
         {
-            set { despawnHelper = UnitDespawnHelper.Create(this, value); }
+            set
+            {
+                despawnHelper = UnitDespawnHelper.Create(this, value);
+            }
         }
 
-        public override void Initialize()
-        {
-            rcBandwidthUsage = new UnitProperty(this, AggregateField.remote_control_bandwidth_usage);
-            AddProperty(rcBandwidthUsage);
-            Behavior = Behavior.Create(BehaviorType.RemoteControlled);
+        //public override void Initialize()
+        //{
+        //    remoteChannelBandwidthUsage = new UnitProperty(this, AggregateField.remote_control_bandwidth_usage);
+        //    /*
+        //    AddProperty(rcBandwidthUsage);
+        //    */
 
-            base.Initialize();
-        }
+        //    base.Initialize();
+        //}
 
         public override bool IsStationary => true;
 
@@ -45,6 +47,11 @@ namespace Perpetuum.Zones.RemoteControl
         public void SetPlayer(Player player)
         {
             Player = player;
+        }
+
+        public void SetBandwidthUsage(double value)
+        {
+            RemoteChannelBandwidthUsage = value;
         }
 
         protected override void OnUpdate(TimeSpan time)
@@ -61,12 +68,13 @@ namespace Perpetuum.Zones.RemoteControl
 
         protected override void OnDead(Unit killer)
         {
+            /*
             Zone.CreateBeam(
                 BeamType.arbalest_wreck,
                 builder => builder
                     .WithPosition(CurrentPosition)
                     .WithState(BeamState.Hit));
-
+            */
             base.OnDead(killer);
         }
     }

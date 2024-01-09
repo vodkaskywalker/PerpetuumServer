@@ -18,7 +18,7 @@ namespace Perpetuum.Zones.RemoteControl
         private readonly ConcurrentQueue<RemoteChannel> deactivatedChannels = new ConcurrentQueue<RemoteChannel>();
         private int dirty;
 
-        public string Name => owner.GetCharacter().Nick;
+        public string Name => owner.ParentRobot.GetCharacter().Nick;
 
         public IEnumerable<SmartCreature> Members => channels.Select(x => x.Turret);
 

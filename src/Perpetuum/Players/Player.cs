@@ -36,6 +36,7 @@ using Perpetuum.Zones.NpcSystem;
 using Perpetuum.Zones.PBS;
 using Perpetuum.Zones.PlantTools;
 using Perpetuum.Zones.ProximityProbes;
+using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.Teleporting;
 using Perpetuum.Zones.Teleporting.Strategies;
 using Perpetuum.Zones.Terrains;
@@ -744,7 +745,8 @@ namespace Perpetuum.Players
                 unit is IPBSObject ||
                 unit is WallHealer ||
                 unit is ProximityDeviceBase ||
-                (unit is BlobEmitterUnit b && b.IsPlayerSpawned);
+                (unit is BlobEmitterUnit b && b.IsPlayerSpawned) ||
+                unit is RemoteControlledTurret;
         }
 
         protected override void OnDead(Unit killer)

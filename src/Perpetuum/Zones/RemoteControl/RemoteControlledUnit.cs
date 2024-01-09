@@ -6,19 +6,19 @@ namespace Perpetuum.Zones.RemoteControl
 {
     public class RemoteControlledUnit : Ammo
     {
-        private ItemProperty rcBandwidthUsage = ItemProperty.None;
+        private ItemProperty remoteChannelBandwidthUsage = ItemProperty.None;
 
         public override void Initialize()
         {
-            rcBandwidthUsage = new AmmoProperty<RemoteControlledUnit>(this, AggregateField.remote_control_bandwidth_usage);
-            AddProperty(rcBandwidthUsage);
+            remoteChannelBandwidthUsage = new AmmoProperty<RemoteControlledUnit>(this, AggregateField.remote_control_bandwidth_usage);
+            AddProperty(remoteChannelBandwidthUsage);
 
             base.Initialize();
         }
 
         public double RemoteChannelBandwidthUsage
         {
-            get { return rcBandwidthUsage.Value; }
+            get { return remoteChannelBandwidthUsage.Value; }
         }
     }
 }

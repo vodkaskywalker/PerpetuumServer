@@ -1,15 +1,17 @@
 ﻿using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
+using Perpetuum.Log;
 using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Players;
 using Perpetuum.Units;
 using Perpetuum.Zones;
 using Perpetuum.Zones.Beams;
-using Perpetuum.Zones.Effects;
 using Perpetuum.Zones.Finders;
 using Perpetuum.Zones.Finders.PositionFinders;
 using Perpetuum.Zones.Locking.Locks;
+using Perpetuum.Zones.NpcSystem;
+using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using Perpetuum.Zones.RemoteControl;
 using System;
 using System.Linq;
@@ -19,10 +21,9 @@ namespace Perpetuum.Modules
     public class RemoteControllerModule : ActiveModule
     {
         private const int SentryTurretHeight = 7;
-        private const double SentryTurretDeployRange = 2;
+        private const double TurretDeployRange = 2;
         private readonly ModuleProperty bandwidthMax;
         private BandwidthHandler bandwidthHandler;
-        protected readonly EffectToken effectToken = EffectToken.NewToken();
 
         public double BandwidthMax
         {
@@ -35,9 +36,6 @@ namespace Perpetuum.Modules
 
             bandwidthMax = new ModuleProperty(this, AggregateField.remote_control_bandwidth_max);
             this.AddProperty(bandwidthMax);
-
-            var remoteControlDamageModifier = new ModuleProperty(this, AggregateField.remote_control_damage_modifier);
-            this.AddProperty(remoteControlDamageModifier);
 
             InitBandwidthHandler(this);
         }
@@ -52,17 +50,21 @@ namespace Perpetuum.Modules
             bandwidthHandler.Update();
         }
 
+        /*
         [CanBeNull]
         public RemoteChannel GetRemoteChannel(long channelId)
         {
-            return bandwidthHandler.GetRemoteChannel(channelId);
+            //return bandwidthHandler.GetRemoteChannel(channelId);
         }
+        */
 
+        /*
         [CanBeNull]
         public RemoteChannel GetRemoteChannelByUnit(Unit unit)
         {
-            return bandwidthHandler.GetRemoteChannelByUnit(unit);
+            //return bandwidthHandler.GetRemoteChannelByUnit(unit);
         }
+        */
 
         public bool HasFreeBandwidthFor(RemoteControlledUnit unit)
         {
@@ -76,10 +78,12 @@ namespace Perpetuum.Modules
             bandwidthHandler.Update();
         }
 
+        /*
         public void UseRemoteChannel(RemoteChannel newChannel)
         {
             bandwidthHandler.UseRemoteChannel(newChannel);
         }
+        */
 
         public override void AcceptVisitor(IEntityVisitor visitor)
         {
@@ -103,13 +107,6 @@ namespace Perpetuum.Modules
 
             SyncRemoteChannels();
 
-            var zone = Zone;
-
-            if (zone == null)
-            {
-                return;
-            }
-
             Position? lockPosition;
 
             var myLock = GetLock();
@@ -130,18 +127,14 @@ namespace Perpetuum.Modules
             }
 
             Position targetPosition = lockPosition.Value;
-            zone.Units
-                .OfType<SentryTurret>()
-                .WithinRange(zone.FixZ(targetPosition), SentryTurretDeployRange)
+            
+            Zone.Units
+                .OfType<RemoteControlledTurret>()
+                .WithinRange(Zone.FixZ(targetPosition), TurretDeployRange)
                 .Any()
                 .ThrowIfTrue(ErrorCodes.RemoteControlledTurretInRange);
-            zone.Units
-                .OfType<IndustrialTurret>()
-                .WithinRange(zone.FixZ(targetPosition), SentryTurretDeployRange)
-                .Any()
-                .ThrowIfTrue(ErrorCodes.RemoteControlledTurretInRange);
-
-            var r = zone.IsInLineOfSight(ParentRobot, targetPosition.AddToZ(SentryTurretHeight), false);
+            
+            var r = Zone.IsInLineOfSight(ParentRobot, targetPosition.AddToZ(SentryTurretHeight), false);
 
             if (r.hit)
             {
@@ -152,7 +145,14 @@ namespace Perpetuum.Modules
 
             var ammo = GetAmmo() as RemoteControlledUnit;
 
-            if (this.ParentRobot is Player player)
+            HasFreeBandwidthFor(ammo).ThrowIfFalse(ErrorCodes.MaxBandwidthExceed);
+
+            var player = this.ParentRobot is Player robotAsPlayer
+                ? robotAsPlayer
+                : null;
+
+
+            if (player != null)
             {
                 ammo.CheckEnablerExtensionsAndThrowIfFailed(player.Character, ErrorCodes.ExtensionLevelMismatchTerrain);
             }
@@ -173,22 +173,29 @@ namespace Perpetuum.Modules
                 PerpetuumException.Create(ErrorCodes.InvalidAmmoDefinition);
             }
 
-            fieldTurret.Owner = this.Owner;
-            fieldTurret.SetPlayer(this.ParentRobot as Player);
+            if (player != null)
+            {
+                fieldTurret.SetPlayer(player);
+            }
 
-            HasFreeBandwidthFor(ammo).ThrowIfFalse(ErrorCodes.MaxBandwidthExceed);
+            fieldTurret.Owner = this.ParentRobot.Owner;
+            fieldTurret.Behavior = Behavior.Create(BehaviorType.RemoteControlled);
+            fieldTurret.SetBandwidthUsage(ammo.RemoteChannelBandwidthUsage);
+
             UseRemoteChannel(fieldTurret);
 
             var despawnTimeMod = ammo.GetPropertyModifier(AggregateField.despawn_time);
 
-            var despawnTime = TimeSpan.FromMilliseconds(despawnTimeMod.Value);
-
-            fieldTurret.DespawnTime = despawnTime;
-
+            fieldTurret.DespawnTime = TimeSpan.FromMilliseconds(despawnTimeMod.Value);
             fieldTurret.SetGroup(bandwidthHandler);
 
-            var finder = new ClosestWalkablePositionFinder(zone, targetPosition);
+            var finder = new ClosestWalkablePositionFinder(Zone, targetPosition);
             var position = finder.FindOrThrow();
+
+            fieldTurret.HomePosition = position;
+            fieldTurret.HomeRange = 30;
+            fieldTurret.CallForHelp = true;
+
             var deployBeamBuilder = Beam.NewBuilder()
                 .WithType(BeamType.dock_in)
                 .WithSource(fieldTurret.Player)
@@ -196,7 +203,8 @@ namespace Perpetuum.Modules
                 .WithState(BeamState.Hit)
                 .WithDuration(TimeSpan.FromSeconds(5));
 
-            fieldTurret.AddToZone(zone, position, ZoneEnterType.Deploy, deployBeamBuilder);
+            fieldTurret.AddToZone(Zone, position, ZoneEnterType.Default, deployBeamBuilder);
+            Logger.Info($"[Remote Control] - spawned turret {fieldTurret.Eid} of type {ammo.ED.Options.TurretType} owned by {fieldTurret.Owner} represented by player {fieldTurret.Player} at {targetPosition}");
 
             ConsumeAmmo();
         }
