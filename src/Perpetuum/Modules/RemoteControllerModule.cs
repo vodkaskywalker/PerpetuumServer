@@ -194,6 +194,7 @@ namespace Perpetuum.Modules
 
             fieldTurret.HomePosition = position;
             fieldTurret.HomeRange = 30;
+            fieldTurret.Orientation = FastRandom.NextInt(0, 3) * 0.25;
             fieldTurret.CallForHelp = true;
 
             var deployBeamBuilder = Beam.NewBuilder()

@@ -30,16 +30,6 @@ namespace Perpetuum.Zones.RemoteControl
             }
         }
 
-        //public override void Initialize()
-        //{
-        //    remoteChannelBandwidthUsage = new UnitProperty(this, AggregateField.remote_control_bandwidth_usage);
-        //    /*
-        //    AddProperty(rcBandwidthUsage);
-        //    */
-
-        //    base.Initialize();
-        //}
-
         public override bool IsStationary => true;
 
         public override double CallForHelpArmorThreshold => SentryTurretCallForHelpArmorThreshold;
@@ -68,13 +58,6 @@ namespace Perpetuum.Zones.RemoteControl
 
         protected override void OnDead(Unit killer)
         {
-            /*
-            Zone.CreateBeam(
-                BeamType.arbalest_wreck,
-                builder => builder
-                    .WithPosition(CurrentPosition)
-                    .WithState(BeamState.Hit));
-            */
             base.OnDead(killer);
         }
     }
