@@ -3,7 +3,7 @@ using Perpetuum.Modules;
 
 namespace Perpetuum.Zones.RemoteControl
 {
-    public delegate void RemoteChannelEventHandler(RemoteControlledTurret turret);
+    public delegate void RemoteChannelEventHandler(RemoteControlledCreature turret);
     public delegate void RemoteChannelEventHandler<in T>(RemoteChannel channel, T arg);
 
     public class RemoteChannel
@@ -12,9 +12,9 @@ namespace Perpetuum.Zones.RemoteControl
 
         public RemoteControllerModule Owner { get; private set; }
 
-        public RemoteControlledTurret Turret { get; set; }
+        public RemoteControlledCreature Turret { get; set; }
 
-        public RemoteChannel(RemoteControllerModule owner, RemoteControlledTurret turret)
+        public RemoteChannel(RemoteControllerModule owner, RemoteControlledCreature turret)
         {
             Id = FastRandom.NextLong();
             Owner = owner;

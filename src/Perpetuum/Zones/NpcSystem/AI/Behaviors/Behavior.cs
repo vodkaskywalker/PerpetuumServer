@@ -19,8 +19,10 @@
                     return new AggressiveBehavior();
                 case BehaviorType.Passive:
                     return new PassiveBehavior();
-                case BehaviorType.RemoteControlled:
-                    return new RemoteControlledBehavior();
+                case BehaviorType.RemoteControlledTurret:
+                    return new RemoteControlledTurretBehavior();
+                case BehaviorType.RemoteControlledDrone:
+                    return new RemoteControlledDroneBehavior();
                 default:
                     return new PassiveBehavior();
             }

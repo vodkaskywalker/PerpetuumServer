@@ -746,7 +746,7 @@ namespace Perpetuum.Players
                 unit is WallHealer ||
                 unit is ProximityDeviceBase ||
                 (unit is BlobEmitterUnit b && b.IsPlayerSpawned) ||
-                unit is RemoteControlledTurret;
+                unit is RemoteControlledCreature;
         }
 
         protected override void OnDead(Unit killer)

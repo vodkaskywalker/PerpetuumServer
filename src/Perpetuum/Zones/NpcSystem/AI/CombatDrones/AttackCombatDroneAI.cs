@@ -2,6 +2,7 @@
 using Perpetuum.PathFinders;
 using Perpetuum.Units;
 using Perpetuum.Zones.Movements;
+using Perpetuum.Zones.NpcSystem.TargettingStrategies;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -9,9 +10,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Perpetuum.Zones.NpcSystem.AI
+namespace Perpetuum.Zones.NpcSystem.AI.CombatDrones
 {
-    public class AggressorAI : CombatAI
+    public class AttackCombatDroneAI : CombatAI
     {
         private Position lastTargetPosition;
         private PathMovement movement;
@@ -20,7 +21,14 @@ namespace Perpetuum.Zones.NpcSystem.AI
         private const int Sqrt2 = 141;
         private const int Weight = 1000;
 
-        public AggressorAI(SmartCreature smartCreature) : base(smartCreature) { }
+        public AttackCombatDroneAI(SmartCreature smartCreature) : base(smartCreature) { }
+
+        protected override CombatPrimaryLockSelectionStrategySelector InitSelector()
+        {
+            return CombatPrimaryLockSelectionStrategySelector.Create()
+                .WithStrategy(CombatPrimaryLockSelectionStrategy.HostileOrClosest, 1)
+                .Build();
+        }
 
         public override void Exit()
         {
@@ -31,16 +39,16 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         public override void Update(TimeSpan time)
         {
-            if (!smartCreature.IsInHomeRange)
-            {
-                smartCreature.AI.Push(new HomingAI(smartCreature));
+            //if (!smartCreature.IsInHomeRange)
+            //{
+            //    smartCreature.AI.Push(new HomingAI(smartCreature));
 
-                return;
-            }
+            //    return;
+            //}
 
             if (!smartCreature.ThreatManager.IsThreatened)
             {
-                EnterEvadeMode();
+                ReturnToCommandBot();
 
                 return;
             }
@@ -52,16 +60,16 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         protected override void ToAggressorAI() { }
 
-        private void EnterEvadeMode()
+        private void ReturnToCommandBot()
         {
             smartCreature.AI.Pop();
-            smartCreature.AI.Push(new HomingAI(smartCreature));
-            this.WriteLog("Enter evade mode.");
+            smartCreature.AI.Push(new EscortCombatDroneAI(smartCreature));
+            this.WriteLog("Returning to command robot.");
         }
 
         private void UpdateHostile(TimeSpan time)
         {
-            var mostHated = GetPrimaryOrMostHatedHostile();
+            var mostHated = GetPrimaryHostile();
 
             if (mostHated == null)
             {
@@ -106,8 +114,8 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
                         if (path == null)
                         {
-                            smartCreature.ThreatManager.Remove(mostHated);
-                            smartCreature.AddPseudoThreat(mostHated.Unit);
+                            //smartCreature.ThreatManager.Remove(mostHated);
+                            //smartCreature.AddPseudoThreat(mostHated.Unit);
 
                             return;
                         }
@@ -146,9 +154,10 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
             priorityQueue.Enqueue(startNode);
 
-            var closed = new HashSet<Point>();
-
-            closed.Add(startNode.position);
+            var closed = new HashSet<Point>
+            {
+                startNode.position
+            };
 
             Node current;
 

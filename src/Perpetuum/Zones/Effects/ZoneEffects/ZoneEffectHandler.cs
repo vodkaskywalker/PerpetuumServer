@@ -73,7 +73,7 @@ namespace Perpetuum.Zones.Effects.ZoneEffects
 
         private Func<Unit, bool> CanApplyEffect(ZoneEffect effect)
         {
-            return u => !u.EffectHandler.ContainsEffect(effect.Effect) && (!effect.PlayerOnly || u is Player || u is RemoteControlledTurret);
+            return u => !u.EffectHandler.ContainsEffect(effect.Effect) && (!effect.PlayerOnly || u is Player || u is RemoteControlledCreature);
         }
 
         public void OnEnterZone(Unit unit)

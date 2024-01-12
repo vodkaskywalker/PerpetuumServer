@@ -1,4 +1,6 @@
 ﻿using Perpetuum.Zones.Locking.Locks;
+using Perpetuum.Zones.RemoteControl;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -16,6 +18,7 @@ namespace Perpetuum.Zones.NpcSystem.TargettingStrategies
             { CombatPrimaryLockSelectionStrategy.Closest, TargetClosest },
             { CombatPrimaryLockSelectionStrategy.OptimalRange, TargetWithinOptimal },
             { CombatPrimaryLockSelectionStrategy.HostileOrClosest, TargetMostHatedOrClosest },
+            { CombatPrimaryLockSelectionStrategy.PropagatedPrimary, TargetPropagatedPrimary },
         };
 
         public static CombatTargetSelectionStrategy GetStrategy(CombatPrimaryLockSelectionStrategy strategyType)
@@ -33,6 +36,18 @@ namespace Perpetuum.Zones.NpcSystem.TargettingStrategies
             }
 
             return primaryLockSelectionStrategy(smartCreature, locks);
+        }
+
+        private static bool TargetPropagatedPrimary(SmartCreature smartCreature, UnitLock[] locks)
+        {
+            var propagatedPrimary = locks.FirstOrDefault(x => x.Target == ((smartCreature as RemoteControlledCreature).Player.GetPrimaryLock() as UnitLock)?.Target);
+
+            if (propagatedPrimary == null)
+            {
+                smartCreature.ResetLocks();
+            }
+
+            return TrySetPrimaryLock(smartCreature, propagatedPrimary);
         }
 
         private static bool TargetMostHated(SmartCreature smartCreature, UnitLock[] locks)

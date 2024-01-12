@@ -408,6 +408,16 @@ namespace Perpetuum.Units
 
             Debug.Assert(zone != null, "zone != null");
 
+            if (this is Robot robot)
+            {
+                var remoteController = robot.Modules.FirstOrDefault(x => x is RemoteControllerModule);
+
+                if (remoteController != null)
+                {
+                    (remoteController as RemoteControllerModule).CloseAllChannels();
+                }
+            }
+
             if (exitBeamBuilder != null)
                 zone.CreateBeam(exitBeamBuilder);
 
@@ -933,6 +943,8 @@ namespace Perpetuum.Units
         internal virtual bool IsHostile(IndustrialTurret turret) { return false; }
 
         internal virtual bool IsHostile(Npc npc) { return false; }
+
+        internal virtual bool IsHostile(CombatDrone drone) { return false; }
 
         public void StopMoving()
         {

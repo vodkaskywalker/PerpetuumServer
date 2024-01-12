@@ -406,13 +406,6 @@ namespace Perpetuum.Robots
 
         protected override void OnRemovedFromZone(IZone zone)
         {
-            var remoteController = _modules.Value.FirstOrDefault(x => x is RemoteControllerModule) ;
-
-            if (remoteController != null)
-            {
-                (remoteController as RemoteControllerModule).CloseAllChannels();
-            }
-
             base.OnRemovedFromZone(zone);
         }
 

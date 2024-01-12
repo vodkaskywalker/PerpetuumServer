@@ -17,6 +17,11 @@ namespace Perpetuum.Zones.NpcSystem.ThreatManaging
             _lock = new object();
         }
 
+        public bool IsThreatened
+        {
+            get { return _pseudoThreats.Any(); }
+        }
+
         public void AwardPseudoThreats(List<Unit> alreadyAwarded, IZone zone, int ep)
         {
             var pseudoHostileUnits = new List<Unit>();

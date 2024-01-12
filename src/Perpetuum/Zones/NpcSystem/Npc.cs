@@ -171,6 +171,11 @@ namespace Perpetuum.Zones.NpcSystem
             return true;
         }
 
+        internal override bool IsHostile(CombatDrone drone)
+        {
+            return true;
+        }
+
         protected override bool IsHostileFor(Unit unit)
         {
             return unit.IsHostile(this);
@@ -178,7 +183,7 @@ namespace Perpetuum.Zones.NpcSystem
 
         protected override void UpdateUnitVisibility(Unit target)
         {
-            if (target is SentryTurret)
+            if (target is RemoteControlledCreature)
             {
                 UpdateVisibility(target);
             }

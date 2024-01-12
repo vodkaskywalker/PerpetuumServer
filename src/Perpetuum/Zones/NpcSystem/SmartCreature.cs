@@ -21,6 +21,7 @@ using Perpetuum.Zones.Terrains;
 using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using Perpetuum.Zones.Terrains.Materials.Plants;
 using Perpetuum.Players;
+using Perpetuum.Zones.NpcSystem.AI.CombatDrones;
 
 namespace Perpetuum.Zones.NpcSystem
 {
@@ -106,7 +107,7 @@ namespace Perpetuum.Zones.NpcSystem
             industrialValueManager = new IndustrialValueManager();
         }
 
-        public void LookingForHostiles()
+        public virtual void LookingForHostiles()
         {
             foreach (var visibility in GetVisibleUnits())
             {
@@ -275,7 +276,7 @@ namespace Perpetuum.Zones.NpcSystem
             debounceBodyPull.Reset();
         }
 
-        private void AddBodyPullThreat(Unit enemy)
+        protected void AddBodyPullThreat(Unit enemy)
         {
             if (!IsHostile(enemy))
             {
@@ -313,7 +314,7 @@ namespace Perpetuum.Zones.NpcSystem
 
         public bool IsInAggroRange(Unit target)
         {
-            return IsStationary || IsInRangeOf3D(target, AggroRange);
+            return this is CombatDrone || IsStationary || IsInRangeOf3D(target, AggroRange);
         }
 
         public void AddThreat(Unit hostile, Threat threat, bool spreadToGroup)
@@ -423,6 +424,10 @@ namespace Perpetuum.Zones.NpcSystem
                 {
                     AI.Push(new HarvestingIndustrialTurretAI(this));
                 }
+            }
+            else if (this is CombatDrone)
+            {
+                AI.Push(new GuardCombatDroneAI(this));
             }
             else if (IsStationary)
             {

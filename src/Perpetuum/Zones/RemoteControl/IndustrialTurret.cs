@@ -12,7 +12,7 @@ using System;
 
 namespace Perpetuum.Zones.RemoteControl
 {
-    public class IndustrialTurret : RemoteControlledTurret
+    public class IndustrialTurret : RemoteControlledCreature
     {
         public TurretType TurretType { get; private set; }
 

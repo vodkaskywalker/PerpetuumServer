@@ -194,9 +194,9 @@ namespace Perpetuum.Modules
 
                 var parentPlayer = ParentRobot as Player;
 
-                if (parentPlayer is null && ParentRobot is RemoteControlledTurret)
+                if (parentPlayer is null && ParentRobot is RemoteControlledCreature)
                 {
-                    parentPlayer = (ParentRobot as RemoteControlledTurret).Player;
+                    parentPlayer = (ParentRobot as RemoteControlledCreature).Player;
                 }
 
                 if (ED.AttributeFlags.OffensiveModule)

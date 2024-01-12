@@ -5,6 +5,7 @@
         Passive,
         Neutral,
         Aggressive,
-        RemoteControlled,
+        RemoteControlledTurret,
+        RemoteControlledDrone,
     }
 }

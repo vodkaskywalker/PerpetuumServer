@@ -10,7 +10,7 @@ using System;
 
 namespace Perpetuum.Zones.RemoteControl
 {
-    public class RemoteControlledTurret : SmartCreature
+    public class RemoteControlledCreature : SmartCreature
     {
         private const double SentryTurretCallForHelpArmorThreshold = 0.8;
         private UnitDespawnHelper despawnHelper;

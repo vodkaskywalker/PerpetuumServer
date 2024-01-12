@@ -18,7 +18,7 @@ namespace Perpetuum.Zones.Effects
             {
                 var gang = Owner is Player player
                     ? player.Gang
-                    : Owner is RemoteControlledTurret turret
+                    : Owner is RemoteControlledCreature turret
                         ? turret.Player.Gang
                         : null;
 

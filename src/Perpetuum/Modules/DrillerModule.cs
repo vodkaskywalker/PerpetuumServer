@@ -131,7 +131,7 @@ namespace Perpetuum.Modules
 
             MaterialType materialType;
 
-            if (ParentRobot is RemoteControlledTurret)
+            if (ParentRobot is RemoteControlledCreature)
             {
                 materialType = zone.Terrain.GetMaterialTypeAtPosition(terrainLock.Location);
             }
@@ -169,8 +169,8 @@ namespace Perpetuum.Modules
                 Debug.Assert(container != null, "container != null");
                 container.EnlistTransaction();
 
-                var player = ParentRobot is RemoteControlledTurret
-                    ? (ParentRobot as RemoteControlledTurret).Player
+                var player = ParentRobot is RemoteControlledCreature
+                    ? (ParentRobot as RemoteControlledCreature).Player
                     : ParentRobot as Player;
 
                 Debug.Assert(player != null,"player != null");

@@ -21,7 +21,8 @@ namespace Perpetuum.Zones.NpcSystem.AI
         public void Visit(Player player)
         {
             if (smartCreature.Behavior.Type != BehaviorType.Aggressive &&
-                smartCreature.Behavior.Type != BehaviorType.RemoteControlled)
+                smartCreature.Behavior.Type != BehaviorType.RemoteControlledTurret &&
+                smartCreature.Behavior.Type != BehaviorType.RemoteControlledDrone)
             {
                 return;
             }
@@ -82,7 +83,8 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         public void Visit(Npc npc)
         {
-            if (smartCreature.Behavior.Type != BehaviorType.RemoteControlled)
+            if (smartCreature.Behavior.Type != BehaviorType.RemoteControlledTurret &&
+                smartCreature.Behavior.Type != BehaviorType.RemoteControlledDrone)
             {
                 return;
             }

@@ -7,5 +7,6 @@
         Closest,
         OptimalRange,
         HostileOrClosest,
+        PropagatedPrimary,
     }
 }

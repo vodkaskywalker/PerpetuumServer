@@ -206,9 +206,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         protected Hostile GetPrimaryOrMostHatedHostile()
         {
-            var primaryHostile = this.smartCreature.ThreatManager.Hostiles
-                .Where(h => h.Unit == (this.smartCreature.GetPrimaryLock() as UnitLock)?.Target)
-                .FirstOrDefault();
+            var primaryHostile = GetPrimaryHostile();
 
             if (primaryHostile != null)
             {
@@ -216,6 +214,13 @@ namespace Perpetuum.Zones.NpcSystem.AI
             }
 
             return this.smartCreature.ThreatManager.GetMostHatedHostile();
+        }
+
+        protected Hostile GetPrimaryHostile()
+        {
+            return this.smartCreature.ThreatManager.Hostiles
+                .Where(h => h.Unit == (this.smartCreature.GetPrimaryLock() as UnitLock)?.Target)
+                .FirstOrDefault();
         }
 
         private void SetLockForHostile(Hostile hostile)

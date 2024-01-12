@@ -6,7 +6,7 @@ using Perpetuum.Zones.NpcSystem;
 
 namespace Perpetuum.Zones.RemoteControl
 {
-    public class SentryTurret : RemoteControlledTurret
+    public class SentryTurret : RemoteControlledCreature
     {
         private readonly IStandingHandler standingHandler;
         private const double StandingLimit = 0.0;

@@ -677,8 +677,12 @@
     <Compile Include="Zones\NpcSystem\AI\BaseAI.cs" />
     <Compile Include="Zones\NpcSystem\AI\Behaviors\Behavior.cs" />
     <Compile Include="Zones\NpcSystem\AI\Behaviors\BehaviorType.cs" />
+    <Compile Include="Zones\NpcSystem\AI\Behaviors\RemoteControlledDroneBehavior.cs" />
     <Compile Include="Zones\NpcSystem\AI\BodyPullThreatHelper.cs" />
     <Compile Include="Zones\NpcSystem\AI\CombatAI.cs" />
+    <Compile Include="Zones\NpcSystem\AI\CombatDrones\AttackCombatDroneAI.cs" />
+    <Compile Include="Zones\NpcSystem\AI\CombatDrones\EscortCombatDroneAI.cs" />
+    <Compile Include="Zones\NpcSystem\AI\CombatDrones\GuardCombatDroneAI.cs" />
     <Compile Include="Zones\NpcSystem\AI\HarvestingIndustrialTurretAI.cs" />
     <Compile Include="Zones\NpcSystem\AI\HarvestingTurretIndustrialAI.cs" />
     <Compile Include="Zones\NpcSystem\AI\HomingAI.cs" />
@@ -688,9 +692,10 @@
     <Compile Include="Zones\NpcSystem\AI\MiningIndustrialTurretAI.cs" />
     <Compile Include="Zones\NpcSystem\AI\ModuleActivator.cs" />
     <Compile Include="Zones\NpcSystem\AI\Behaviors\NeutralBehavior.cs" />
+    <Compile Include="Zones\NpcSystem\AI\Node.cs" />
     <Compile Include="Zones\NpcSystem\AI\NullAI.cs" />
     <Compile Include="Zones\NpcSystem\AI\Behaviors\PassiveBehavior.cs" />
-    <Compile Include="Zones\NpcSystem\AI\Behaviors\RemoteControlledBehavior.cs" />
+    <Compile Include="Zones\NpcSystem\AI\Behaviors\RemoteControlledTurretBehavior.cs" />
     <Compile Include="Zones\NpcSystem\AI\SentryTurretCombatAI.cs" />
     <Compile Include="Zones\NpcSystem\AI\SentryTurretIdleAI.cs" />
     <Compile Include="Zones\NpcSystem\AI\StationaryCombatAI.cs" />
@@ -724,10 +729,11 @@
     <Compile Include="Zones\NpcSystem\ThreatManagement\ThreatExtensions.cs" />
     <Compile Include="Zones\NpcSystem\ThreatManagement\ThreatManager.cs" />
     <Compile Include="Zones\NpcSystem\ThreatManagement\ThreatType.cs" />
+    <Compile Include="Zones\RemoteControl\CombatDrone.cs" />
     <Compile Include="Zones\RemoteControl\IndustrialTurret.cs" />
     <Compile Include="Zones\RemoteControl\RemoteChannel.cs" />
     <Compile Include="Zones\RemoteControl\BandwidthHandler.cs" />
-    <Compile Include="Zones\RemoteControl\RemoteControlledTurret.cs" />
+    <Compile Include="Zones\RemoteControl\RemoteControlledCreature.cs" />
     <Compile Include="Zones\RemoteControl\SentryTurret.cs" />
     <Compile Include="Zones\Finders\PositionFinders\RandomWalkableAroundPositionFinder.cs" />
     <Compile Include="Zones\Finders\PositionFinders\RandomWalkableOnCircle.cs" />

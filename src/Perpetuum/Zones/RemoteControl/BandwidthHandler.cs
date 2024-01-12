@@ -47,7 +47,7 @@ namespace Perpetuum.Zones.RemoteControl
             return BandwidthUsed <= owner.BandwidthMax - unit.RemoteChannelBandwidthUsage;
         }
 
-        public void UseRemoteChannel(RemoteControlledTurret turret)
+        public void UseRemoteChannel(RemoteControlledCreature turret)
         {
             UseRemoteChannel(new RemoteChannel(owner, turret));
         }
@@ -58,7 +58,7 @@ namespace Perpetuum.Zones.RemoteControl
             Interlocked.Exchange(ref dirty, 1);
         }
 
-        public void OnRemoteChannelDeactivated(RemoteControlledTurret turret)
+        public void OnRemoteChannelDeactivated(RemoteControlledCreature turret)
         {
             var channel = GetRemoteChannelByUnit(turret);
 

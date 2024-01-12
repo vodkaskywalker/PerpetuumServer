@@ -847,6 +847,7 @@ namespace Perpetuum.Bootstrapper
             RegisterRobot<Player>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
             RegisterRobot<SentryTurret>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
             RegisterRobot<IndustrialTurret>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
+            RegisterRobot<CombatDrone>().OnActivated(e => e.Instance.SetCoreRecharger(e.Context.Resolve<ICoreRecharger>()));
             RegisterRobot<PBSTurret>();
             RegisterRobot<PunchBag>();
 
@@ -1119,6 +1120,9 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<RemoteControlledUnit>(CategoryFlags.cf_sentry_turret_units);
                 ByCategoryFlags<RemoteControlledUnit>(CategoryFlags.cf_mining_turret_units);
                 ByCategoryFlags<RemoteControlledUnit>(CategoryFlags.cf_harvesting_turret_units);
+                ByCategoryFlags<RemoteControlledUnit>(CategoryFlags.cf_pelistal_combat_drones_units);
+                ByCategoryFlags<RemoteControlledUnit>(CategoryFlags.cf_nuimqol_combat_drones_units);
+                ByCategoryFlags<RemoteControlledUnit>(CategoryFlags.cf_thelodica_combat_drones_units);
                 ByCategoryFlags<TileScannerAmmo>(CategoryFlags.cf_mining_probe_ammo_tile);
                 ByCategoryFlags<OneTileScannerAmmo>(CategoryFlags.cf_mining_probe_ammo_one_tile);
                 ByCategoryFlags<ArtifactScannerAmmo>(CategoryFlags.cf_mining_probe_ammo_artifact);
@@ -1257,6 +1261,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<SentryTurret>(CategoryFlags.cf_sentry_turrets);
                 ByCategoryFlags<IndustrialTurret>(CategoryFlags.cf_mining_turrets);
                 ByCategoryFlags<IndustrialTurret>(CategoryFlags.cf_harvesting_turrets);
+                ByCategoryFlags<CombatDrone>(CategoryFlags.cf_combat_drones);
                 ByCategoryFlags<Item>(CategoryFlags.cf_reactor_cores);
                 ByCategoryFlags<Kiosk>(CategoryFlags.cf_kiosk);
                 ByCategoryFlags<AlarmSwitch>(CategoryFlags.cf_alarm_switch);

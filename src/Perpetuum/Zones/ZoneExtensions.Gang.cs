@@ -34,17 +34,17 @@ namespace Perpetuum.Zones
             return gang == null ? new Player[0] : zone.Players.Where(player => player.Gang == gang);
         }
 
-        public static IEnumerable<RemoteControlledTurret> GetAlliedTurretsByPlayers(this IZone zone, IEnumerable<Player> players)
+        public static IEnumerable<RemoteControlledCreature> GetAlliedTurretsByPlayers(this IZone zone, IEnumerable<Player> players)
         {
             return !players.Any()
-                ? new RemoteControlledTurret[0]
+                ? new RemoteControlledCreature[0]
                 : zone.Units
-                    .Where(x => x is RemoteControlledTurret)
+                    .Where(x => x is RemoteControlledCreature)
                     .Join(
                         players,
-                        turret => ((RemoteControlledTurret)turret).Player,
+                        turret => ((RemoteControlledCreature)turret).Player,
                         player => player,
-                        (turret, player) => (RemoteControlledTurret)turret);
+                        (turret, player) => (RemoteControlledCreature)turret);
         }
 
         public static void SendPacketToGang(this IZone zone, Gang gang, IBuilder<Packet> packetBuidler, long exceptMemberEid = 0L)
