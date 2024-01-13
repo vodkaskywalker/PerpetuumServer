@@ -46,6 +46,11 @@ namespace Perpetuum.Robots
             return _lockHandler.GetPrimaryLock();
         }
 
+        public IEnumerable<Lock> GetSecondaryLocks()
+        {
+            return _lockHandler.GetSecondaryLocks();
+        }
+
         public bool IsInLockingRange(Unit unit)
         {
             return _lockHandler.IsInLockingRange(unit);

@@ -181,6 +181,11 @@ namespace Perpetuum.Zones.Locking
             return _locks.FirstOrDefault(l => l.Primary);
         }
 
+        public IEnumerable<Lock> GetSecondaryLocks()
+        {
+            return _locks.Where(l => !l.Primary);
+        }
+
         public bool IsLocked(Unit unit)
         {
             return _locks.OfType<UnitLock>().Any(l => unit.Eid == l.Target.Eid);

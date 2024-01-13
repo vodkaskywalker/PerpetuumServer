@@ -8,16 +8,21 @@ using System.Collections.Generic;
 using System.Linq;
 using Perpetuum.Zones.NpcSystem.IndustrialTargetsManagement;
 using Perpetuum.Zones.NpcSystem.AI.Behaviors;
+using Perpetuum.Zones.RemoteControl;
 
 namespace Perpetuum.Zones.NpcSystem.AI
 {
     public class IndustrialAI : BaseAI
     {
         private const int UpdateFrequency = 1650;
+        private const int EjectFrequency = 300000;
+        private const double VolumeToEject = 10.0;
         private readonly IntervalTimer processIndustrialTargetsTimer = new IntervalTimer(UpdateFrequency);
+        private readonly IntervalTimer processEjectTimer = new IntervalTimer(EjectFrequency);
         private IntervalTimer primarySelectTimer;
         private List<ModuleActivator> moduleActivators;
         private TimeSpan industrialTargetsUpdateFrequency = TimeSpan.FromMilliseconds(UpdateFrequency);
+        private TimeSpan ejectCargoFrequency = TimeSpan.FromMilliseconds(EjectFrequency);
         private IndustrialPrimaryLockSelectionStrategySelector stratSelector;
 
         public IndustrialAI(SmartCreature smartCreature) : base(smartCreature)
@@ -32,6 +37,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 .Select(m => new ModuleActivator(m))
                 .ToList();
             processIndustrialTargetsTimer.Update(industrialTargetsUpdateFrequency);
+            processEjectTimer.Update(ejectCargoFrequency);
             primarySelectTimer.Update(industrialTargetsUpdateFrequency);
 
             base.Enter();
@@ -42,6 +48,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
             UpdateIndustrialTargets(time);
             UpdatePrimaryTarget(time);
             RunModules(time);
+            EjectCargo(time);
         }
 
         protected virtual IndustrialPrimaryLockSelectionStrategySelector InitSelector()
@@ -79,6 +86,17 @@ namespace Perpetuum.Zones.NpcSystem.AI
             foreach (var activator in moduleActivators)
             {
                 activator.Update(time);
+            }
+        }
+
+        protected void EjectCargo(TimeSpan time)
+        {
+            processEjectTimer.Update(time);
+
+            if (processEjectTimer.Passed)
+            {
+                processEjectTimer.Reset();
+                (smartCreature as IndustrialTurret).EjectCargo();
             }
         }
 
@@ -183,23 +201,8 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return true;
             }
 
-            this.smartCreature.IndustrialValueManager.IndustrialTargets
-                .Where(x => x.IndustrialValue == 0)
-                .ForEach(x => this.smartCreature.GetLockByPosition(x.Position).Cancel());
-
-            var weakestLock = this.smartCreature.IndustrialValueManager.IndustrialTargets
-                .SkipWhile(h => h != industrialTarget)
-                .Skip(1)
-                .Select(h => this.smartCreature.GetLockByPosition(h.Position))
-                .LastOrDefault();
-
-            if (weakestLock == null)
-            {
-                return false;
-            }
-
-            weakestLock.Cancel();
-
+            this.smartCreature.GetSecondaryLocks().ForEach(x => x.Cancel());
+            
             return true;
         }
 

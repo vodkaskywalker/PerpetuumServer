@@ -1,5 +1,6 @@
 ﻿using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
+using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.Terrains.Materials.Plants.Harvesters;
 
 namespace Perpetuum.Modules
@@ -20,14 +21,10 @@ namespace Perpetuum.Modules
 
         protected override void OnAction()
         {
-            var zone = Zone;
-
-            if (zone == null)
+            if (Zone != null)
             {
-                return;
+                DoHarvesting(Zone);
             }
-
-            DoHarvesting(zone);
         }
     }
 }

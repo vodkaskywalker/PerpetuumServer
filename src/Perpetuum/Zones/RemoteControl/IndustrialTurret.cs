@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System;
+using System.Security.Policy;
 
 namespace Perpetuum.Zones.RemoteControl
 {
@@ -42,6 +43,13 @@ namespace Perpetuum.Zones.RemoteControl
 
         protected override void OnRemovedFromZone(IZone zone)
         {
+            EjectCargo();
+
+            base.OnRemovedFromZone(zone);
+        }
+
+        public void EjectCargo()
+        {
             using (var scope = Db.CreateTransaction())
             {
                 EnlistTransaction();
@@ -53,20 +61,6 @@ namespace Perpetuum.Zones.RemoteControl
                     Debug.Assert(robotInventory != null);
 
                     var lootItems = new List<LootItem>();
-
-                    foreach (var item in robotInventory.GetItems(true).Where(i => i is VolumeWrapperContainer))
-                    {
-                        var wrapper = item as VolumeWrapperContainer;
-
-                        if (wrapper == null)
-                        {
-                            continue;
-                        }
-
-                        lootItems.AddRange(wrapper.GetLootItems());
-                        wrapper.SetAllowDelete();
-                        Repository.Delete(wrapper);
-                    }
 
                     foreach (var item in robotInventory
                         .GetItems()
@@ -81,18 +75,16 @@ namespace Perpetuum.Zones.RemoteControl
                                     .SetRepackaged(item.ED.AttributeFlags.Repackable)
                                     .Build());
                         }
-                        else
-                        {
-                            robotInventory.RemoveItemOrThrow(item);
-                            Repository.Delete(item);
-                        }
+
+                        robotInventory.RemoveItemOrThrow(item);
+                        Repository.Delete(item);
                     }
 
                     if (lootItems.Count > 0)
                     {
                         var lootContainer = LootContainer.Create()
                             .AddLoot(lootItems)
-                            .BuildAndAddToZone(zone, CurrentPosition);
+                            .BuildAndAddToZone(Zone, CurrentPosition);
                     }
 
                     this.Save();
@@ -104,8 +96,6 @@ namespace Perpetuum.Zones.RemoteControl
                     Logger.Exception(ex);
                 }
             }
-
-            base.OnRemovedFromZone(zone);
         }
     }
 }

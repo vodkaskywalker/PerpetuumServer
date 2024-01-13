@@ -165,11 +165,11 @@ namespace Perpetuum.Zones.NpcSystem
 
             foreach (PlantType plantType in availablePlantTypes)
             {
-                var plantsCounter = Zone.CountPlantsInArea(plantType, area);
+                var plants = Zone.GetPlantPositionsInArea(plantType, area);
 
-                if (plantsCounter > 0)
+                if (plants.Any())
                 {
-                    var valuablePositions = Zone.GetPlantPositionsInArea(plantType, area)
+                    var valuablePositions = plants
                         .Select(x => Zone.FixZ(x))
                         .Where(x => x.IsInRangeOf2D(this.CurrentPosition, this.BestActionRange));
 
@@ -179,7 +179,7 @@ namespace Perpetuum.Zones.NpcSystem
 
                         if (plant.material > 0)
                         {
-                            IndustrialValueManager.GetOrAddIndustrialTargetWithValue(valuablePosition.Center, IndustrialValueType.Mineral, plant.material);
+                            IndustrialValueManager.GetOrAddIndustrialTargetWithValue(valuablePosition.Center, IndustrialValueType.Plant, plant.material);
                         }                       
                     }
                 }

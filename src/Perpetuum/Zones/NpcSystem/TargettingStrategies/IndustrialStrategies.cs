@@ -42,7 +42,6 @@ namespace Perpetuum.Zones.NpcSystem.TargettingStrategies
 
             var industrialTargetLocks = locks.Where(u => industrialTargets.Any(h => h.Position.ToString() == u.Location.ToString()));
             var mostHostileLock = industrialTargetLocks
-                //.Where(k => k.Location.IsInRangeOf2D(smartCreature.CurrentPosition, smartCreature.BestCombatRange))
                 .OrderByDescending(u => industrialTargets.FirstOrDefault(h => h.Position.ToString() == u.Location.ToString())?.IndustrialValue ?? 0)
                 .FirstOrDefault();
 
