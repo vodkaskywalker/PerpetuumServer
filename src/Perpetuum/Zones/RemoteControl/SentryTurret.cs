@@ -1,4 +1,4 @@
-﻿using Perpetuum.Groups.Corporations;
+﻿using Perpetuum.EntityFramework;
 using Perpetuum.Players;
 using Perpetuum.Services.Standing;
 using Perpetuum.Units;
@@ -8,12 +8,17 @@ namespace Perpetuum.Zones.RemoteControl
 {
     public class SentryTurret : RemoteControlledCreature
     {
-        private readonly IStandingHandler standingHandler;
-        private const double StandingLimit = 0.0;
-
         public SentryTurret(IStandingHandler standingHandler)
+            : base(standingHandler)
         {
-            this.standingHandler = standingHandler;
+        }
+
+        public override void AcceptVisitor(IEntityVisitor visitor)
+        {
+            if (!TryAcceptVisitor(this, visitor))
+            {
+                base.AcceptVisitor(visitor);
+            }
         }
 
         protected override bool IsHostileFor(Unit unit)
@@ -21,19 +26,9 @@ namespace Perpetuum.Zones.RemoteControl
             return unit.IsHostile(this);
         }
 
-        public override bool IsHostile(Player player)
+        public override bool IsHostile(Player targetPlayer)
         {
-            if (Player != null && Player == player)
-            {
-                return false;
-            }
-
-            if (Player.Gang != null && Player.Gang.IsMember(player.Character))
-            {
-                return false;
-            }
-
-            return IsHostilePlayer(player.Eid);
+            return IsHostilePlayer(targetPlayer);
         }
 
         public override void OnAggression(Unit victim)
@@ -46,19 +41,23 @@ namespace Perpetuum.Zones.RemoteControl
             return true;
         }
 
+        internal override bool IsHostile(CombatDrone drone)
+        {
+            return IsHostilePlayer(drone.Player);
+        }
+
+        internal override bool IsHostile(SentryTurret turret)
+        {
+            return IsHostilePlayer(turret.Player);
+        }
+
         protected override void UpdateUnitVisibility(Unit target)
         {
-            if (target is Npc)
+            if (target is Npc ||
+                target is RemoteControlledCreature)
             {
                 UpdateVisibility(target);
             }
-        }
-
-        private bool IsHostilePlayer(long playerEid)
-        {
-            var standing = standingHandler.GetStanding(Owner, playerEid);
-
-            return StandingLimit >= standing;
         }
     }
 }

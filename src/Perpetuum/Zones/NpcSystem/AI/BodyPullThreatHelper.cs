@@ -5,11 +5,17 @@ using Perpetuum.Units;
 using Perpetuum.Zones.Eggs;
 using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using Perpetuum.Zones.NpcSystem.ThreatManaging;
+using Perpetuum.Zones.RemoteControl;
 using System.Linq;
 
 namespace Perpetuum.Zones.NpcSystem.AI
 {
-    public class BodyPullThreatHelper : IEntityVisitor<Player>, IEntityVisitor<AreaBomb>, IEntityVisitor<Npc>
+    public class BodyPullThreatHelper :
+        IEntityVisitor<Player>,
+        IEntityVisitor<AreaBomb>,
+        IEntityVisitor<Npc>,
+        IEntityVisitor<SentryTurret>,
+        IEntityVisitor<CombatDrone>
     {
         private readonly SmartCreature smartCreature;
 
@@ -107,6 +113,62 @@ namespace Perpetuum.Zones.NpcSystem.AI
             var threat = Threat.BODY_PULL + FastRandom.NextDouble(0, 5);
 
             smartCreature.AddThreat(npc, new Threat(ThreatType.Bodypull, threat));
+        }
+
+        public void Visit(SentryTurret sentryTurret)
+        {
+            if (smartCreature.Behavior.Type != BehaviorType.RemoteControlledTurret &&
+                smartCreature.Behavior.Type != BehaviorType.RemoteControlledDrone)
+            {
+                return;
+            }
+
+            if (!smartCreature.ActiveModules.Any(m => m is WeaponModule))
+            {
+                return;
+            }
+
+            if (smartCreature.ThreatManager.Hostiles.Any(h => h.Unit.Eid == sentryTurret.Eid))
+            {
+                return;
+            }
+
+            if (!smartCreature.IsInAggroRange(sentryTurret))
+            {
+                return;
+            }
+
+            var threat = Threat.BODY_PULL + FastRandom.NextDouble(0, 5);
+
+            smartCreature.AddThreat(sentryTurret, new Threat(ThreatType.Bodypull, threat));
+        }
+
+        public void Visit(CombatDrone combatDrone)
+        {
+            if (smartCreature.Behavior.Type != BehaviorType.RemoteControlledTurret &&
+                smartCreature.Behavior.Type != BehaviorType.RemoteControlledDrone)
+            {
+                return;
+            }
+
+            if (!smartCreature.ActiveModules.Any(m => m is WeaponModule))
+            {
+                return;
+            }
+
+            if (smartCreature.ThreatManager.Hostiles.Any(h => h.Unit.Eid == combatDrone.Eid))
+            {
+                return;
+            }
+
+            if (!smartCreature.IsInAggroRange(combatDrone))
+            {
+                return;
+            }
+
+            var threat = Threat.BODY_PULL + FastRandom.NextDouble(0, 5);
+
+            smartCreature.AddThreat(combatDrone, new Threat(ThreatType.Bodypull, threat));
         }
     }
 }

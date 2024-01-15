@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 using System;
 using System.Security.Policy;
+using Perpetuum.Services.Standing;
 
 namespace Perpetuum.Zones.RemoteControl
 {
@@ -17,7 +18,8 @@ namespace Perpetuum.Zones.RemoteControl
     {
         public TurretType TurretType { get; private set; }
 
-        public IndustrialTurret()
+        public IndustrialTurret(IStandingHandler standingHandler)
+            : base(standingHandler)
         {
         }
 

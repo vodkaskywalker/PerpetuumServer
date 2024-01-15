@@ -192,6 +192,11 @@ namespace Perpetuum.Units
 
         public static void SendPacketToWitnessPlayers(this Unit source, Packet packet, bool sendSelf = false)
         {
+            if (source == null)
+            {
+                return;
+            }
+
             if (sendSelf)
             {
                 (source as Player)?.Session.SendPacket(packet);

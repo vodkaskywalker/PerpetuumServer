@@ -1,11 +1,8 @@
-﻿using Perpetuum.Data;
-using Perpetuum.ExportedTypes;
-using Perpetuum.Items;
+﻿using Perpetuum.Items;
 using Perpetuum.Players;
+using Perpetuum.Services.Standing;
 using Perpetuum.Units;
-using Perpetuum.Zones.Beams;
 using Perpetuum.Zones.NpcSystem;
-using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using System;
 
 namespace Perpetuum.Zones.RemoteControl
@@ -15,6 +12,8 @@ namespace Perpetuum.Zones.RemoteControl
         private const double SentryTurretCallForHelpArmorThreshold = 0.8;
         private UnitDespawnHelper despawnHelper;
         private ItemProperty remoteChannelBandwidthUsage = ItemProperty.None;
+        private readonly IStandingHandler standingHandler;
+        private const double StandingLimit = 0.0;
 
         public event RemoteChannelEventHandler RemoteChannelDeactivated;
 
@@ -33,6 +32,11 @@ namespace Perpetuum.Zones.RemoteControl
         public override bool IsStationary => true;
 
         public override double CallForHelpArmorThreshold => SentryTurretCallForHelpArmorThreshold;
+
+        public RemoteControlledCreature(IStandingHandler standingHandler)
+        {
+            this.standingHandler = standingHandler;
+        }
 
         public void SetPlayer(Player player)
         {
@@ -59,6 +63,35 @@ namespace Perpetuum.Zones.RemoteControl
         protected override void OnDead(Unit killer)
         {
             base.OnDead(killer);
+        }
+
+        protected bool IsHostilePlayer(Player targetPlayer)
+        {
+            if (Player != null && Player == targetPlayer)
+            {
+                return false;
+            }
+
+            if (Player.Gang != null && Player.Gang.IsMember(targetPlayer.Character))
+            {
+                return false;
+            }
+
+            var corporationStanding = standingHandler.GetStanding(Player.CorporationEid, targetPlayer.CorporationEid);
+
+            if (corporationStanding > StandingLimit)
+            {
+                return false;
+            }
+
+            var personalStanding = standingHandler.GetStanding(Owner, targetPlayer.Character.Eid);
+
+            if (personalStanding > StandingLimit)
+            {
+                return false;
+            }
+
+            return true;
         }
     }
 }

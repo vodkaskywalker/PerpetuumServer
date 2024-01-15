@@ -1,25 +1,22 @@
-﻿using Perpetuum.Players;
+﻿using Perpetuum.EntityFramework;
+using Perpetuum.Players;
 using Perpetuum.Services.Standing;
 using Perpetuum.Units;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.NpcSystem;
 using System;
-using System.Linq;
 
 namespace Perpetuum.Zones.RemoteControl
 {
     public class CombatDrone : RemoteControlledCreature
     {
-        private readonly IStandingHandler standingHandler;
-        private const double StandingLimit = 0.0;
-
         public double GuardRange { get; set; }
 
         public override bool IsStationary => false;
 
         public CombatDrone(IStandingHandler standingHandler)
+            : base(standingHandler)
         {
-            this.standingHandler = standingHandler;
         }
 
         public bool IsInGuardRange
@@ -27,24 +24,17 @@ namespace Perpetuum.Zones.RemoteControl
             get { return CurrentPosition.IsInRangeOf2D(HomePosition, GuardRange); }
         }
 
-        protected override bool IsHostileFor(Unit unit)
+        public override void AcceptVisitor(IEntityVisitor visitor)
         {
-            return unit.IsHostile(this);
+            if (!TryAcceptVisitor(this, visitor))
+            {
+                base.AcceptVisitor(visitor);
+            }
         }
 
         public override bool IsHostile(Player player)
         {
-            if (Player != null && Player == player)
-            {
-                return false;
-            }
-
-            if (Player.Gang != null && Player.Gang.IsMember(player.Character))
-            {
-                return false;
-            }
-
-            return IsHostilePlayer(player.Eid);
+            return IsHostilePlayer(player);
         }
 
         public override void OnAggression(Unit victim)
@@ -52,38 +42,15 @@ namespace Perpetuum.Zones.RemoteControl
             this.Player.OnAggression(victim);
         }
 
-        /*
-        public override void LookingForHostiles()
+        protected override bool IsHostileFor(Unit unit)
         {
-            foreach (var visibility in GetVisibleUnits().Where(x=>IsCommandBotPrimaryLock(x.Target))
-            {
-                AddBodyPullThreat(visibility.Target);
-            }
+            return unit.IsHostile(this);
         }
-        */
 
         protected override void OnUpdate(TimeSpan time)
         {
             HomePosition = Player.CurrentPosition;
             base.OnUpdate(time);
-        }
-
-        internal override bool IsHostile(Npc npc)
-        {
-            return true;
-        }
-
-        protected override void OnUnitLockStateChanged(Lock @lock)
-        {
-            // Do nothing
-        }
-
-        protected override void UpdateUnitVisibility(Unit target)
-        {
-            if (target is Npc)
-            {
-                UpdateVisibility(target);
-            }
         }
 
         protected override bool IsDetected(Unit target)
@@ -96,11 +63,33 @@ namespace Perpetuum.Zones.RemoteControl
             return base.IsDetected(target);
         }
 
-        private bool IsHostilePlayer(long playerEid)
+        internal override bool IsHostile(Npc npc)
         {
-            var standing = standingHandler.GetStanding(Owner, playerEid);
+            return true;
+        }
 
-            return StandingLimit >= standing;
+        internal override bool IsHostile(CombatDrone drone)
+        {
+            return IsHostilePlayer(drone.Player);
+        }
+
+        internal override bool IsHostile(SentryTurret turret)
+        {
+            return IsHostilePlayer(turret.Player);
+        }
+
+        protected override void OnUnitLockStateChanged(Lock @lock)
+        {
+            // Do nothing
+        }
+
+        protected override void UpdateUnitVisibility(Unit target)
+        {
+            if (target is Npc ||
+                target is RemoteControlledCreature)
+            {
+                UpdateVisibility(target);
+            }
         }
 
         private bool IsCommandBotPrimaryLock(Unit unit)
