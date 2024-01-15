@@ -75,7 +75,7 @@ namespace Perpetuum.Zones.RemoteControl
         {
             foreach (var channel in channels)
             {
-                channel.Turret.RemoveFromZone();
+                channel.Turret.Kill();
                 ReleaseRemoteChannel(channel);
             }
 

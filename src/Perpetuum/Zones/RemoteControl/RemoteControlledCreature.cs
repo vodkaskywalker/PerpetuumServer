@@ -67,6 +67,11 @@ namespace Perpetuum.Zones.RemoteControl
 
         protected bool IsHostilePlayer(Player targetPlayer)
         {
+            if (Zone.Configuration.IsAlpha && !Player.HasPvpEffect && !targetPlayer.HasPvpEffect)
+            {
+                return false;
+            }
+
             if (Player != null && Player == targetPlayer)
             {
                 return false;
