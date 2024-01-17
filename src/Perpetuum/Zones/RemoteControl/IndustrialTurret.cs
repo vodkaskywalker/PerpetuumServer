@@ -43,19 +43,16 @@ namespace Perpetuum.Zones.RemoteControl
             return false;
         }
 
-        protected override void OnRemovedFromZone(IZone zone)
+        protected override void OnBeforeRemovedFromZone(IZone zone)
         {
-            EjectCargo();
-
-            base.OnRemovedFromZone(zone);
+            EjectCargo(zone);
+            base.OnBeforeRemovedFromZone(zone);
         }
 
-        public void EjectCargo()
+        public void EjectCargo(IZone zone)
         {
             using (var scope = Db.CreateTransaction())
             {
-                EnlistTransaction();
-
                 try
                 {
                     var robotInventory = GetContainer();
@@ -86,7 +83,7 @@ namespace Perpetuum.Zones.RemoteControl
                     {
                         var lootContainer = LootContainer.Create()
                             .AddLoot(lootItems)
-                            .BuildAndAddToZone(Zone, CurrentPosition);
+                            .BuildAndAddToZone(zone, CurrentPosition);
                     }
 
                     this.Save();

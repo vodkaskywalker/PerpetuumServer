@@ -54,10 +54,9 @@ namespace Perpetuum.Zones.RemoteControl
             despawnHelper?.Update(time, this);
         }
 
-        protected override void OnRemovedFromZone(IZone zone)
+        protected override void OnBeforeRemovedFromZone(IZone zone)
         {
             RemoteChannelDeactivated(this);
-            base.OnRemovedFromZone(zone);
         }
 
         protected override void OnDead(Unit killer)

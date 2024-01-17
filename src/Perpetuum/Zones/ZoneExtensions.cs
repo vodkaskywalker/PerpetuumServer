@@ -213,7 +213,9 @@ namespace Perpetuum.Zones
         public static void DoAoeDamage(this IZone zone,IBuilder<DamageInfo> damageBuilder)
         {
             var damageInfo = damageBuilder.Build();
-            var units = zone.Units.WithinRange(damageInfo.sourcePosition, damageInfo.Range);
+            var units = zone.Units
+                .WithinRange(damageInfo.sourcePosition, damageInfo.Range);
+                //.Where(x=>x.HasTeleportSicknessEffect);
 
             foreach (var unit in units)
             {

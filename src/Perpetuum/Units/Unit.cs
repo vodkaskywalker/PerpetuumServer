@@ -403,32 +403,29 @@ namespace Perpetuum.Units
         public void RemoveFromZone(IBeamBuilder exitBeamBuilder = null)
         {
             IZone zone;
+
             if ((zone = Interlocked.CompareExchange(ref _zone, null, _zone)) == null)
+            {
                 return;
+            }
 
             Debug.Assert(zone != null, "zone != null");
 
-            if (this is Robot robot)
+            if (exitBeamBuilder != null)
             {
-                var remoteController = robot.Modules.FirstOrDefault(x => x is RemoteControllerModule);
-
-                if (remoteController != null)
-                {
-                    (remoteController as RemoteControllerModule).CloseAllChannels();
-                }
+                zone.CreateBeam(exitBeamBuilder);
             }
 
-            if (exitBeamBuilder != null)
-                zone.CreateBeam(exitBeamBuilder);
-
+            OnBeforeRemovedFromZone(zone);
             zone.RemoveUnit(this);
-
             OnRemovedFromZone(zone);
             zone.UpdateUnitRelations(this);
             RemovedFromZone?.Invoke(this);
         }
 
         protected virtual void OnRemovedFromZone(IZone zone) { }
+
+        protected virtual void OnBeforeRemovedFromZone(IZone zone) { }
 
         public void TakeDamage(DamageInfo damageInfo)
         {

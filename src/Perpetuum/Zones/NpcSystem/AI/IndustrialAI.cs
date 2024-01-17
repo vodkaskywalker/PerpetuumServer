@@ -96,7 +96,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
             if (processEjectTimer.Passed)
             {
                 processEjectTimer.Reset();
-                (smartCreature as IndustrialTurret).EjectCargo();
+                (smartCreature as IndustrialTurret).EjectCargo(smartCreature.Zone);
             }
         }
 

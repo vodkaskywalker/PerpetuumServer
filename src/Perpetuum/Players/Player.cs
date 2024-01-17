@@ -939,6 +939,16 @@ namespace Perpetuum.Players
             p.Clear();
         }
 
+        protected override void OnBeforeRemovedFromZone(IZone zone)
+        {
+            var remoteController = this.Modules?.FirstOrDefault(x => x is RemoteControllerModule);
+
+            if (remoteController != null)
+            {
+                (remoteController as RemoteControllerModule).CloseAllChannels();
+            }
+        }
+
         protected override void OnRemovedFromZone(IZone zone)
         {
             Session.SendPacket(ExitPacketBuilder);
