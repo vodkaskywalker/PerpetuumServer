@@ -41,7 +41,9 @@ At this point, take note of the path of the installed server, usually `C:\Perpet
 
 ## Move/extraction of files
 1. Extract layers archive into the data folder of the PerpetuumDedicated installation
-2. Extract icons from the archive to the `OPResource/lang0000` folder
+2. Extract icons from the archive to the `OPResource/lang0000` folder.
+
+Note that the icons archive does not contain icons for new items, the resource server will substitute the default icon instead. The default icon is the blue cube.
 
 ## Initialize/Reset DB (windows)
 Here you can run the following steps to initialize for the first time or reset the DB to a valid state for the given release version you have checked out in the OPDB repository.
