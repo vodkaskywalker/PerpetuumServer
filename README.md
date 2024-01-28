@@ -34,6 +34,7 @@ The OPDB is contains the database schema definition and the migration patches fo
 Note that the Gamma_layers is compatible with release P26+
 
 Here save the layers rar file + icons zip file.
+
 6. (Requires Windows for now) Run the PerpetuumDedicated from steam or directly the exe, install SQL server express (known issues with Win11+, unable to install, use windows 10 to install), initialize the DB when asked at the end.
 
 At this point, take note of the path of the installed server, usually `C:\PerpetuumDedicated`.
