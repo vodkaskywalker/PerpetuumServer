@@ -1,8 +1,8 @@
-﻿using Perpetuum.Items;
-using Perpetuum.Players;
+﻿using Perpetuum.Players;
 using Perpetuum.Services.Standing;
 using Perpetuum.Units;
 using Perpetuum.Zones.NpcSystem;
+using Perpetuum.Zones.NpcSystem.ThreatManaging;
 using System;
 
 namespace Perpetuum.Zones.RemoteControl
@@ -11,7 +11,6 @@ namespace Perpetuum.Zones.RemoteControl
     {
         private const double SentryTurretCallForHelpArmorThreshold = 0.8;
         private UnitDespawnHelper despawnHelper;
-        private ItemProperty remoteChannelBandwidthUsage = ItemProperty.None;
         private readonly IStandingHandler standingHandler;
         private const double StandingLimit = 0.0;
 
@@ -23,10 +22,7 @@ namespace Perpetuum.Zones.RemoteControl
 
         public TimeSpan DespawnTime
         {
-            set
-            {
-                despawnHelper = UnitDespawnHelper.Create(this, value);
-            }
+            set => despawnHelper = UnitDespawnHelper.Create(this, value);
         }
 
         public override bool IsStationary => true;
@@ -48,6 +44,16 @@ namespace Perpetuum.Zones.RemoteControl
             RemoteChannelBandwidthUsage = value;
         }
 
+        public override void AddThreat(Unit hostile, Threat threat, bool spreadToGroup)
+        {
+            if (hostile.IsPlayer() && Player == (hostile as Player))
+            {
+                return;
+            }
+
+            base.AddThreat(hostile, threat, spreadToGroup);
+        }
+
         protected override void OnUpdate(TimeSpan time)
         {
             base.OnUpdate(time);
@@ -59,13 +65,13 @@ namespace Perpetuum.Zones.RemoteControl
             RemoteChannelDeactivated(this);
         }
 
-        protected override void OnDead(Unit killer)
-        {
-            base.OnDead(killer);
-        }
-
         protected bool IsHostilePlayer(Player targetPlayer)
         {
+            if (Player == targetPlayer)
+            {
+                return false;
+            }
+
             if (Zone.Configuration.IsAlpha && !Player.HasPvpEffect && !targetPlayer.HasPvpEffect)
             {
                 return false;
@@ -81,21 +87,16 @@ namespace Perpetuum.Zones.RemoteControl
                 return false;
             }
 
-            var corporationStanding = standingHandler.GetStanding(Player.CorporationEid, targetPlayer.CorporationEid);
+            double corporationStanding = standingHandler.GetStanding(Player.CorporationEid, targetPlayer.CorporationEid);
 
             if (corporationStanding > StandingLimit)
             {
                 return false;
             }
 
-            var personalStanding = standingHandler.GetStanding(Owner, targetPlayer.Character.Eid);
+            double personalStanding = standingHandler.GetStanding(Owner, targetPlayer.Character.Eid);
 
-            if (personalStanding > StandingLimit)
-            {
-                return false;
-            }
-
-            return true;
+            return personalStanding <= StandingLimit;
         }
     }
 }

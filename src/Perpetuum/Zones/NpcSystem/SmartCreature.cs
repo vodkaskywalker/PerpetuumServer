@@ -1,6 +1,7 @@
 ﻿using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
+using Perpetuum.Players;
 using Perpetuum.StateMachines;
 using Perpetuum.Timers;
 using Perpetuum.Units;
@@ -8,20 +9,19 @@ using Perpetuum.Zones.DamageProcessors;
 using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.NpcSystem.AI;
+using Perpetuum.Zones.NpcSystem.AI.Behaviors;
+using Perpetuum.Zones.NpcSystem.AI.CombatDrones;
 using Perpetuum.Zones.NpcSystem.Flocks;
 using Perpetuum.Zones.NpcSystem.IndustrialTargetsManagement;
 using Perpetuum.Zones.NpcSystem.ThreatManaging;
 using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.Scanning.Results;
+using Perpetuum.Zones.Terrains;
+using Perpetuum.Zones.Terrains.Materials;
 using Perpetuum.Zones.Terrains.Materials.Minerals;
+using Perpetuum.Zones.Terrains.Materials.Plants;
 using System;
 using System.Linq;
-using Perpetuum.Zones.Terrains.Materials;
-using Perpetuum.Zones.Terrains;
-using Perpetuum.Zones.NpcSystem.AI.Behaviors;
-using Perpetuum.Zones.Terrains.Materials.Plants;
-using Perpetuum.Players;
-using Perpetuum.Zones.NpcSystem.AI.CombatDrones;
 
 namespace Perpetuum.Zones.NpcSystem
 {
@@ -30,9 +30,6 @@ namespace Perpetuum.Zones.NpcSystem
         private const double AggroRange = 30;
         private const double BestComnatRangeModifier = 0.9;
         private const double BaseCallForHelpArmorThreshold = 0.2;
-        private readonly ThreatManager threatManager;
-        private readonly PseudoThreatManager pseudoThreatManager;
-        private readonly IndustrialValueManager industrialValueManager;
         private readonly TimeKeeper debounceBodyPull = new TimeKeeper(TimeSpan.FromSeconds(2.5));
         private readonly TimeKeeper debounceLockChange = new TimeKeeper(TimeSpan.FromSeconds(2.5));
         private readonly IntervalTimer pseudoUpdateFreq = new IntervalTimer(TimeSpan.FromMilliseconds(650));
@@ -51,45 +48,21 @@ namespace Perpetuum.Zones.NpcSystem
 
         public Position HomePosition { get; set; }
 
-        public ThreatManager ThreatManager
-        {
-            get { return this.threatManager; }
-        }
+        public ThreatManager ThreatManager { get; }
 
-        public PseudoThreatManager PseudoThreatManager
-        {
-            get { return pseudoThreatManager; }
-        }
+        public PseudoThreatManager PseudoThreatManager { get; }
 
-        public IndustrialValueManager IndustrialValueManager
-        {
-            get { return industrialValueManager; }
-        }
+        public IndustrialValueManager IndustrialValueManager { get; }
 
-        public int BestActionRange
-        {
-            get { return this.optimalActionRange.Value; }
-        }
+        public int BestActionRange => optimalActionRange.Value;
 
-        public int MaxActionRange
-        {
-            get { return this.maxActionRange.Value; }
-        }
+        public int MaxActionRange => maxActionRange.Value;
 
-        public bool IsInHomeRange
-        {
-            get { return CurrentPosition.IsInRangeOf2D(HomePosition, HomeRange); }
-        }
+        public bool IsInHomeRange => CurrentPosition.IsInRangeOf2D(HomePosition, HomeRange);
 
-        public ISmartCreatureGroup Group
-        {
-            get { return group; }
-        }
+        public ISmartCreatureGroup Group => group;
 
-        public virtual bool IsStationary
-        {
-            get { return MaxSpeed.IsZero(); }
-        }
+        public virtual bool IsStationary => MaxSpeed.IsZero();
 
         public virtual double CallForHelpArmorThreshold => BaseCallForHelpArmorThreshold;
 
@@ -101,15 +74,15 @@ namespace Perpetuum.Zones.NpcSystem
         {
             RecalculateMaxCombatRange();
             RecalculateOptimalCombatRange();
-            threatManager = new ThreatManager();
+            ThreatManager = new ThreatManager();
             AI = new StackFSM();
-            pseudoThreatManager = new PseudoThreatManager();
-            industrialValueManager = new IndustrialValueManager();
+            PseudoThreatManager = new PseudoThreatManager();
+            IndustrialValueManager = new IndustrialValueManager();
         }
 
         public virtual void LookingForHostiles()
         {
-            foreach (var visibility in GetVisibleUnits())
+            foreach (IUnitVisibility visibility in GetVisibleUnits())
             {
                 AddBodyPullThreat(visibility.Target);
             }
@@ -119,36 +92,35 @@ namespace Perpetuum.Zones.NpcSystem
         {
             IndustrialValueManager.Clear();
 
-            var area = Zone.CreateArea(CurrentPosition, BestActionRange);
+            Area area = Zone.CreateArea(CurrentPosition, BestActionRange);
 
-            var availableMaterialTypes = Zone.Terrain.GetAvailableMineralTypes();
+            MaterialType[] availableMaterialTypes = Zone.Terrain.GetAvailableMineralTypes();
 
             foreach (MaterialType materialType in availableMaterialTypes)
             {
-                var builder = MineralScanResultBuilder.Create(Zone, materialType);
+                MineralScanResultBuilder builder = MineralScanResultBuilder.Create(Zone, materialType);
 
                 builder.ScanArea = area;
                 builder.ScanAccuracy = 100.0;
 
-                var result = builder.Build();
+                MineralScanResult result = builder.Build();
 
-                MineralLayer mineralLayer = Zone.Terrain.GetMaterialLayer(materialType) as MineralLayer;
 
-                if (mineralLayer != null)
+                if (Zone.Terrain.GetMaterialLayer(materialType) is MineralLayer mineralLayer)
                 {
                     if (result.FoundAny)
                     {
-                        var valuablePositions = result.Area
+                        System.Collections.Generic.IEnumerable<Position> valuablePositions = result.Area
                             .GetPositions()
                             .Where(x => mineralLayer.HasMineral(x))
-                            .Select(x=>Zone.FixZ(x))
-                            .Where(x => x.IsInRangeOf3D(this.PositionWithHeight, this.BestActionRange));
+                            .Select(x => Zone.FixZ(x))
+                            .Where(x => x.IsInRangeOf3D(PositionWithHeight, BestActionRange));
 
-                        foreach (var valuablePosition in valuablePositions)
+                        foreach (Position valuablePosition in valuablePositions)
                         {
-                            var mineralNode = mineralLayer.GetNode(valuablePosition);
+                            MineralNode mineralNode = mineralLayer.GetNode(valuablePosition);
 
-                            IndustrialValueManager.GetOrAddIndustrialTargetWithValue(valuablePosition.Center, IndustrialValueType.Mineral, mineralNode.GetValue(valuablePosition));
+                            _ = IndustrialValueManager.GetOrAddIndustrialTargetWithValue(valuablePosition.Center, IndustrialValueType.Mineral, mineralNode.GetValue(valuablePosition));
                         }
                     }
                 }
@@ -159,28 +131,28 @@ namespace Perpetuum.Zones.NpcSystem
         {
             IndustrialValueManager.Clear();
 
-            var area = Zone.CreateArea(CurrentPosition, BestActionRange);
+            Area area = Zone.CreateArea(CurrentPosition, BestActionRange);
 
-            var availablePlantTypes = Zone.Terrain.GetAvailablePlantTypes();
+            PlantType[] availablePlantTypes = Zone.Terrain.GetAvailablePlantTypes();
 
             foreach (PlantType plantType in availablePlantTypes)
             {
-                var plants = Zone.GetPlantPositionsInArea(plantType, area);
+                System.Collections.Generic.List<Position> plants = Zone.GetPlantPositionsInArea(plantType, area);
 
                 if (plants.Any())
                 {
-                    var valuablePositions = plants
+                    System.Collections.Generic.IEnumerable<Position> valuablePositions = plants
                         .Select(x => Zone.FixZ(x))
-                        .Where(x => x.IsInRangeOf2D(this.CurrentPosition, this.BestActionRange));
+                        .Where(x => x.IsInRangeOf2D(CurrentPosition, BestActionRange));
 
-                    foreach (var valuablePosition in valuablePositions)
+                    foreach (Position valuablePosition in valuablePositions)
                     {
-                        var plant = Zone.Terrain.Plants.GetValue(valuablePosition.intX, valuablePosition.intY);
+                        PlantInfo plant = Zone.Terrain.Plants.GetValue(valuablePosition.intX, valuablePosition.intY);
 
                         if (plant.material > 0)
                         {
-                            IndustrialValueManager.GetOrAddIndustrialTargetWithValue(valuablePosition.Center, IndustrialValueType.Plant, plant.material);
-                        }                       
+                            _ = IndustrialValueManager.GetOrAddIndustrialTargetWithValue(valuablePosition.Center, IndustrialValueType.Plant, plant.material);
+                        }
                     }
                 }
             }
@@ -188,7 +160,7 @@ namespace Perpetuum.Zones.NpcSystem
 
         public void AddPseudoThreat(Unit hostile)
         {
-            pseudoThreatManager.AddOrRefreshExisting(hostile);
+            PseudoThreatManager.AddOrRefreshExisting(hostile);
         }
 
         public void SetGroup(ISmartCreatureGroup group)
@@ -221,7 +193,7 @@ namespace Perpetuum.Zones.NpcSystem
                     }
                 case AggregateField.armor_current:
                     {
-                        var percentage = Armor.Ratio(ArmorMax);
+                        double percentage = Armor.Ratio(ArmorMax);
 
                         if (percentage <= CallForHelpArmorThreshold)
                         {
@@ -240,9 +212,8 @@ namespace Perpetuum.Zones.NpcSystem
                 return;
             }
 
-            var unitLock = @lock as UnitLock;
 
-            if (unitLock == null)
+            if (!(@lock is UnitLock unitLock))
             {
                 return;
             }
@@ -257,7 +228,7 @@ namespace Perpetuum.Zones.NpcSystem
                 return;
             }
 
-            var threatValue = unitLock.Primary
+            double threatValue = unitLock.Primary
                 ? Threat.LOCK_PRIMARY
                 : Threat.LOCK_SECONDARY;
 
@@ -283,7 +254,7 @@ namespace Perpetuum.Zones.NpcSystem
                 return;
             }
 
-            var helper = new BodyPullThreatHelper(this);
+            BodyPullThreatHelper helper = new BodyPullThreatHelper(this);
 
             enemy.AcceptVisitor(helper);
         }
@@ -317,14 +288,19 @@ namespace Perpetuum.Zones.NpcSystem
             return this is CombatDrone || IsStationary || IsInRangeOf3D(target, AggroRange);
         }
 
-        public void AddThreat(Unit hostile, Threat threat, bool spreadToGroup)
+        public virtual void AddThreat(Unit hostile, Threat threat, bool spreadToGroup)
         {
+            if (hostile is RemoteControlledCreature)
+            {
+                threat = Threat.Multiply(threat, 100);
+            }
+
             if (hostile.IsPlayer())
             {
                 BossInfo?.OnAggro(hostile as Player);
             }
 
-            threatManager.GetOrAddHostile(hostile).AddThreat(threat);
+            ThreatManager.GetOrAddHostile(hostile).AddThreat(threat);
 
             RemovePseudoThreat(hostile);
 
@@ -333,15 +309,15 @@ namespace Perpetuum.Zones.NpcSystem
                 return;
             }
 
-            var group = Group;
+            ISmartCreatureGroup group = Group;
             if (@group == null)
             {
                 return;
             }
 
-            var multipliedThreat = Threat.Multiply(threat, 0.5);
+            Threat multipliedThreat = Threat.Multiply(threat, 0.5);
 
-            foreach (var member in @group.Members)
+            foreach (SmartCreature member in @group.Members)
             {
                 if (member == this)
                 {
@@ -362,22 +338,12 @@ namespace Perpetuum.Zones.NpcSystem
         /// <returns>If the target can be a threat</returns>
         public bool CanAddThreatTo(Unit target, Threat threat)
         {
-            if (threatManager.Contains(target))
-            {
-                return true;
-            }
-
-            if (Behavior.Type == BehaviorType.Passive)
-            {
-                return false;
-            }
-
-            return threat.type != ThreatType.Undefined;
+            return ThreatManager.Contains(target) || (Behavior.Type != BehaviorType.Passive && threat.type != ThreatType.Undefined);
         }
 
         public void AddAssistThreat(Unit assistant, Unit target, Threat threat)
         {
-            if (!threatManager.Contains(target))
+            if (!ThreatManager.Contains(target))
             {
                 return;
             }
@@ -443,7 +409,7 @@ namespace Perpetuum.Zones.NpcSystem
         {
             base.OnDamageTaken(source, e);
 
-            var player = Zone.ToPlayerOrGetOwnerPlayer(source);
+            Player player = Zone.ToPlayerOrGetOwnerPlayer(source);
 
             if (player == null)
             {
@@ -465,16 +431,16 @@ namespace Perpetuum.Zones.NpcSystem
 
         private void RemovePseudoThreat(Unit hostile)
         {
-            pseudoThreatManager.Remove(hostile);
+            PseudoThreatManager.Remove(hostile);
         }
 
         private void UpdatePseudoThreats(TimeSpan time)
         {
-            pseudoUpdateFreq.Update(time);
+            _ = pseudoUpdateFreq.Update(time);
 
             if (pseudoUpdateFreq.Passed)
             {
-                pseudoThreatManager.Update(pseudoUpdateFreq.Elapsed);
+                PseudoThreatManager.Update(pseudoUpdateFreq.Elapsed);
                 pseudoUpdateFreq.Reset();
             }
         }
@@ -491,14 +457,14 @@ namespace Perpetuum.Zones.NpcSystem
                 return;
             }
 
-            var group = Group;
+            ISmartCreatureGroup group = Group;
 
             if (group == null)
             {
                 return;
             }
 
-            foreach (var member in group.Members.Where(flockMember => flockMember != this))
+            foreach (SmartCreature member in group.Members.Where(flockMember => flockMember != this))
             {
                 member.HelpingFor(this);
             }
@@ -513,7 +479,7 @@ namespace Perpetuum.Zones.NpcSystem
 
             ThreatManager.Clear();
 
-            foreach (var hostile in caller.ThreatManager.Hostiles)
+            foreach (Hostile hostile in caller.ThreatManager.Hostiles)
             {
                 AddThreat(hostile.Unit, new Threat(ThreatType.Undefined, hostile.Threat), true);
             }

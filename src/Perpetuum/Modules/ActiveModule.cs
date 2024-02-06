@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using Perpetuum.Containers;
 using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
@@ -15,6 +12,9 @@ using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.Terrains;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Perpetuum.Modules
 {
@@ -31,7 +31,7 @@ namespace Perpetuum.Modules
         public Lock Lock
         {
             [CanBeNull]
-            get { return _lock; }
+            get => _lock;
             set
             {
                 if (_lock != null)
@@ -54,8 +54,8 @@ namespace Perpetuum.Modules
         {
             get
             {
-                var volume = base.Volume;
-                var ammo = GetAmmo();
+                double volume = base.Volume;
+                Items.Ammos.Ammo ammo = GetAmmo();
 
                 if (ammo != null)
                 {
@@ -74,10 +74,10 @@ namespace Perpetuum.Modules
 
         public double Falloff => falloff.Value;
 
-        protected ActiveModule(CategoryFlags ammoCategoryFlags,bool ranged = false)
+        protected ActiveModule(CategoryFlags ammoCategoryFlags, bool ranged = false)
         {
             IsRanged = ranged;
-            coreUsage = new ModuleProperty(this,AggregateField.core_usage);
+            coreUsage = new ModuleProperty(this, AggregateField.core_usage);
             AddProperty(coreUsage);
             cycleTime = new CycleTimeProperty(this);
             AddProperty(cycleTime);
@@ -114,7 +114,7 @@ namespace Perpetuum.Modules
 
         public override void UpdateRelatedProperties(AggregateField field)
         {
-            var ammo = GetAmmo();
+            Items.Ammos.Ammo ammo = GetAmmo();
 
             ammo?.UpdateRelatedProperties(field);
             base.UpdateRelatedProperties(field);
@@ -124,7 +124,7 @@ namespace Perpetuum.Modules
         {
             Debug.Assert(ParentRobot != null, "ParentRobot != null");
 
-            return !IsRanged || ParentRobot.IsInRangeOf3D(position,OptimalRange + Falloff);
+            return !IsRanged || ParentRobot.IsInRangeOf3D(position, OptimalRange + Falloff);
         }
 
         public void ForceUpdate()
@@ -142,24 +142,24 @@ namespace Perpetuum.Modules
         {
             base.UpdateAllProperties();
 
-            var ammo = GetAmmo();
+            Items.Ammos.Ammo ammo = GetAmmo();
 
             ammo?.UpdateAllProperties();
         }
 
         public override void Unequip(Container container)
         {
-            UnequipAmmoToContainer(container);
+            _ = UnequipAmmoToContainer(container);
             base.Unequip(container);
         }
 
         public override Dictionary<string, object> ToDictionary()
         {
-            var result = base.ToDictionary();
+            Dictionary<string, object> result = base.ToDictionary();
 
             result.Add(k.ammoCategoryFlags, (long)_ammoCategoryFlags);
 
-            var ammo = GetAmmo();
+            Items.Ammos.Ammo ammo = GetAmmo();
 
             if (ammo == null)
             {
@@ -178,21 +178,22 @@ namespace Perpetuum.Modules
         {
             if (parentPlayer != null)
             {
-                (unitLockTarget.Target as Player)?.CheckPvp().ThrowIfError();
+                _ = ((unitLockTarget.Target as Player)?.CheckPvp().ThrowIfError());
+                _ = ((unitLockTarget.Target as RemoteControlledCreature)?.Player?.CheckPvp().ThrowIfError());
             }
         }
 
         protected Lock GetLock()
         {
-            var currentLock = Lock.ThrowIfNull(ErrorCodes.LockTargetNotFound);
+            Lock currentLock = Lock.ThrowIfNull(ErrorCodes.LockTargetNotFound);
 
-            currentLock.State.ThrowIfNotEqual(LockState.Locked, ErrorCodes.LockIsInProgress);
+            _ = currentLock.State.ThrowIfNotEqual(LockState.Locked, ErrorCodes.LockIsInProgress);
 
             if (currentLock is UnitLock unitLockTarget)
             {
                 IsInRange(unitLockTarget.Target.CurrentPosition).ThrowIfFalse(ErrorCodes.TargetOutOfRange);
 
-                var parentPlayer = ParentRobot as Player;
+                Player parentPlayer = ParentRobot as Player;
 
                 if (parentPlayer is null && ParentRobot is RemoteControlledCreature)
                 {
@@ -223,7 +224,7 @@ namespace Perpetuum.Modules
 
         protected void CreateBeam(Unit target, BeamState beamState)
         {
-            CreateBeam(target, beamState, 0, 0, 0);
+            _ = CreateBeam(target, beamState, 0, 0, 0);
         }
 
         protected int CreateBeam(Unit target, BeamState beamState, int duration, double bulletTime)
@@ -233,12 +234,12 @@ namespace Perpetuum.Modules
 
         protected void CreateBeam(Position location, BeamState beamState)
         {
-            CreateBeam(location, beamState, 0, 0, 0);
+            _ = CreateBeam(location, beamState, 0, 0, 0);
         }
 
         protected int CreateBeam(Position location, BeamState beamState, int duration, double bulletTime)
         {
-            return CreateBeam(location, beamState, duration, bulletTime,0);
+            return CreateBeam(location, beamState, duration, bulletTime, 0);
         }
 
         protected override void OnUpdateProperty(AggregateField field)
@@ -247,45 +248,45 @@ namespace Perpetuum.Modules
             {
                 case AggregateField.core_usage:
                 case AggregateField.effect_core_usage_gathering_modifier:
-                {
-                    coreUsage.Update();
+                    {
+                        coreUsage.Update();
 
-                    break;
-                }
+                        break;
+                    }
                 case AggregateField.cycle_time:
                 case AggregateField.effect_weapon_cycle_time_modifier:
                 case AggregateField.effect_gathering_cycle_time_modifier:
-                {
-                    cycleTime.Update();
+                    {
+                        cycleTime.Update();
 
-                    break;
-                }
+                        break;
+                    }
                 case AggregateField.optimal_range:
                 case AggregateField.effect_optimal_range_modifier:
                 case AggregateField.effect_ew_optimal_range_modifier:
                 case AggregateField.module_missile_range_modifier:
                 case AggregateField.effect_missile_range_modifier:
-                {
-                    optimalRange.Update();
+                    {
+                        optimalRange.Update();
 
-                    break;
-                }
+                        break;
+                    }
                 case AggregateField.falloff:
-                {
-                    falloff.Update();
+                    {
+                        falloff.Update();
 
-                    break;
-                }
+                        break;
+                    }
             }
 
             base.OnUpdateProperty(field);
         }
 
-        protected double ModifyValueByOptimalRange(Unit target,double value)
+        protected double ModifyValueByOptimalRange(Unit target, double value)
         {
             Debug.Assert(ParentRobot != null, "ParentRobot != null");
 
-            var distance = ParentRobot.GetDistance(target);
+            double distance = ParentRobot.GetDistance(target);
 
             if (distance <= OptimalRange)
             {
@@ -297,8 +298,8 @@ namespace Perpetuum.Modules
                 return 0.0;
             }
 
-            var x = (distance - OptimalRange) / Falloff;
-            var m = Math.Cos(x * Math.PI) / 2 + 0.5;
+            double x = (distance - OptimalRange) / Falloff;
+            double m = (Math.Cos(x * Math.PI) / 2) + 0.5;
 
             return value * m;
         }
@@ -307,7 +308,7 @@ namespace Perpetuum.Modules
         {
             Debug.Assert(ParentRobot != null, "ParentRobot != null");
 
-            var visibility = ParentRobot.GetVisibility(target);
+            IUnitVisibility visibility = ParentRobot.GetVisibility(target);
 
             return visibility?.GetLineOfSight(IsCategory(CategoryFlags.cf_missiles)) ?? LOSResult.None;
         }
@@ -316,18 +317,18 @@ namespace Perpetuum.Modules
         {
             Debug.Assert(ParentRobot != null, "ParentRobot != null");
 
-            var losResult = ParentRobot.Zone.IsInLineOfSight(ParentRobot,location,IsCategory(CategoryFlags.cf_missiles));
+            LOSResult losResult = ParentRobot.Zone.IsInLineOfSight(ParentRobot, location, IsCategory(CategoryFlags.cf_missiles));
 
             return losResult;
         }
 
         protected bool LOSCheckAndCreateBeam(Unit target)
         {
-            var result = GetLineOfSight(target);
+            LOSResult result = GetLineOfSight(target);
 
             if (result.hit)
             {
-                var beamState = (result.blockingFlags != BlockingFlags.Undefined) ? BeamState.AlignToTerrain : BeamState.Hit;
+                BeamState beamState = (result.blockingFlags != BlockingFlags.Undefined) ? BeamState.AlignToTerrain : BeamState.Hit;
 
                 CreateBeam(result.position, beamState);
 
@@ -351,7 +352,7 @@ namespace Perpetuum.Modules
                 return;
             }
 
-            var shutdown = @lock.State == LockState.Disabled || (ED.AttributeFlags.PrimaryLockedTarget && !@lock.Primary);
+            bool shutdown = @lock.State == LockState.Disabled || (ED.AttributeFlags.PrimaryLockedTarget && !@lock.Primary);
 
             if (!shutdown)
             {
@@ -364,7 +365,7 @@ namespace Perpetuum.Modules
 
         private BeamType GetBeamType()
         {
-            var ammo = GetAmmo();
+            Items.Ammos.Ammo ammo = GetAmmo();
 
             return ammo != null
                 ? BeamHelper.GetBeamByDefinition(ammo.Definition)
@@ -373,14 +374,14 @@ namespace Perpetuum.Modules
 
         private void SendModuleStateToPlayer()
         {
-            var state = State;
+            IModuleState state = State;
 
             if (!(ParentRobot is Player player))
             {
                 return;
             }
 
-            var packet = new Packet(ZoneCommand.ModuleChangeState);
+            Packet packet = new Packet(ZoneCommand.ModuleChangeState);
 
             Debug.Assert(ParentComponent != null, "ParentComponent != null");
             packet.AppendByte((byte)ParentComponent.Type);
@@ -403,8 +404,8 @@ namespace Perpetuum.Modules
 
         private int CreateBeam(Unit target, BeamState beamState, int duration, double bulletTime, int visibility)
         {
-            var delay = 0;
-            var beamType = GetBeamType();
+            int delay = 0;
+            BeamType beamType = GetBeamType();
 
             if (beamType <= 0)
             {
@@ -420,8 +421,8 @@ namespace Perpetuum.Modules
 
             Debug.Assert(ParentComponent != null, "ParentComponent != null");
 
-            var slot = ParentComponent.Type == RobotComponentType.Chassis ? Slot : 0xff; // -1
-            var builder = Beam.NewBuilder().WithType(beamType)
+            int slot = ParentComponent.Type == RobotComponentType.Chassis ? Slot : 0xff; // -1
+            BeamBuilder builder = Beam.NewBuilder().WithType(beamType)
                 .WithSlot(slot)
                 .WithSource(ParentRobot)
                 .WithState(beamState)
@@ -437,8 +438,8 @@ namespace Perpetuum.Modules
 
         private int CreateBeam(Position location, BeamState beamState, int duration, double bulletTime, int visibility)
         {
-            var delay = 0;
-            var beamType = GetBeamType();
+            int delay = 0;
+            BeamType beamType = GetBeamType();
 
             if (beamType <= 0)
             {
@@ -454,8 +455,8 @@ namespace Perpetuum.Modules
 
             Debug.Assert(ParentComponent != null, "ParentComponent != null");
 
-            var slot = ParentComponent.Type == RobotComponentType.Chassis ? Slot : 0xff; // -1
-            var builder = Beam.NewBuilder().WithType(beamType)
+            int slot = ParentComponent.Type == RobotComponentType.Chassis ? Slot : 0xff; // -1
+            BeamBuilder builder = Beam.NewBuilder().WithType(beamType)
                 .WithSlot(slot)
                 .WithSource(ParentRobot)
                 .WithState(beamState)
@@ -476,7 +477,7 @@ namespace Perpetuum.Modules
                 return;
             }
 
-            var packet = new CombatLogPacket(error, this, _lock);
+            CombatLogPacket packet = new CombatLogPacket(error, this, _lock);
 
             player.Session.SendPacket(packet);
         }

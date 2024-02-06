@@ -1,10 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Threading;
-using System.Threading.Tasks;
 using Perpetuum.Builders;
 using Perpetuum.Groups.Corporations;
 using Perpetuum.IO;
@@ -12,6 +5,13 @@ using Perpetuum.Log;
 using Perpetuum.Modules.Weapons;
 using Perpetuum.Units;
 using Perpetuum.Zones.Terrains;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Perpetuum.Zones
 {
@@ -23,9 +23,9 @@ namespace Perpetuum.Zones
 
     public static class LayerFileIOExtensions
     {
-        public static T[] Load<T>(this ILayerFileIO dataIO,IZone zone,LayerType layerType) where T : struct
+        public static T[] Load<T>(this ILayerFileIO dataIO, IZone zone, LayerType layerType) where T : struct
         {
-            return dataIO.LoadLayerData<T>(zone,layerType.ToString());
+            return dataIO.LoadLayerData<T>(zone, layerType.ToString());
         }
     }
 
@@ -38,28 +38,30 @@ namespace Perpetuum.Zones
             _fileSystem = fileSystem;
         }
 
-        public T[] LoadLayerData<T>(IZone zone,string name) where T : struct
+        public T[] LoadLayerData<T>(IZone zone, string name) where T : struct
         {
-            var path = zone.CreateTerrainDataFilename(name);
-            var data = _fileSystem.ReadLayer<T>(path);
+            string path = zone.CreateTerrainDataFilename(name);
+            T[] data = _fileSystem.ReadLayer<T>(path);
             Logger.Info("Layer data loaded. (" + name + ") zone:" + zone.Id);
             return data;
         }
 
         public void SaveLayerToDisk<T>(IZone zone, ILayer<T> layer) where T : struct
         {
-            var baseFilename = zone.CreateTerrainDataFilename(layer.LayerType.ToString().ToLower(),"");
+            string baseFilename = zone.CreateTerrainDataFilename(layer.LayerType.ToString().ToLower(), "");
 
-            using (var md5 = MD5.Create())
+            using (MD5 md5 = MD5.Create())
             {
-                var tmpFn = baseFilename + "tmp" + DateTime.Now.Ticks + ".bin";
-                var layerData = layer.RawData.ToByteArray();
-                _fileSystem.WriteLayer(tmpFn,layerData);
+                string tmpFn = baseFilename + "tmp" + DateTime.Now.Ticks + ".bin";
+                byte[] layerData = layer.RawData.ToByteArray();
+                _fileSystem.WriteLayer(tmpFn, layerData);
 
                 if (!md5.ComputeHash(layerData).SequenceEqual(md5.ComputeHash(_fileSystem.ReadLayerAsByteArray(tmpFn))))
+                {
                     return;
+                }
 
-                _fileSystem.MoveLayerFile(tmpFn,baseFilename + "bin");
+                _fileSystem.MoveLayerFile(tmpFn, baseFilename + "bin");
                 Logger.Info("Layer saved. (" + baseFilename + ")");
             }
         }
@@ -67,7 +69,7 @@ namespace Perpetuum.Zones
 
     public static partial class ZoneExtensions
     {
-        public static List<Point> FindWalkableArea(this IZone zone, Area area, int size,double slope = 4.0)
+        public static List<Point> FindWalkableArea(this IZone zone, Area area, int size, double slope = 4.0)
         {
             area = area.Clamp(zone.Size);
             while (true)
@@ -77,28 +79,31 @@ namespace Perpetuum.Zones
                 {
                     startPosition = area.GetRandomPosition();
 
-                    if (!zone.Terrain.Blocks.GetValue(startPosition).Island && zone.IsWalkable(startPosition,slope))
+                    if (!zone.Terrain.Blocks.GetValue(startPosition).Island && zone.IsWalkable(startPosition, slope))
+                    {
                         break;
+                    }
                 }
 
-                var p = FindWalkableArea(zone, startPosition, area, size,slope);
+                List<Point> p = FindWalkableArea(zone, startPosition, area, size, slope);
                 if (p != null)
+                {
                     return p;
+                }
 
                 Thread.Sleep(1);
             }
         }
 
         [CanBeNull]
-        public static List<Point> FindWalkableArea(this IZone zone,Point startPosition, Area area, int size,double slope = 4.0)
+        public static List<Point> FindWalkableArea(this IZone zone, Point startPosition, Area area, int size, double slope = 4.0)
         {
-            var q = new Queue<Point>();
+            Queue<Point> q = new Queue<Point>();
             q.Enqueue(startPosition);
-            var closed = new HashSet<Point> {startPosition};
+            HashSet<Point> closed = new HashSet<Point> { startPosition };
 
-            var result = new List<Point>();
-            Point position;
-            while (q.TryDequeue(out position))
+            List<Point> result = new List<Point>();
+            while (q.TryDequeue(out Point position))
             {
                 result.Add(position);
 
@@ -108,15 +113,19 @@ namespace Perpetuum.Zones
                     return result;
                 }
 
-                foreach (var np in position.GetNonDiagonalNeighbours())
+                foreach (Point np in position.GetNonDiagonalNeighbours())
                 {
                     if (closed.Contains(np))
+                    {
                         continue;
+                    }
 
-                    closed.Add(np);
+                    _ = closed.Add(np);
 
-                    if (!area.Contains(np) || !zone.IsWalkable(np,slope))
+                    if (!area.Contains(np) || !zone.IsWalkable(np, slope))
+                    {
                         continue;
+                    }
 
                     q.Enqueue(np);
                 }
@@ -136,18 +145,18 @@ namespace Perpetuum.Zones
         /// <returns>True if tiles checked are walkable</returns>
         public static bool CheckLinearPath(this IZone zone, Point start, Point end, double slope = 4.0)
         {
-            var x = start.X;
-            var y = start.Y;
-            var deltaX = Math.Abs(end.X - x);
-            var deltaY = Math.Abs(end.Y - y);
-            var travelDist = deltaX + deltaY;
-            var xIncrement = (end.X > x) ? 1 : -1;
-            var yIncrement = (end.Y > y) ? 1 : -1;
-            var error = deltaX - deltaY;
+            int x = start.X;
+            int y = start.Y;
+            int deltaX = Math.Abs(end.X - x);
+            int deltaY = Math.Abs(end.Y - y);
+            int travelDist = deltaX + deltaY;
+            int xIncrement = (end.X > x) ? 1 : -1;
+            int yIncrement = (end.Y > y) ? 1 : -1;
+            int error = deltaX - deltaY;
             deltaX *= 2;
             deltaY *= 2;
-            
-            for (var i = 0; i <= travelDist; i++)
+
+            for (int i = 0; i <= travelDist; i++)
             {
                 if (!zone.IsWalkable(x, y, slope))
                 {
@@ -170,19 +179,19 @@ namespace Perpetuum.Zones
 
         public static bool IsTerrainConditionsMatchInRange(this IZone zone, Position centerPosition, int range, double slope)
         {
-            var totalTiles = range * range * 4;
+            int totalTiles = range * range * 4;
 
-            var illegalsFound = 0;
+            int illegalsFound = 0;
 
-            for (var j = centerPosition.intY - range; j < centerPosition.intY + range; j++)
+            for (int j = centerPosition.intY - range; j < centerPosition.intY + range; j++)
             {
-                for (var i = centerPosition.intX - range; i < centerPosition.intX + range; i++)
+                for (int i = centerPosition.intX - range; i < centerPosition.intX + range; i++)
                 {
-                    var cPos = new Position(i, j);
+                    Position cPos = new Position(i, j);
 
                     if (centerPosition.IsInRangeOf2D(cPos, range))
                     {
-                        var blockInfo = zone.Terrain.Blocks.GetValue(i, j);
+                        BlockingInfo blockInfo = zone.Terrain.Blocks.GetValue(i, j);
 
                         if (blockInfo.Height > 0 || blockInfo.NonNaturally || blockInfo.Plant || !zone.Terrain.Slope.CheckSlope(cPos.intX, cPos.intY, slope))
                         {
@@ -192,36 +201,38 @@ namespace Perpetuum.Zones
                 }
             }
 
-            var troubleFactor = illegalsFound / (double)totalTiles;
+            double troubleFactor = illegalsFound / (double)totalTiles;
 
             Logger.Info("trouble factor: " + troubleFactor);
 
             if (troubleFactor > 0.5)
             {
-                Logger.Warning("illegal tiles coverage: " + troubleFactor * 100 + "%");
+                Logger.Warning("illegal tiles coverage: " + (troubleFactor * 100) + "%");
                 return false;
             }
 
             return true;
         }
 
-        public static void DoAoeDamageAsync(this IZone zone,IBuilder<DamageInfo> damageBuilder)
+        public static void DoAoeDamageAsync(this IZone zone, IBuilder<DamageInfo> damageBuilder)
         {
-            Task.Run(() => DoAoeDamage(zone, damageBuilder));
+            _ = Task.Run(() => DoAoeDamage(zone, damageBuilder));
         }
 
-        public static void DoAoeDamage(this IZone zone,IBuilder<DamageInfo> damageBuilder)
+        public static void DoAoeDamage(this IZone zone, IBuilder<DamageInfo> damageBuilder)
         {
-            var damageInfo = damageBuilder.Build();
-            var units = zone.Units
-                .WithinRange(damageInfo.sourcePosition, damageInfo.Range);
-                //.Where(x=>x.HasTeleportSicknessEffect);
+            DamageInfo damageInfo = damageBuilder.Build();
+            IEnumerable<Unit> units = zone.Units
+                .WithinRange(damageInfo.sourcePosition, damageInfo.Range)
+                .Where(x => !x.HasTeleportSicknessEffect || x.HasPvpEffect);
 
-            foreach (var unit in units)
+            foreach (Unit unit in units)
             {
-                var losResult = zone.IsInLineOfSight(damageInfo.attacker, unit, false);
+                LOSResult losResult = zone.IsInLineOfSight(damageInfo.attacker, unit, false);
                 if (losResult.hit)
+                {
                     continue;
+                }
 
                 unit.TakeDamage(damageInfo);
             }
@@ -246,16 +257,20 @@ namespace Perpetuum.Zones
 
         public static Position FindPassablePointInRadius(this IZone zone, Position origin, int radius)
         {
-            var counter = 0;
+            int counter = 0;
             while (true)
             {
                 counter++;
                 if (counter > MAX_SAMPLES)
-                    return default(Position);
+                {
+                    return default;
+                }
 
-                var randomPos = origin.GetRandomPositionInRange2D(0, radius).Clamp(zone.Size);
+                Position randomPos = origin.GetRandomPositionInRange2D(0, radius).Clamp(zone.Size);
                 if (zone.Terrain.IsPassable(randomPos))
+                {
                     return randomPos;
+                }
             }
         }
 
@@ -264,16 +279,16 @@ namespace Perpetuum.Zones
             return x >= 0 && x < zone.Size.Width && y >= 0 && y < zone.Size.Height;
         }
 
-        public static void UpdateCorporation(this IZone zone,CorporationCommand command,Dictionary<string,object> data)
+        public static void UpdateCorporation(this IZone zone, CorporationCommand command, Dictionary<string, object> data)
         {
-            zone.CorporationHandler.HandleCorporationCommand(command,data);
+            zone.CorporationHandler.HandleCorporationCommand(command, data);
         }
 
-        public static Position ToWorldPosition(this IZone zone,Position position)
+        public static Position ToWorldPosition(this IZone zone, Position position)
         {
-            var zx = zone.Configuration.WorldPosition.X;
-            var zy = zone.Configuration.WorldPosition.Y;
-            return position.GetWorldPosition(zx,zy);
+            int zx = zone.Configuration.WorldPosition.X;
+            int zy = zone.Configuration.WorldPosition.Y;
+            return position.GetWorldPosition(zx, zy);
         }
     }
 }

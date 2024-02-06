@@ -38,6 +38,14 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
+            if (smartCreature is RemoteControlledCreature remoteControlledCreature &&
+                player.Zone.Configuration.IsAlpha &&
+                !player.HasPvpEffect &&
+                !remoteControlledCreature.Player.HasPvpEffect)
+            {
+                return;
+            }
+
             if (smartCreature.ThreatManager.Hostiles.Any(h => h.Unit.Eid == player.Eid))
             {
                 return;
@@ -48,7 +56,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            var threat = Threat.BODY_PULL + FastRandom.NextDouble(0, 5);
+            double threat = Threat.BODY_PULL + FastRandom.NextDouble(0, 5);
 
             smartCreature.AddThreat(player, new Threat(ThreatType.Bodypull, threat));
         }
@@ -65,18 +73,18 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            var group = smartCreature.Group;
+            Flocks.ISmartCreatureGroup group = smartCreature.Group;
 
             if (group != null && group.Members.Any(m => m.ThreatManager.Contains(bomb)))
             {
                 return;
             }
 
-            var threat = Threat.BODY_PULL;
+            double threat = Threat.BODY_PULL;
 
             if (smartCreature.ThreatManager.IsThreatened)
             {
-                var h = smartCreature.ThreatManager.GetMostHatedHostile();
+                Hostile h = smartCreature.ThreatManager.GetMostHatedHostile();
 
                 if (h != null)
                 {
@@ -110,7 +118,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            var threat = Threat.BODY_PULL + FastRandom.NextDouble(0, 5);
+            double threat = Threat.BODY_PULL + FastRandom.NextDouble(0, 5);
 
             smartCreature.AddThreat(npc, new Threat(ThreatType.Bodypull, threat));
         }
@@ -138,7 +146,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            var threat = Threat.BODY_PULL + FastRandom.NextDouble(0, 5);
+            double threat = Threat.BODY_PULL + FastRandom.NextDouble(0, 5);
 
             smartCreature.AddThreat(sentryTurret, new Threat(ThreatType.Bodypull, threat));
         }
@@ -166,7 +174,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            var threat = Threat.BODY_PULL + FastRandom.NextDouble(0, 5);
+            double threat = Threat.BODY_PULL + FastRandom.NextDouble(0, 5);
 
             smartCreature.AddThreat(combatDrone, new Threat(ThreatType.Bodypull, threat));
         }
