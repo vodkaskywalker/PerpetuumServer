@@ -1,12 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.Caching;
-using System.Threading.Tasks;
-using System.Transactions;
-using Newtonsoft.Json.Linq;
-using System.Windows.Input;
 using Perpetuum.Common.Loggers.Transaction;
 using Perpetuum.Containers;
 using Perpetuum.Data;
@@ -25,12 +16,19 @@ using Perpetuum.Services.TechTree;
 using Perpetuum.Units.DockingBases;
 using Perpetuum.Wallets;
 using Perpetuum.Zones;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Runtime.Caching;
+using System.Threading.Tasks;
+using System.Transactions;
 
 namespace Perpetuum.Accounting.Characters
 {
     public delegate Character CharacterFactory(int id);
 
-    public class Character :  IEquatable<Character>,IComparable<Character>
+    public class Character : IEquatable<Character>, IComparable<Character>
     {
         private static Character _none;
 
@@ -92,15 +90,15 @@ namespace Perpetuum.Accounting.Characters
         private const string LAST_RESPEC = "LastRespec";
 
         public static ObjectCache CharacterCache { get; set; }
-      
+
         public static CharacterFactory CharacterFactory { get; set; }
 
         public Character()
         {
-            
+
         }
 
-        public Character(int id,IAccountManager accountManager,
+        public Character(int id, IAccountManager accountManager,
                                 Lazy<IZoneManager> zoneManager,
                                 DockingBaseHelper dockingBaseHelper,
                                 RobotHelper robotHelper,
@@ -127,7 +125,9 @@ namespace Perpetuum.Accounting.Characters
             _walletHelper = walletHelper;
 
             if (id <= 0)
+            {
                 id = 0;
+            }
 
             Id = id;
         }
@@ -168,7 +168,7 @@ namespace Perpetuum.Accounting.Characters
             get => ReadValueFromDb<bool>(FIELD_OFFENSIVE_NICK);
             set
             {
-                WriteValueToDb(FIELD_OFFENSIVE_NICK,value);
+                WriteValueToDb(FIELD_OFFENSIVE_NICK, value);
                 WriteValueToDb(FIELD_NICK_CORRECTED, !value);
             }
         }
@@ -287,13 +287,10 @@ namespace Perpetuum.Accounting.Characters
         {
             get
             {
-                var x = ReadValueFromDb<double?>(FIELD_POSITION_X);
-                var y = ReadValueFromDb<double?>(FIELD_POSITION_Y);
+                double? x = ReadValueFromDb<double?>(FIELD_POSITION_X);
+                double? y = ReadValueFromDb<double?>(FIELD_POSITION_Y);
 
-                if (x == null || y == null)
-                    return null;
-
-                return new Position((double) x,(double) y);
+                return x == null || y == null ? null : (Position?)new Position((double)x, (double)y);
             }
             set
             {
@@ -302,13 +299,13 @@ namespace Perpetuum.Accounting.Characters
 
                 if (value != null)
                 {
-                    var p = (Position) value;
+                    Position p = (Position)value;
                     x = p.X;
                     y = p.Y;
                 }
 
-                WriteValueToDb(FIELD_POSITION_X,x);
-                WriteValueToDb(FIELD_POSITION_Y,y);
+                WriteValueToDb(FIELD_POSITION_X, x);
+                WriteValueToDb(FIELD_POSITION_Y, y);
             }
         }
 
@@ -319,7 +316,7 @@ namespace Perpetuum.Accounting.Characters
             {
                 WriteValueToDb(FIELD_CORPORATION_EID, value);
 
-                Db.Query().CommandText("update entities set parent=@corporationEID where eid=@characterEID")
+                _ = Db.Query().CommandText("update entities set parent=@corporationEID where eid=@characterEID")
                     .SetParameter("@corporationEID", value)
                     .SetParameter("@characterEID", Eid)
                     .ExecuteNonQuery().ThrowIfEqual(0, ErrorCodes.SQLUpdateError);
@@ -329,25 +326,25 @@ namespace Perpetuum.Accounting.Characters
         public long DefaultCorporationEid
         {
             get => ReadValueFromDb<long>(FIELD_DEFAULT_CORPORATION_EID);
-            set => WriteValueToDb(FIELD_DEFAULT_CORPORATION_EID,value);
+            set => WriteValueToDb(FIELD_DEFAULT_CORPORATION_EID, value);
         }
 
         public long AllianceEid
         {
             get => ReadValueFromDb<long?>(FIELD_ALLIANCE_EID) ?? 0L;
-            set => WriteValueToDb(FIELD_ALLIANCE_EID,value == 0L ? (object) null : value);
+            set => WriteValueToDb(FIELD_ALLIANCE_EID, value == 0L ? (object)null : value);
         }
 
         public long ActiveRobotEid
         {
             get => ReadValueFromDb<long?>(FIELD_ACTIVE_CHASSIS) ?? 0;
-            set => WriteValueToDb(FIELD_ACTIVE_CHASSIS,value == 0L ? (object)null : value);
+            set => WriteValueToDb(FIELD_ACTIVE_CHASSIS, value == 0L ? (object)null : value);
         }
 
         public long CurrentDockingBaseEid
         {
             get => ReadValueFromDb<long>(FIELD_BASE_EID);
-            set => WriteValueToDb(FIELD_BASE_EID,value);
+            set => WriteValueToDb(FIELD_BASE_EID, value);
         }
 
         public DateTime NextAvailableUndockTime
@@ -379,29 +376,29 @@ namespace Perpetuum.Accounting.Characters
         public long? HomeBaseEid
         {
             get => ReadValueFromDb<long?>(FIELD_HOME_BASE_EID);
-            set => WriteValueToDb(FIELD_HOME_BASE_EID,value);
+            set => WriteValueToDb(FIELD_HOME_BASE_EID, value);
         }
 
-        private static string GetCacheKey(string prefix,object key)
+        private static string GetCacheKey(string prefix, object key)
         {
             return $"{prefix}_{key}";
         }
 
         public void RemoveFromCache()
         {
-            CharacterCache.Remove(GetCacheKey(CACHE_KEY_ID_TO_EID, Id));
-            CharacterCache.Remove(GetCacheKey(CACHE_KEY_EID_TO_ID, Eid));
+            _ = CharacterCache.Remove(GetCacheKey(CACHE_KEY_ID_TO_EID, Id));
+            _ = CharacterCache.Remove(GetCacheKey(CACHE_KEY_EID_TO_ID, Eid));
             RemoveAccountIdFromCache();
         }
 
         public void UpdateExtensionsCache(CharacterExtensionCollection extensions)
         {
-            CharacterCache.Set(this.Id.ToString(), extensions, new TimeSpan(0,1,0));
+            CharacterCache.Set(Id.ToString(), extensions, new TimeSpan(0, 1, 0));
         }
 
         private void RemoveAccountIdFromCache()
         {
-            CharacterCache.Remove(GetCacheKey(CACHE_KEY_ID_TO_ACCOUNTID, Id));
+            _ = CharacterCache.Remove(GetCacheKey(CACHE_KEY_ID_TO_ACCOUNTID, Id));
         }
 
         public override int GetHashCode()
@@ -413,31 +410,21 @@ namespace Perpetuum.Accounting.Characters
         {
             return Id.CompareTo(other?.Id);
         }
-        
+
         public override bool Equals(object obj)
         {
-            var other = obj as Character;
+            Character other = obj as Character;
             return other != Character.None && Equals(other);
         }
 
         public bool Equals(Character other)
         {
-            if (ReferenceEquals(null, other))
-                return false;
-            if (ReferenceEquals(this, other))
-                return true;
-            return Id == other.Id;
+            return !(other is null) && (ReferenceEquals(this, other) || Id == other.Id);
         }
 
         public static bool operator ==(Character left, Character right)
         {
-            if (ReferenceEquals(left, right))
-                return true;
-
-            if ((object)left == null || (object)right == null)
-                return false;
-
-            return left.Equals(right);
+            return ReferenceEquals(left, right) || (left is object && right is object && left.Equals(right));
         }
 
         public static bool operator !=(Character left, Character right)
@@ -457,7 +444,7 @@ namespace Perpetuum.Accounting.Characters
 
         private T GetValueFromCache<T>(string key)
         {
-            return CharacterCache.Get(CreateCacheKey(key),() => default(T));
+            return CharacterCache.Get(CreateCacheKey(key), () => default(T));
         }
 
         private void SetValueToCache<T>(string key, T value)
@@ -479,28 +466,28 @@ namespace Perpetuum.Accounting.Characters
 
         private static T ReadValueFromDb<T>(int id, string name)
         {
-            if (id == 0)
-                return default(T);
-
-            return Db.Query().CommandText("select " + name + " from characters where characterid = @id").SetParameter("@id",id).ExecuteScalar<T>();
+            return id == 0
+                ? default
+                : Db.Query().CommandText("select " + name + " from characters where characterid = @id").SetParameter("@id", id).ExecuteScalar<T>();
         }
 
         private static T ReadValueFromDb<T>(long eid, string name)
         {
-            if (eid == 0)
-                return default(T);
-
-            return Db.Query().CommandText("select " + name + " from characters where rooteid = @eid").SetParameter("@eid",eid).ExecuteScalar<T>();
+            return eid == 0
+                ? default
+                : Db.Query().CommandText("select " + name + " from characters where rooteid = @eid").SetParameter("@eid", eid).ExecuteScalar<T>();
         }
 
         private static void WriteValueToDb(int id, string name, object value)
         {
-            if ( id == 0 )
+            if (id == 0)
+            {
                 return;
+            }
 
-            Db.Query().CommandText("update characters set " + name + " = @value where characterid = @id")
-                .SetParameter("@id",id)
-                .SetParameter("@value",value)
+            _ = Db.Query().CommandText("update characters set " + name + " = @value where characterid = @id")
+                .SetParameter("@id", id)
+                .SetParameter("@value", value)
                 .ExecuteNonQuery().ThrowIfEqual(0, ErrorCodes.SQLUpdateError);
         }
 
@@ -508,9 +495,11 @@ namespace Perpetuum.Accounting.Characters
         public static Character GetByEid(long characterEid)
         {
             if (characterEid == 0L)
+            {
                 return None;
+            }
 
-            var characterId = GetIdByEid(characterEid);
+            int characterId = GetIdByEid(characterEid);
             return CharacterFactory(characterId);
         }
 
@@ -522,23 +511,17 @@ namespace Perpetuum.Accounting.Characters
 
         private static int GetCachedAccountId(int id)
         {
-            if (id == 0)
-                return 0;
-
-            return CharacterCache.Get(GetCacheKey(CACHE_KEY_ID_TO_ACCOUNTID,id), () => ReadValueFromDb<int>(id,FIELD_ACCOUNT_ID));
+            return id == 0 ? 0 : CharacterCache.Get(GetCacheKey(CACHE_KEY_ID_TO_ACCOUNTID, id), () => ReadValueFromDb<int>(id, FIELD_ACCOUNT_ID));
         }
 
         private static long GetEid(int id)
         {
-            if (id == 0)
-                return 0L;
-
-            return CharacterCache.Get(GetCacheKey(CACHE_KEY_ID_TO_EID, id), () => ReadValueFromDb<long>(id, FIELD_ROOT_EID));
+            return id == 0 ? 0L : CharacterCache.Get(GetCacheKey(CACHE_KEY_ID_TO_EID, id), () => ReadValueFromDb<long>(id, FIELD_ROOT_EID));
         }
 
         public static int GetIdByEid(long eid)
         {
-            return CharacterCache.Get(GetCacheKey(CACHE_KEY_EID_TO_ID, eid), () => ReadValueFromDb<int>(eid,FIELD_CHARACTER_ID));
+            return CharacterCache.Get(GetCacheKey(CACHE_KEY_EID_TO_ID, eid), () => ReadValueFromDb<int>(eid, FIELD_CHARACTER_ID));
         }
 
         public static bool Exists(int id)
@@ -546,11 +529,11 @@ namespace Perpetuum.Accounting.Characters
             return id != 0 && ReadValueFromDb<int>(id, FIELD_CHARACTER_ID) > 0;
         }
 
-        public static void CheckNickAndThrowIfFailed(string nick, AccessLevel accessLevel,Account issuerAccount)
+        public static void CheckNickAndThrowIfFailed(string nick, AccessLevel accessLevel, Account issuerAccount)
         {
             nick = nick.Trim();
-            nick.Length.ThrowIfLess(3, ErrorCodes.NickTooShort);
-            nick.Length.ThrowIfGreater(25, ErrorCodes.NickTooLong);
+            _ = nick.Length.ThrowIfLess(3, ErrorCodes.NickTooShort);
+            _ = nick.Length.ThrowIfGreater(25, ErrorCodes.NickTooLong);
             nick.AllowAscii().ThrowIfFalse(ErrorCodes.OnlyAsciiAllowed);
 
             if (!accessLevel.IsAdminOrGm())
@@ -559,7 +542,7 @@ namespace Perpetuum.Accounting.Characters
             }
 
             //check history 
-            var inHistory =
+            int inHistory =
             Db.Query().CommandText("select count(*) from characternickhistory where nick=@nick and accountid != @accountID")
                     .SetParameter("@accountID", issuerAccount.Id)
                     .SetParameter("@nick", nick)
@@ -568,9 +551,11 @@ namespace Perpetuum.Accounting.Characters
 
 
             //is nick belongs to an active of inavtive character
-            var owner = GetByNick(nick);
+            Character owner = GetByNick(nick);
             if (owner == Character.None)
+            {
                 return;
+            }
 
             // ok, now we know that the nick is used in the characters table, lets check ownership and timeouts!
 
@@ -578,8 +563,8 @@ namespace Perpetuum.Accounting.Characters
             owner.IsActive.ThrowIfTrue(ErrorCodes.NickTaken);
 
             //if the character is deleted and belongs to the issuer then it's ok
-            var b = owner.AccountId != issuerAccount.Id;
-            if (b && !(DateTime.Now.Subtract(owner.DeletedAt).TotalDays > 1))
+            bool b = owner.AccountId != issuerAccount.Id;
+            if (b && (DateTime.Now.Subtract(owner.DeletedAt).TotalDays <= 1))
             {
                 throw new PerpetuumException(ErrorCodes.NickTaken);
             }
@@ -593,13 +578,13 @@ namespace Perpetuum.Accounting.Characters
         {
             return Db.Query().CommandText("select characterid from characters where docked=1 and baseEID=@baseEID and active=1 and inUse=1")
                 .SetParameter("@baseEID", baseEid)
-                .Execute().Select(r => Get((int) r.GetValue<int>(0)));
+                .Execute().Select(r => Get(r.GetValue<int>(0)));
         }
 
         [UsedImplicitly]
         public static Character GetByNick(string nick)
         {
-            var id = Db.Query().CommandText("select characterid from characters where nick = @nick").SetParameter("@nick",nick).ExecuteScalar<int>();
+            int id = Db.Query().CommandText("select characterid from characters where nick = @nick").SetParameter("@nick", nick).ExecuteScalar<int>();
             return Get(id);
         }
 
@@ -617,8 +602,8 @@ namespace Perpetuum.Accounting.Characters
 
         public IDictionary<string, object> GetTransactionHistory(int offsetInDays)
         {
-            var later = DateTime.Now.AddDays(-offsetInDays);
-            var earlier = later.AddDays(-2);
+            DateTime later = DateTime.Now.AddDays(-offsetInDays);
+            DateTime earlier = later.AddDays(-2);
 
             const string sqlCmd = @"SELECT transactionType,
                                            amount,
@@ -630,7 +615,7 @@ namespace Perpetuum.Accounting.Characters
                                     FROM charactertransactions 
                                     WHERE characterid = @characterId AND transactiondate between @earlier AND @later and amount != 0";
 
-            var result = Db.Query().CommandText(sqlCmd)
+            Dictionary<string, object> result = Db.Query().CommandText(sqlCmd)
                 .SetParameter("@characterId", Id)
                 .SetParameter("@earlier", earlier)
                 .SetParameter("@later", later)
@@ -647,8 +632,8 @@ namespace Perpetuum.Accounting.Characters
 
         public void CheckNextAvailableUndockTimeAndThrowIfFailed()
         {
-            var nextAvailableUndockTime = NextAvailableUndockTime;
-            nextAvailableUndockTime.ThrowIfGreater(DateTime.Now, ErrorCodes.DockingTimerStillRunning, gex => gex.SetData("nextAvailable", nextAvailableUndockTime));
+            DateTime nextAvailableUndockTime = NextAvailableUndockTime;
+            _ = nextAvailableUndockTime.ThrowIfGreater(DateTime.Now, ErrorCodes.DockingTimerStillRunning, gex => gex.SetData("nextAvailable", nextAvailableUndockTime));
         }
 
         public void SendErrorMessage(Command command, ErrorCodes error)
@@ -663,61 +648,67 @@ namespace Perpetuum.Accounting.Characters
 
         public void CheckPrivilegedTransactionsAndThrowIfFailed()
         {
-            IsPrivilegedTransactionsAllowed().ThrowIfError();
+            _ = IsPrivilegedTransactionsAllowed().ThrowIfError();
         }
 
         public ErrorCodes IsPrivilegedTransactionsAllowed()
         {
-            var accessLevel = AccessLevel;
-            if (!accessLevel.IsAnyPrivilegeSet())
-                return ErrorCodes.NoError;
-
-            if (!accessLevel.IsAdminOrGm())
-                return ErrorCodes.AccessDenied;
-
-            return ErrorCodes.NoError;
+            AccessLevel accessLevel = AccessLevel;
+            return !accessLevel.IsAnyPrivilegeSet()
+                ? ErrorCodes.NoError
+                : !accessLevel.IsAdminOrGm() ? ErrorCodes.AccessDenied : ErrorCodes.NoError;
         }
 
         public bool IsRobotSelectedForOtherCharacter(long robotEid)
         {
-            var selectCheck = Db.Query().CommandText("select count(*) from characters where activechassis=@robotEID and characterID != @characterID")
+            int selectCheck = Db.Query().CommandText("select count(*) from characters where activechassis=@robotEID and characterID != @characterID")
                 .SetParameter("@characterID", Id).SetParameter("@robotEID", robotEid)
                 .ExecuteNonQuery();
 
             if (selectCheck <= 0)
+            {
                 return false;
+            }
 
             Logger.Error($"An evil attempt to select a robot twice happened. characterID:{Id} robotEID:{robotEid}");
             return true;
         }
 
-        public IWallet<double> GetWalletWithAccessCheck(bool useCorporationWallet,TransactionType transactionType,params CorporationRole[] roles)
+        public IWallet<double> GetWalletWithAccessCheck(bool useCorporationWallet, TransactionType transactionType, params CorporationRole[] roles)
         {
-            var thisCharacter = this;
-            return GetWallet(useCorporationWallet,transactionType,role =>
+            Character thisCharacter = this;
+            return GetWallet(useCorporationWallet, transactionType, role =>
             {
-                if (role.IsAnyRole(CorporationRole.CEO,CorporationRole.DeputyCEO,CorporationRole.Accountant))
+                if (role.IsAnyRole(CorporationRole.CEO, CorporationRole.DeputyCEO, CorporationRole.Accountant))
+                {
                     return true;
+                }
 
                 if (!role.IsAnyRole(CorporationRole.CEO))
-                    thisCharacter._corporationManager.IsInJoinOrLeave(thisCharacter).ThrowIfError();
+                {
+                    _ = thisCharacter._corporationManager.IsInJoinOrLeave(thisCharacter).ThrowIfError();
+                }
 
                 return role.IsAnyRole(roles);
             });
         }
 
-        public IWallet<double> GetWallet(bool useCorporationWallet,TransactionType transactionType,Predicate<CorporationRole> accessChecker = null)
+        public IWallet<double> GetWallet(bool useCorporationWallet, TransactionType transactionType, Predicate<CorporationRole> accessChecker = null)
         {
             if (!useCorporationWallet)
+            {
                 return GetWallet(transactionType);
+            }
 
-            var privateCorporation = GetPrivateCorporationOrThrow();
+            PrivateCorporation privateCorporation = GetPrivateCorporationOrThrow();
 
             if (accessChecker != null)
             {
-                var role = privateCorporation.GetMemberRole(this);
+                CorporationRole role = privateCorporation.GetMemberRole(this);
                 if (!accessChecker(role))
+                {
                     throw new PerpetuumException(ErrorCodes.InsufficientPrivileges);
+                }
             }
 
             return new CorporationWallet(privateCorporation);
@@ -725,22 +716,22 @@ namespace Perpetuum.Accounting.Characters
 
         public IWallet<double> GetWallet(TransactionType transactionType)
         {
-            return _walletHelper.GetWallet(this,transactionType);
+            return _walletHelper.GetWallet(this, transactionType);
         }
 
         public void TransferCredit(Character target, long amount)
         {
-            _walletHelper.TransferCredit(this,target,amount);
+            _walletHelper.TransferCredit(this, target, amount);
         }
 
         public void AddToWallet(TransactionType transactionType, double amount)
         {
-            _walletHelper.AddToWallet(this,transactionType,amount);
+            _walletHelper.AddToWallet(this, transactionType, amount);
         }
 
         public void SubtractFromWallet(TransactionType transactionType, double amount)
         {
-            _walletHelper.SubtractFromWallet(this,transactionType,amount);
+            _walletHelper.SubtractFromWallet(this, transactionType, amount);
         }
 
         public ICharacterSocial GetSocial()
@@ -758,13 +749,17 @@ namespace Perpetuum.Accounting.Characters
             DeleteAllSpentPoints();
 
             //reset the actual extension levels
-            Db.Query().CommandText("delete characterextensions where characterid=@characterID")
-                    .SetParameter("@characterID",Id)
+            _ = Db.Query().CommandText(
+@"DELETE ce FROM characterextensions ce
+INNER JOIN extensions e
+ON ce.extensionid = e.extensionid
+WHERE characterid=@characterID AND e.active = 1 AND e.hidden = 0")
+                    .SetParameter("@characterID", Id)
                     .ExecuteNonQuery();
 
             //reset remove log
-            Db.Query().CommandText("delete extensionremovelog where characterid=@characterID")
-                .SetParameter("@characterID",Id)
+            _ = Db.Query().CommandText("DELETE extensionremovelog WHERE characterid=@characterID")
+                .SetParameter("@characterID", Id)
                 .ExecuteNonQuery();
 
             //remove ram
@@ -773,13 +768,13 @@ namespace Perpetuum.Accounting.Characters
 
         public void IncreaseExtensionLevel(int extensionId, int extensionLevel)
         {
-            Db.Query().CommandText("dbo.increaseExtensionLevel")
+            _ = Db.Query().CommandText("dbo.increaseExtensionLevel")
                 .SetParameter("@characterID", Id)
                 .SetParameter("@extensionID", extensionId)
                 .SetParameter("@extensionLevel", extensionLevel)
                 .ExecuteScalar<int>().ThrowIfEqual(0, ErrorCodes.SQLExecutionError);
 
-            var thisCharacter = this;
+            Character thisCharacter = this;
             Transaction.Current.OnCommited(() => thisCharacter._characterExtensions.Remove(thisCharacter));
         }
 
@@ -795,13 +790,13 @@ namespace Perpetuum.Accounting.Characters
 
         public void SetAllExtensionLevel(int level)
         {
-            var extensions = _extensionReader.GetExtensions().Values.Where(e => !e.hidden).Select(e => new Extension(e.id, level));
+            IEnumerable<Extension> extensions = _extensionReader.GetExtensions().Values.Where(e => !e.hidden).Select(e => new Extension(e.id, level));
             SetExtensions(extensions);
         }
 
         public void SetExtensions(IEnumerable<Extension> extensions)
         {
-            foreach (var extension in extensions)
+            foreach (Extension extension in extensions)
             {
                 SetExtension(extension);
             }
@@ -817,13 +812,13 @@ namespace Perpetuum.Accounting.Characters
                 return;
             }
 
-            Db.Query().CommandText("dbo.setExtensionLevel")
+            _ = Db.Query().CommandText("dbo.setExtensionLevel")
                 .SetParameter("@characterID", Id)
                 .SetParameter("@extensionID", extension.id)
                 .SetParameter("@extensionLevel", extension.level)
                 .ExecuteScalar<int>().ThrowIfEqual(0, ErrorCodes.SQLExecutionError);
 
-            var tmpCharacter = this;
+            Character tmpCharacter = this;
             Transaction.Current.OnCommited(() => tmpCharacter._characterExtensions.Remove(tmpCharacter));
         }
 
@@ -839,7 +834,7 @@ namespace Perpetuum.Accounting.Characters
 
         public double GetExtensionsBonusSummary(IEnumerable<int> extensionIDs)
         {
-            var thisC = this;
+            Character thisC = this;
             return GetExtensions().SelectById(extensionIDs).Sum(e => e.level * thisC._extensionReader.GetExtensionByID(e.id).bonus);
         }
 
@@ -855,7 +850,7 @@ namespace Perpetuum.Accounting.Characters
 
         public int GetExtensionLevelSummaryByName(params string[] extensionNames)
         {
-            var ex = GetExtensions();
+            CharacterExtensionCollection ex = GetExtensions();
             return _extensionReader.GetExtensionIDsByName(extensionNames).Sum(extensionId => ex.GetLevel(extensionId));
         }
 
@@ -880,21 +875,23 @@ namespace Perpetuum.Accounting.Characters
         }
 
         [Pure]
-        public int AddExtensionPointsBoostAndLog(EpForActivityType activityType,   int points)
+        public int AddExtensionPointsBoostAndLog(EpForActivityType activityType, int points)
         {
             if (points <= 0)
+            {
                 return 0;
+            }
 
-            var account = GetAccount();
+            Account account = GetAccount();
             Debug.Assert(account != null, "account != null");
-            return _accountManager.AddExtensionPointsBoostAndLog(account,this, activityType, points);
+            return _accountManager.AddExtensionPointsBoostAndLog(account, this, activityType, points);
         }
 
 
         [CanBeNull]
         public Task ReloadContainerOnZoneAsync()
         {
-            var character = this;
+            Character character = this;
             return Task.Run(() => character.ReloadContainerOnZone());
         }
 
@@ -913,9 +910,9 @@ namespace Perpetuum.Accounting.Characters
             return GetCurrentDockingBase().GetPublicContainerWithItems(this);
         }
 
-        public void SendItemErrorMessage(Command command,ErrorCodes error,Item item)
+        public void SendItemErrorMessage(Command command, ErrorCodes error, Item item)
         {
-            CreateErrorMessage(command,error)
+            CreateErrorMessage(command, error)
                 .SetExtraInfo(d =>
                 {
                     d["eid"] = item.Eid;
@@ -926,25 +923,25 @@ namespace Perpetuum.Accounting.Characters
         public bool TechTreeNodeUnlocked(int definition)
         {
             if (_techTreeService.GetUnlockedNodes(Eid).Any(n => n.Definition == definition))
+            {
                 return true;
+            }
 
-            var hasRole = Corporation.GetRoleFromSql(this).HasRole(PresetCorporationRoles.CAN_LIST_TECHTREE);
+            bool hasRole = Corporation.GetRoleFromSql(this).HasRole(PresetCorporationRoles.CAN_LIST_TECHTREE);
             return hasRole && _techTreeService.GetUnlockedNodes(CorporationEid).Any(n => n.Definition == definition);
         }
 
         public bool HasTechTreeBonus(int definition)
         {
-            var hasRole = Corporation.GetRoleFromSql(this).HasRole(PresetCorporationRoles.CAN_LIST_TECHTREE);
-            if (!hasRole)
-                return false;
-
-            return _techTreeService.GetUnlockedNodes(Eid).Any(n => n.Definition == definition) && (_techTreeService.GetUnlockedNodes(CorporationEid).Any(n => n.Definition == definition));
+            bool hasRole = Corporation.GetRoleFromSql(this).HasRole(PresetCorporationRoles.CAN_LIST_TECHTREE);
+            return hasRole
+&& _techTreeService.GetUnlockedNodes(Eid).Any(n => n.Definition == definition) && _techTreeService.GetUnlockedNodes(CorporationEid).Any(n => n.Definition == definition);
         }
 
         public DockingBase GetHomeBaseOrCurrentBase()
         {
-            var resultBaseEid = HomeBaseEid ?? 0L;
-            var wasHomeBase = true;
+            long resultBaseEid = HomeBaseEid ?? 0L;
+            bool wasHomeBase = true;
 
             if (resultBaseEid == 0)
             {
@@ -952,9 +949,11 @@ namespace Perpetuum.Accounting.Characters
                 wasHomeBase = false;
             }
 
-            var dockingBase = _dockingBaseHelper.GetDockingBase(resultBaseEid);
+            DockingBase dockingBase = _dockingBaseHelper.GetDockingBase(resultBaseEid);
             if (dockingBase != null && dockingBase.IsDockingAllowed(this) == ErrorCodes.NoError)
+            {
                 return _dockingBaseHelper.GetDockingBase(resultBaseEid);
+            }
 
             //docking would normally fail
             if (wasHomeBase)
@@ -966,11 +965,11 @@ namespace Perpetuum.Accounting.Characters
             //pick the race related homebase
             resultBaseEid = DefaultCorporation.GetDockingBaseEid(this);
 
-            var thisCharacter = this;
+            Character thisCharacter = this;
             //inform dead player about this state
             Transaction.Current.OnCommited(() =>
             {
-                var info = new Dictionary<string,object>
+                Dictionary<string, object> info = new Dictionary<string, object>
                 {
                     {k.characterID,thisCharacter.Id},
                     {k.baseEID, resultBaseEid},
@@ -983,9 +982,9 @@ namespace Perpetuum.Accounting.Characters
             return _dockingBaseHelper.GetDockingBase(resultBaseEid);
         }
 
-        public void WriteItemTransactionLog(TransactionType transactionType,Item item)
+        public void WriteItemTransactionLog(TransactionType transactionType, Item item)
         {
-            var b = TransactionLogEvent.Builder().SetTransactionType(transactionType).SetCharacter(this).SetItem(item.Definition,item.Quantity);
+            TransactionLogEventBuilder b = TransactionLogEvent.Builder().SetTransactionType(transactionType).SetCharacter(this).SetItem(item.Definition, item.Quantity);
             LogTransaction(b);
         }
 
@@ -993,8 +992,8 @@ namespace Perpetuum.Accounting.Characters
         {
             ActiveRobotEid = robot?.Eid ?? 0L;
 
-            var thisCharacter = this;
-            var result = robot?.ToDictionary();
+            Character thisCharacter = this;
+            Dictionary<string, object> result = robot?.ToDictionary();
             Transaction.Current.OnCommited(() => Message.Builder.SetCommand(Commands.RobotActivated)
                 .WithData(result)
                 .WrapToResult()
@@ -1005,28 +1004,28 @@ namespace Perpetuum.Accounting.Characters
         public void CleanGameRelatedData()
         {
             //corp founder
-            Db.Query().CommandText("update corporations set founder=NULL where founder=@characterId")
-                .SetParameter("@characterID",Id)
+            _ = Db.Query().CommandText("update corporations set founder=NULL where founder=@characterId")
+                .SetParameter("@characterID", Id)
                 .ExecuteNonQuery();
 
-            Db.Query().CommandText("delete characterextensions where characterid=@characterID")
-                .SetParameter("@characterID",Id)
+            _ = Db.Query().CommandText("delete characterextensions where characterid=@characterID")
+                .SetParameter("@characterID", Id)
                 .ExecuteNonQuery();
 
-            Db.Query().CommandText("delete charactersettings where characterid=@characterID")
-                .SetParameter("@characterID",Id)
+            _ = Db.Query().CommandText("delete charactersettings where characterid=@characterID")
+                .SetParameter("@characterID", Id)
                 .ExecuteNonQuery();
 
-            Db.Query().CommandText("delete charactersparks where characterid=@characterID")
-                .SetParameter("@characterID",Id)
+            _ = Db.Query().CommandText("delete charactersparks where characterid=@characterID")
+                .SetParameter("@characterID", Id)
                 .ExecuteNonQuery();
 
-            Db.Query().CommandText("delete charactersparkteleports where characterid=@characterID")
-                .SetParameter("@characterID",Id)
+            _ = Db.Query().CommandText("delete charactersparkteleports where characterid=@characterID")
+                .SetParameter("@characterID", Id)
                 .ExecuteNonQuery();
 
-            Db.Query().CommandText("delete from channelmembers where memberid = @characterID")
-                .SetParameter("@characterID",Id)
+            _ = Db.Query().CommandText("delete from channelmembers where memberid = @characterID")
+                .SetParameter("@characterID", Id)
                 .ExecuteNonQuery();
 
             TransportAssignment.CharacterDeleted(this);
@@ -1047,7 +1046,7 @@ namespace Perpetuum.Accounting.Characters
         [CanBeNull]
         public Alliance GetAlliance()
         {
-            var allianceEid = AllianceEid;
+            long allianceEid = AllianceEid;
             return allianceEid == 0L ? null : Alliance.GetOrThrow(allianceEid);
         }
 
@@ -1058,14 +1057,14 @@ namespace Perpetuum.Accounting.Characters
 
         public DockingBase GetCurrentDockingBase()
         {
-            var baseEid = CurrentDockingBaseEid;
+            long baseEid = CurrentDockingBaseEid;
             return _dockingBaseHelper.GetDockingBase(baseEid);
         }
 
         [CanBeNull]
         public Player GetPlayerRobotFromZone()
         {
-            var zone = GetCurrentZone();
+            IZone zone = GetCurrentZone();
             return zone?.GetPlayer(this);
         }
 
@@ -1084,17 +1083,17 @@ namespace Perpetuum.Accounting.Characters
             return GetCurrentZone()?.Configuration ?? ZoneConfiguration.None;
         }
 
-        public IDictionary<string,object> GetFullProfile()
+        public IDictionary<string, object> GetFullProfile()
         {
-            var record = Db.Query().CommandText("select * from characters where characterid = @characterid")
-                .SetParameter("@characterid",Id)
+            System.Data.IDataRecord record = Db.Query().CommandText("select * from characters where characterid = @characterid")
+                .SetParameter("@characterid", Id)
                 .ExecuteSingleRow().ThrowIfNull(ErrorCodes.CharacterNotFound);
 
-            var currentBaseEid = record.GetValue<long>("baseEID");
-            var dockingBase =  _dockingBaseHelper.GetDockingBase(currentBaseEid);
-            var isInTraining = record.GetValue<int>("raceID") == 0;
+            long currentBaseEid = record.GetValue<long>("baseEID");
+            DockingBase dockingBase = _dockingBaseHelper.GetDockingBase(currentBaseEid);
+            bool isInTraining = record.GetValue<int>("raceID") == 0;
 
-            var profile = new Dictionary<string,object>(21)
+            Dictionary<string, object> profile = new Dictionary<string, object>(21)
             {
                 {k.raceID, record.GetValue<int>("raceID")},
                 {k.creation, record.GetValue<DateTime>("creation")},
@@ -1122,7 +1121,7 @@ namespace Perpetuum.Accounting.Characters
                 {k.isInTraining, isInTraining}
             };
 
-            _techTreeService.AddInfoToDictionary(Eid,profile);
+            _techTreeService.AddInfoToDictionary(Eid, profile);
             return profile;
         }
 
@@ -1134,7 +1133,7 @@ namespace Perpetuum.Accounting.Characters
         [CanBeNull]
         public PrivateCorporation GetPrivateCorporation()
         {
-            return (GetCorporation() as PrivateCorporation);
+            return GetCorporation() as PrivateCorporation;
         }
 
         public Corporation GetCorporation()
@@ -1144,28 +1143,30 @@ namespace Perpetuum.Accounting.Characters
 
         public DefaultCorporation GetDefaultCorporation()
         {
-            var eid = DefaultCorporationEid;
+            long eid = DefaultCorporationEid;
             return (DefaultCorporation)Corporation.GetOrThrow(eid);
         }
 
         public void DeleteAllSpentPoints()
         {
             //delete the spent points
-            Db.Query().CommandText("delete accountextensionspent where characterid=@characterID")
+            _ = Db.Query().CommandText("delete accountextensionspent where characterid=@characterID")
                 .SetParameter("@characterID", Id)
                 .ExecuteNonQuery();
         }
 
         public void GetTableIndexForAccountExtensionSpent(int extensionId, int extensionLevel, ref int spentId, ref int spentPoints)
         {
-            var record = Db.Query().CommandText("select top 1 id,points from accountextensionspent where extensionid=@extensionID and extensionlevel=@extensionLevel and characterid=@characterID and points > 0 order by eventtime desc")
+            System.Data.IDataRecord record = Db.Query().CommandText("select top 1 id,points from accountextensionspent where extensionid=@extensionID and extensionlevel=@extensionLevel and characterid=@characterID and points > 0 order by eventtime desc")
                 .SetParameter("@extensionLevel", extensionLevel)
                 .SetParameter("@extensionID", extensionId)
                 .SetParameter("@characterID", Id)
                 .ExecuteSingleRow();
 
             if (record == null)
+            {
                 return;
+            }
 
             spentId = record.GetValue<int>(0);
             spentPoints = record.GetValue<int>(1);
