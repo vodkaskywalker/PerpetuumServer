@@ -52,7 +52,7 @@ jobs:
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled && always()}}
 
     - name: Upload a Build Artifact for (${{ matrix.configuration }})
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Perpetuum-Server-${{ github.sha }}.${{ matrix.configuration }}
         path: ${{ env.Workspace }}/bin/x64/${{ env.Configuration }}/Perpetuum.Server
