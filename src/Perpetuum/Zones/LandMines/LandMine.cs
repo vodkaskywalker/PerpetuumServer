@@ -1,10 +1,6 @@
-﻿using Perpetuum.Accounting.Characters;
-using Perpetuum.EntityFramework;
-using Perpetuum.ExportedTypes;
-using Perpetuum.Log;
+﻿using Perpetuum.ExportedTypes;
 using Perpetuum.Modules.Weapons;
 using Perpetuum.Players;
-using Perpetuum.Robots;
 using Perpetuum.Timers;
 using Perpetuum.Units;
 using Perpetuum.Units.DockingBases;
@@ -14,7 +10,6 @@ using Perpetuum.Zones.Teleporting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Policy;
 
 namespace Perpetuum.Zones.LandMines
 {
@@ -23,19 +18,13 @@ namespace Perpetuum.Zones.LandMines
         private const int BeamDistance = 600;
         private readonly IntervalTimer probingInterval = new IntervalTimer(TimeSpan.FromSeconds(2));
 
-        public int TriggerMass
-        {
-            get
-            {
-                return ED.Options.GetOption<int>("triggerMass");
-            }
-        }
+        public int TriggerMass => ED.Options.GetOption<int>("triggerMass");
 
         protected override void OnUpdate(TimeSpan time)
         {
-            var despawnHelper = GetDespawnHelper();
+            UnitDespawnHelper despawnHelper = GetDespawnHelper();
 
-            probingInterval.Update(time);
+            _ = probingInterval.Update(time);
 
             if (!probingInterval.Passed)
             {
@@ -47,9 +36,9 @@ namespace Perpetuum.Zones.LandMines
             if (IsActive)
             {
                 //detect
-                var robotsNearMe = GetNoticedUnits();
+                List<Player> robotsNearMe = GetNoticedUnits();
 
-                if (robotsNearMe.Exists(x => x.ActualMass > this.TriggerMass))
+                if (robotsNearMe.Exists(x => x.ActualMass > TriggerMass))
                 {
                     robotsNearMe[0].Zone.CreateBeam(
                         BeamType.plant_bomb_explosion,//.timebomb_explosion,
@@ -59,7 +48,7 @@ namespace Perpetuum.Zones.LandMines
                             .WithVisibility(BeamDistance));
 
                     // There be explosion
-                    var damageBuilder = DamageInfo.Builder.WithAttacker(this)
+                    IDamageBuilder damageBuilder = DamageInfo.Builder.WithAttacker(this)
                         .WithDamage(DamageType.Chemical, ED.Config.damage_chemical ?? 5000.0)
                         .WithDamage(DamageType.Explosive, ED.Config.damage_explosive ?? 5000.0)
                         .WithDamage(DamageType.Kinetic, ED.Config.damage_kinetic ?? 5000.0)
@@ -77,8 +66,8 @@ namespace Perpetuum.Zones.LandMines
 
             if (despawnHelper == null)
             {
-                var m = GetPropertyModifier(AggregateField.despawn_time);
-                var timespan = TimeSpan.FromMilliseconds((int)m.Value);
+                Items.ItemPropertyModifier m = GetPropertyModifier(AggregateField.despawn_time);
+                TimeSpan timespan = TimeSpan.FromMilliseconds((int)m.Value);
                 SetDespawnTime(timespan);
                 despawnHelper = GetDespawnHelper();
             }
@@ -96,7 +85,7 @@ namespace Perpetuum.Zones.LandMines
         }
         protected override bool IsDetected(Unit target)
         {
-            var range = ED.Config.item_work_range ?? 5.0;
+            double range = ED.Config.item_work_range ?? 5.0;
 
             return IsInRangeOf3D(target, range);
         }

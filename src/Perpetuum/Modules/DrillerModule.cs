@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
-using System.Linq;
-using System.Transactions;
 using Perpetuum.Data;
 using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
@@ -18,6 +12,12 @@ using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.Terrains;
 using Perpetuum.Zones.Terrains.Materials;
 using Perpetuum.Zones.Terrains.Materials.Minerals;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
+using System.Linq;
+using System.Transactions;
 
 namespace Perpetuum.Modules
 {
@@ -27,14 +27,14 @@ namespace Perpetuum.Modules
         private readonly RareMaterialHandler _rareMaterialHandler;
         private readonly MaterialHelper _materialHelper;
         private readonly ItemProperty _miningAmountModifier;
-        private readonly ISet<int> LIQUIDS = new HashSet<int>(new int[] 
+        private readonly ISet<int> LIQUIDS = new HashSet<int>(new int[]
         {
             (int)MaterialType.Crude,
             (int)MaterialType.Liquizit,
             (int)MaterialType.Epriton
         });
 
-        public DrillerModule(CategoryFlags ammoCategoryFlags,RareMaterialHandler rareMaterialHandler,MaterialHelper materialHelper)
+        public DrillerModule(CategoryFlags ammoCategoryFlags, RareMaterialHandler rareMaterialHandler, MaterialHelper materialHelper)
             : base(ammoCategoryFlags, true)
         {
             _rareMaterialHandler = rareMaterialHandler;
@@ -74,7 +74,7 @@ namespace Perpetuum.Modules
                 return new List<ItemInfo>();
             }
 
-            var extractor = new MineralExtractor(location, amount, _materialHelper);
+            MineralExtractor extractor = new MineralExtractor(location, amount, _materialHelper);
 
             layer.AcceptVisitor(extractor);
 
@@ -83,9 +83,9 @@ namespace Perpetuum.Modules
 
         protected override void OnAction()
         {
-            var zone = Zone;
+            IZone zone = Zone;
 
-            if ( zone != null)
+            if (zone != null)
             {
                 DoExtractMinerals(zone);
             }
@@ -95,7 +95,7 @@ namespace Perpetuum.Modules
 
         protected override int CalculateEp(int materialType)
         {
-            var activeGathererModules = this is RemoteControlledDrillerModule
+            DrillerModule[] activeGathererModules = this is RemoteControlledDrillerModule
                 ? ParentRobot.ActiveModules.OfType<RemoteControlledDrillerModule>().Where(m => m.State.Type != ModuleStateType.Idle).ToArray()
                 : ParentRobot.ActiveModules.OfType<DrillerModule>().Where(m => m.State.Type != ModuleStateType.Idle).ToArray();
 
@@ -104,9 +104,9 @@ namespace Perpetuum.Modules
                 return 0;
             }
 
-            var avgCycleTime = activeGathererModules.Select(m => m.CycleTime).Average();
-            var t = TimeSpan.FromDays(1).Divide(avgCycleTime);
-            var chance = (double)MAX_EP_PER_DAY / t.Ticks;
+            TimeSpan avgCycleTime = activeGathererModules.Select(m => m.CycleTime).Average();
+            TimeSpan t = TimeSpan.FromDays(1).Divide(avgCycleTime);
+            double chance = (double)MAX_EP_PER_DAY / t.Ticks;
 
             chance /= activeGathererModules.Length;
 
@@ -115,19 +115,14 @@ namespace Perpetuum.Modules
                 chance /= 2.0;
             }
 
-            var rand = FastRandom.NextDouble();
+            double rand = FastRandom.NextDouble();
 
-            if (rand <= chance)
-            {
-                return 1;
-            }
-
-            return 0;
+            return rand <= chance ? 1 : 0;
         }
 
         public void DoExtractMinerals(IZone zone)
         {
-            var terrainLock = GetLock().ThrowIfNotType<TerrainLock>(ErrorCodes.InvalidLockType);
+            TerrainLock terrainLock = GetLock().ThrowIfNotType<TerrainLock>(ErrorCodes.InvalidLockType);
 
             MaterialType materialType;
 
@@ -137,9 +132,7 @@ namespace Perpetuum.Modules
             }
             else
             {
-                MiningAmmo ammo = GetAmmo() as MiningAmmo;
-
-                if (ammo == null)
+                if (!(GetAmmo() is MiningAmmo ammo))
                 {
                     return;
                 }
@@ -147,52 +140,53 @@ namespace Perpetuum.Modules
                 materialType = ammo.MaterialType;
             }
 
-            var materialInfo = _materialHelper.GetMaterialInfo(materialType);
+            MaterialInfo materialInfo = _materialHelper.GetMaterialInfo(materialType);
 
             CheckEnablerEffect(materialInfo);
 
-            var mineralLayer = zone.Terrain.GetMineralLayerOrThrow(materialInfo.Type);
-            var materialAmount = materialInfo.Amount * _miningAmountModifier.Value;
-            var extractedMaterials = Extract(mineralLayer, terrainLock.Location,(uint) materialAmount);
+            MineralLayer mineralLayer = zone.Terrain.GetMineralLayerOrThrow(materialInfo.Type);
+            double materialAmount = materialInfo.Amount * _miningAmountModifier.Value;
+            List<ItemInfo> extractedMaterials = Extract(mineralLayer, terrainLock.Location, (uint)materialAmount);
 
-            extractedMaterials.Count.ThrowIfEqual(0, ErrorCodes.NoMineralOnTile);
+            _ = extractedMaterials.Count.ThrowIfEqual(0, ErrorCodes.NoMineralOnTile);
             extractedMaterials.AddRange(_rareMaterialHandler.GenerateRareMaterials(materialInfo.EntityDefault.Definition));
 
             CreateBeam(terrainLock.Location, BeamState.AlignToTerrain);
 
-            using (var scope = Db.CreateTransaction())
+            using (TransactionScope scope = Db.CreateTransaction())
             {
                 Debug.Assert(ParentRobot != null, "ParentRobot != null");
 
-                var container = ParentRobot.GetContainer();
+                Robots.RobotInventory container = ParentRobot.GetContainer();
 
                 Debug.Assert(container != null, "container != null");
                 container.EnlistTransaction();
 
-                var player = ParentRobot is RemoteControlledCreature
-                    ? (ParentRobot as RemoteControlledCreature).Player
+                Player player = ParentRobot is RemoteControlledCreature remoteControlledCreature &&
+                    remoteControlledCreature.CommandRobot is Player ownerPlayer
+                    ? ownerPlayer
                     : ParentRobot as Player;
 
-                Debug.Assert(player != null,"player != null");
+                Debug.Assert(player != null, "player != null");
 
-                foreach (var material in extractedMaterials)
+                foreach (ItemInfo material in extractedMaterials)
                 {
-                    var item = (Item)Factory.CreateWithRandomEID(material.Definition);
+                    Item item = (Item)Factory.CreateWithRandomEID(material.Definition);
 
                     item.Owner = Owner;
                     item.Quantity = material.Quantity;
                     container.AddItem(item, true);
 
-                    var drilledMineralDefinition = material.Definition;
-                    var drilledQuantity = material.Quantity;
+                    int drilledMineralDefinition = material.Definition;
+                    int drilledQuantity = material.Quantity;
 
-                    player.MissionHandler.EnqueueMissionEventInfo(new DrillMineralEventInfo(player,drilledMineralDefinition,drilledQuantity,terrainLock.Location));
-                    player.Zone?.MiningLogHandler.EnqueueMiningLog(drilledMineralDefinition,drilledQuantity);
+                    player.MissionHandler.EnqueueMissionEventInfo(new DrillMineralEventInfo(player, drilledMineralDefinition, drilledQuantity, terrainLock.Location));
+                    player.Zone?.MiningLogHandler.EnqueueMiningLog(drilledMineralDefinition, drilledQuantity);
                 }
 
                 //save container
                 container.Save();
-                OnGathererMaterial(zone, player, (int) materialInfo.Type);
+                OnGathererMaterial(zone, player, (int)materialInfo.Type);
                 Transaction.Current.OnCommited(() => container.SendUpdateToOwnerAsync());
                 scope.Complete();
             }
@@ -200,7 +194,7 @@ namespace Perpetuum.Modules
 
         private void CheckEnablerEffect(MaterialInfo materialInfo)
         {
-            if ( !Zone.Configuration.Terraformable )
+            if (!Zone.Configuration.Terraformable)
             {
                 return;
             }
@@ -210,7 +204,7 @@ namespace Perpetuum.Modules
                 return;
             }
 
-            var containsEnablerEffect = ParentRobot.EffectHandler.ContainsEffect(EffectCategory.effcat_pbs_mining_tower_effect);
+            bool containsEnablerEffect = ParentRobot.EffectHandler.ContainsEffect(EffectCategory.effcat_pbs_mining_tower_effect);
 
             containsEnablerEffect.ThrowIfFalse(ErrorCodes.MiningEnablerEffectRequired);
         }

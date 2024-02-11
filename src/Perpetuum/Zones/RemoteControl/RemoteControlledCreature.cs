@@ -1,4 +1,5 @@
 ﻿using Perpetuum.Players;
+using Perpetuum.Robots;
 using Perpetuum.Services.Standing;
 using Perpetuum.Units;
 using Perpetuum.Zones.NpcSystem;
@@ -16,7 +17,7 @@ namespace Perpetuum.Zones.RemoteControl
 
         public event RemoteChannelEventHandler RemoteChannelDeactivated;
 
-        public Player Player { get; private set; }
+        public Robot CommandRobot { get; private set; }
 
         public double RemoteChannelBandwidthUsage { get; private set; }
 
@@ -34,9 +35,9 @@ namespace Perpetuum.Zones.RemoteControl
             this.standingHandler = standingHandler;
         }
 
-        public void SetPlayer(Player player)
+        public void SetCommandRobot(Robot commandRobot)
         {
-            Player = player;
+            CommandRobot = commandRobot;
         }
 
         public void SetBandwidthUsage(double value)
@@ -46,7 +47,7 @@ namespace Perpetuum.Zones.RemoteControl
 
         public override void AddThreat(Unit hostile, Threat threat, bool spreadToGroup)
         {
-            if (hostile.IsPlayer() && Player == (hostile as Player))
+            if (hostile.IsPlayer() && CommandRobot == (hostile as Player))
             {
                 return;
             }
@@ -67,27 +68,32 @@ namespace Perpetuum.Zones.RemoteControl
 
         protected bool IsHostilePlayer(Player targetPlayer)
         {
-            if (Player == targetPlayer)
+            if (!(CommandRobot is Player player))
+            {
+                return true;
+            }
+
+            if (player == targetPlayer)
             {
                 return false;
             }
 
-            if (Zone.Configuration.IsAlpha && !Player.HasPvpEffect && !targetPlayer.HasPvpEffect)
+            if (Zone.Configuration.IsAlpha && !player.HasPvpEffect && !targetPlayer.HasPvpEffect)
             {
                 return false;
             }
 
-            if (Player != null && Player == targetPlayer)
+            if (player == targetPlayer)
             {
                 return false;
             }
 
-            if (Player.Gang != null && Player.Gang.IsMember(targetPlayer.Character))
+            if (player.Gang != null && player.Gang.IsMember(targetPlayer.Character))
             {
                 return false;
             }
 
-            double corporationStanding = standingHandler.GetStanding(Player.CorporationEid, targetPlayer.CorporationEid);
+            double corporationStanding = standingHandler.GetStanding(player.CorporationEid, targetPlayer.CorporationEid);
 
             if (corporationStanding > StandingLimit)
             {

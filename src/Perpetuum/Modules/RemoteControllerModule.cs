@@ -4,6 +4,7 @@ using Perpetuum.Items;
 using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Players;
 using Perpetuum.Units;
+using Perpetuum.Units.DockingBases;
 using Perpetuum.Zones;
 using Perpetuum.Zones.Beams;
 using Perpetuum.Zones.Finders;
@@ -11,6 +12,7 @@ using Perpetuum.Zones.Finders.PositionFinders;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using Perpetuum.Zones.RemoteControl;
+using Perpetuum.Zones.Teleporting;
 using System;
 using System.Linq;
 
@@ -19,7 +21,6 @@ namespace Perpetuum.Modules
     public class RemoteControllerModule : ActiveModule
     {
         private const int SentryTurretHeight = 7;
-        private const double TurretDeployRange = 2;
         private const double SpawnRangeMin = 2;
         private const double SpawnRangeMax = 5;
         private readonly ModuleProperty bandwidthMax;
@@ -115,11 +116,25 @@ namespace Perpetuum.Modules
                     return;
                 }
 
+                Position spawnPosition = Zone.FixZ(targetPosition);
+
                 Zone.Units
-                .OfType<RemoteControlledCreature>()
-                .WithinRange(Zone.FixZ(targetPosition), TurretDeployRange)
-                .Any()
-                .ThrowIfTrue(ErrorCodes.RemoteControlledTurretInRange);
+                    .OfType<RemoteControlledCreature>()
+                    .WithinRange(spawnPosition, DistanceConstants.RCU_DEPLOY_RANGE_FROM_RCU)
+                    .Any()
+                    .ThrowIfTrue(ErrorCodes.RemoteControlledTurretInRange);
+
+                Zone.Units
+                    .OfType<DockingBase>()
+                    .WithinRange(spawnPosition, DistanceConstants.RCU_DEPLOY_RANGE_FROM_BASE)
+                    .Any()
+                    .ThrowIfTrue(ErrorCodes.NotDeployableNearObject);
+
+                Zone.Units
+                    .OfType<Teleport>()
+                    .WithinRange(spawnPosition, DistanceConstants.RCU_DEPLOY_RANGE_FROM_TELEPORT)
+                    .Any()
+                    .ThrowIfTrue(ErrorCodes.TeleportIsInRange);
 
                 LOSResult r = Zone.IsInLineOfSight(ParentRobot, targetPosition.AddToZ(SentryTurretHeight), false);
 
@@ -170,10 +185,7 @@ namespace Perpetuum.Modules
                 return;
             }
 
-            if (player != null)
-            {
-                remoteControlledCreature.SetPlayer(player);
-            }
+            remoteControlledCreature.SetCommandRobot(player ?? ParentRobot);
 
             remoteControlledCreature.Owner = ParentRobot.Owner;
             remoteControlledCreature.SetBandwidthUsage(ammo.RemoteChannelBandwidthUsage);
@@ -193,7 +205,7 @@ namespace Perpetuum.Modules
 
             BeamBuilder deployBeamBuilder = Beam.NewBuilder()
                 .WithType(BeamType.dock_in)
-                .WithSource(remoteControlledCreature.Player)
+                .WithSource(remoteControlledCreature.CommandRobot)
                 .WithTarget(remoteControlledCreature)
                 .WithState(BeamState.Hit)
                 .WithDuration(TimeSpan.FromSeconds(5));

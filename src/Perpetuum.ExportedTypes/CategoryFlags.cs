@@ -715,6 +715,7 @@ namespace Perpetuum.ExportedTypes
         cf_ct_capsules_robot_syndicate_assault = 0x000002050303049B,
         cf_ct_capsules_robot_syndicate_mech = 0x000003050303049B,
         cf_ct_capsules_robot_syndicate_heavymech = 0x000004050303049B,
+        cf_ct_capsules_robot_syndicate_commandbot = 0x000005050303049B,
         cf_ct_capsules_misc = 0x000000000403049B,
         cf_respec_tokens = 0x000000000004049B,
         cf_spark_teleport_devices = 0x000000000005049B,

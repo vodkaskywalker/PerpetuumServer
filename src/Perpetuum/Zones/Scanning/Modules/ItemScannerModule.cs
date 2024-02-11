@@ -21,8 +21,9 @@ namespace Perpetuum.Zones.Scanning.Modules
         {
             Player targetPlayer = unitLockTarget.Target is Player player
                 ? player
-                : unitLockTarget.Target is RemoteControlledCreature remoteCreature
-                    ? remoteCreature.Player
+                : unitLockTarget.Target is RemoteControlledCreature remoteControlledCreature &&
+                    remoteControlledCreature.CommandRobot is Player ownerPlayer
+                    ? ownerPlayer
                     : null;
 
             if (targetPlayer == null)
@@ -63,6 +64,7 @@ namespace Perpetuum.Zones.Scanning.Modules
         {
             double probability = 1.0;
             probability = ModifyValueByOptimalRange(target, probability);
+
             return probability;
         }
     }

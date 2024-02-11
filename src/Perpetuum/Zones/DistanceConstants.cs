@@ -5,11 +5,11 @@ namespace Perpetuum.Zones
     public class DistanceConstants
     {
         public const double TERRAIN_DEGRADE_DISTANCE_FROM_PBS = 75.0;
-        
+
         public const double KIOSK_USE_DISTANCE = 3.0;
         public const double SWITCH_USE_DISTANCE = 3.0;
         public const double ITEMSUPPLY_USE_DISTANCE = 3.0;
-       
+
         public const double ALARMSWITCH_STAYCLOSE_DISTANCE = 14.0;
         public const double ITEM_SHOP_DISTANCE = 3.0;
         public const double AREA_BOMB_DISTANCE_TO_STATIONS = 90.0;
@@ -19,7 +19,7 @@ namespace Perpetuum.Zones
         public const double MOBILE_TELEPORT_USE_RANGE = 8.0;
         public const double INTRUSION_SAP_DEFENSE_RANGE = 100.0;
         public const double PLANT_MIN_DISTANCE_FROM_SAP = 40;
-        
+
         public const double MAX_TERRAFORM_LEVEL_DIFFERENCE = 8.0;
         public const double MAX_TERRAFORM_ALTITUDE_PLAYER_VS_TARGET_DIFFERENCE = 20.0;
         public const double MOBILE_WORLD_TELEPORT_RANGE = 3072;
@@ -35,7 +35,7 @@ namespace Perpetuum.Zones
 
         public const double PLANT_MIN_DISTANCE_FROM_PBS = 5.0;
         public const double PLANT_MAX_DISTANCE_FROM_PBS = 150.0;
-        
+
         public const double NPC_EGG_DISTANCE_ON_PVE_ZONES = 50.0;
         public const double PBS_NODE_USE_DISTANCE = 10.0;
         public const double TERRAFORM_MIN_RANGE_FROM_OBJECTS = 25.0;
@@ -57,17 +57,21 @@ namespace Perpetuum.Zones
 
         public const double PBS_DIST_FROM_TELEPORT = 200;
 
+        public const double RCU_DEPLOY_RANGE_FROM_BASE = 100.0;
+        public const double RCU_DEPLOY_RANGE_FROM_TELEPORT = 100.0;
+        public const double RCU_DEPLOY_RANGE_FROM_RCU = 2.0;
+
         public static Dictionary<string, object> GetEnumDictionary()
         {
-            var result = new Dictionary<string, object>();
+            Dictionary<string, object> result = new Dictionary<string, object>();
 
-            var type = typeof (DistanceConstants); // Get type pointer
-            var fields = type.GetFields(); // Obtain all fields
-            foreach (var field in fields) // Loop through fields
+            System.Type type = typeof(DistanceConstants); // Get type pointer
+            System.Reflection.FieldInfo[] fields = type.GetFields(); // Obtain all fields
+            foreach (System.Reflection.FieldInfo field in fields) // Loop through fields
             {
-                var name = field.Name; // Get string name
-                var temp = field.GetValue(null); // Get value
-                
+                string name = field.Name; // Get string name
+                object temp = field.GetValue(null); // Get value
+
                 if (temp is double)
                 {
                     result.Add(name, temp);

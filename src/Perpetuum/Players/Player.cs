@@ -70,10 +70,7 @@ namespace Perpetuum.Players
         public const int ARKHE_REQUEST_TIMER_MINUTES_PVP = 3;
         public const int ARKHE_REQUEST_TIMER_MINUTES_NPC = 1;
 
-        private bool HasAggressorEffect
-        {
-            get { return EffectHandler.ContainsEffect(EffectType.effect_aggressor); }
-        }
+        private bool HasAggressorEffect => EffectHandler.ContainsEffect(EffectType.effect_aggressor);
 
         public long CorporationEid { get; set; }
 
@@ -85,10 +82,7 @@ namespace Perpetuum.Players
 
         public MissionHandler MissionHandler { get; private set; }
 
-        public bool HasSelfTeleportEnablerEffect
-        {
-            get { return EffectHandler.ContainsEffect(EffectType.effect_teleport_self_enabler); }
-        }
+        public bool HasSelfTeleportEnablerEffect => EffectHandler.ContainsEffect(EffectType.effect_teleport_self_enabler);
 
         public Gang Gang { get; set; }
 
@@ -96,16 +90,12 @@ namespace Perpetuum.Players
         {
             get
             {
-                var zone = Zone;
+                IZone zone = Zone;
 
-                if (zone == null)
-                {
-                    return false;
-                }
-
-                return zone.Configuration.Protected ||
+                return zone != null
+&& (zone.Configuration.Protected ||
                     EffectHandler.ContainsEffect(EffectType.effect_syndicate_area) ||
-                    EffectHandler.ContainsEffect(EffectType.effect_safe_spot);
+                    EffectHandler.ContainsEffect(EffectType.effect_safe_spot));
             }
         }
 
@@ -113,31 +103,17 @@ namespace Perpetuum.Players
         {
             get
             {
-                var isInvulnerable = IsInvulnerable;
+                bool isInvulnerable = IsInvulnerable;
 
-                if (isInvulnerable)
-                {
-                    return false;
-                }
-
-                return base.IsLockable;
+                return !isInvulnerable && base.IsLockable;
             }
         }
 
-        public IBlobHandler BlobHandler
-        {
-            get { return blobHandler; }
-        }
+        public IBlobHandler BlobHandler => blobHandler;
 
-        public double BlobEmission
-        {
-            get { return blobEmitter.BlobEmission; }
-        }
+        public double BlobEmission => blobEmitter.BlobEmission;
 
-        public double BlobEmissionRadius
-        {
-            get { return blobEmitter.BlobEmissionRadius; }
-        }
+        public double BlobEmissionRadius => blobEmitter.BlobEmissionRadius;
 
         public Player(
             IExtensionReader extensionReader,
@@ -206,20 +182,20 @@ namespace Perpetuum.Players
                     DynamicProperties.Update(k.currentCore, Core);
                 }
 
-                var zone = Zone;
+                IZone zone = Zone;
 
                 if (zone == null || States.Dead)
                 {
                     return;
                 }
 
-                var character = Character;
+                Character character = Character;
 
                 character.ZoneId = zone.Id;
                 character.ZonePosition = CurrentPosition;
 
-                var p = DynamicProperties.GetProperty<int>(k.pvpRemaining);
-                var pvpEffect = EffectHandler.GetEffectsByType(EffectType.effect_pvp).FirstOrDefault();
+                IDynamicProperty<int> p = DynamicProperties.GetProperty<int>(k.pvpRemaining);
+                Effect pvpEffect = EffectHandler.GetEffectsByType(EffectType.effect_pvp).FirstOrDefault();
 
                 if (pvpEffect == null)
                 {
@@ -228,7 +204,7 @@ namespace Perpetuum.Players
                     return;
                 }
 
-                var effectTimer = pvpEffect.Timer;
+                IntervalTimer effectTimer = pvpEffect.Timer;
 
                 if (effectTimer != null)
                 {
@@ -258,7 +234,7 @@ namespace Perpetuum.Players
 
         public void SendModuleProcessError(Module module, ErrorCodes error)
         {
-            var packet = new Packet(ZoneCommand.ModuleEvaluateError);
+            Packet packet = new Packet(ZoneCommand.ModuleEvaluateError);
 
             packet.AppendByte((byte)module.ParentComponent.Type);
             packet.AppendByte((byte)module.Slot);
@@ -269,8 +245,8 @@ namespace Perpetuum.Players
         public void ApplyInvulnerableEffect()
         {
             RemoveInvulnerableEffect(); // Remove existing effect, set new
-            var builder = NewEffectBuilder().SetType(EffectType.effect_invulnerable);
-            builder.WithDurationModifier(0.75); //Reduce span of syndicate protection
+            EffectBuilder builder = NewEffectBuilder().SetType(EffectType.effect_invulnerable);
+            _ = builder.WithDurationModifier(0.75); //Reduce span of syndicate protection
             ApplyEffect(builder);
         }
 
@@ -281,18 +257,18 @@ namespace Perpetuum.Players
 
         public void ApplyTeleportSicknessEffect()
         {
-            var zone = Zone;
+            IZone zone = Zone;
 
             if (zone == null || zone is TrainingZone)
             {
                 return;
             }
 
-            var effectBuilder = NewEffectBuilder().SetType(EffectType.effect_teleport_sickness);
+            EffectBuilder effectBuilder = NewEffectBuilder().SetType(EffectType.effect_teleport_sickness);
 
             if (HasPvpEffect)
             {
-                effectBuilder.WithDurationModifier(3.0);
+                _ = effectBuilder.WithDurationModifier(3.0);
             }
 
             ApplyEffect(effectBuilder);
@@ -300,14 +276,14 @@ namespace Perpetuum.Players
 
         public void ApplySelfTeleportEnablerEffect(TimeSpan duration)
         {
-            var effect = EffectHandler.GetEffectsByType(EffectType.effect_teleport_self_enabler).FirstOrDefault();
+            Effect effect = EffectHandler.GetEffectsByType(EffectType.effect_teleport_self_enabler).FirstOrDefault();
 
             if (effect != null)
             {
                 EffectHandler.Remove(effect);
             }
 
-            var builder = NewEffectBuilder().SetType(EffectType.effect_teleport_self_enabler).WithDuration(duration);
+            EffectBuilder builder = NewEffectBuilder().SetType(EffectType.effect_teleport_self_enabler).WithDuration(duration);
 
             ApplyEffect(builder);
         }
@@ -326,14 +302,14 @@ namespace Perpetuum.Players
                 HasTeleportSicknessEffect.ThrowIfTrue(ErrorCodes.CantDockThisState);
             }
 
-            var zone = Zone;
+            IZone zone = Zone;
 
             if (zone == null)
             {
                 return;
             }
 
-            var dockingBase = dockingBaseHelper.GetDockingBase(baseEid);
+            DockingBase dockingBase = dockingBaseHelper.GetDockingBase(baseEid);
 
             if (dockingBase == null)
             {
@@ -345,11 +321,11 @@ namespace Perpetuum.Players
                 dockingBase.IsInDockingRange(this).ThrowIfFalse(ErrorCodes.DockingOutOfRange);
             }
 
-            var currentAccess = Session.AccessLevel;
+            AccessLevel currentAccess = Session.AccessLevel;
 
             if (!currentAccess.IsAdminOrGm())
             {
-                dockingBase.IsDockingAllowed(Character).ThrowIfError();
+                _ = dockingBase.IsDockingAllowed(Character).ThrowIfError();
             }
 
             DockToBase(zone, dockingBase);
@@ -364,7 +340,7 @@ namespace Perpetuum.Players
         {
             States.Dock = true;
 
-            var publicContainer = dockingBase.GetPublicContainer();
+            PublicContainer publicContainer = dockingBase.GetPublicContainer();
 
             FullArmorRepair();
 
@@ -376,22 +352,19 @@ namespace Perpetuum.Players
             {
                 RemoveFromZone();
                 MissionHelper.MissionAdvanceDockInTarget(Character.Id, zone.Id, CurrentPosition);
-                TransportAssignment.DeliverTransportAssignmentAsync(Character);
+                _ = TransportAssignment.DeliverTransportAssignmentAsync(Character);
             });
         }
 
         public ErrorCodes CheckPvp()
         {
-            var zone = Zone;
+            IZone zone = Zone;
 
             Debug.Assert(zone != null);
 
-            if (!HasPvpEffect && (zone.Configuration.Protected || EffectHandler.ContainsEffect(EffectType.effect_syndicate_area)))
-            {
-                return ErrorCodes.PvpIsNotAllowed;
-            }
-
-            return ErrorCodes.NoError;
+            return !HasPvpEffect && (zone.Configuration.Protected || EffectHandler.ContainsEffect(EffectType.effect_syndicate_area))
+                ? ErrorCodes.PvpIsNotAllowed
+                : ErrorCodes.NoError;
         }
 
         public bool IsInDefaultCorporation()
@@ -401,16 +374,16 @@ namespace Perpetuum.Players
 
         public override ItemPropertyModifier GetPropertyModifier(AggregateField field)
         {
-            var modifier = base.GetPropertyModifier(field);
+            ItemPropertyModifier modifier = base.GetPropertyModifier(field);
 
             if (Character == Character.None)
             {
                 return modifier;
             }
 
-            var characterExtensions = Character.GetExtensions();
-            var extensions = extensionReader.GetExtensions();
-            var extensionBonus = characterExtensions
+            CharacterExtensionCollection characterExtensions = Character.GetExtensions();
+            System.Collections.Immutable.ImmutableDictionary<int, ExtensionInfo> extensions = extensionReader.GetExtensions();
+            double extensionBonus = characterExtensions
                 .Select(e => extensions[e.id])
                 .Where(e => e.aggregateField == field)
                 .Sum(e => characterExtensions.GetLevel(e.id) * e.bonus);
@@ -421,7 +394,7 @@ namespace Perpetuum.Players
 
             if (!extensionBonus.IsZero())
             {
-                var m = ItemPropertyModifier.Create(field, extensionBonus);
+                ItemPropertyModifier m = ItemPropertyModifier.Create(field, extensionBonus);
 
                 m.NormalizeExtensionBonus();
                 m.Modify(ref modifier);
@@ -474,25 +447,22 @@ namespace Perpetuum.Players
             }
         }
 
-        public override string InfoString
-        {
-            get { return $"Player:{Character.Id}:{Definition}:{Eid}"; }
-        }
+        public override string InfoString => $"Player:{Character.Id}:{Definition}:{Eid}";
 
         public void SendInitSelf()
         {
-            var zone = Zone;
+            IZone zone = Zone;
 
             Debug.Assert(zone != null, "zone != null");
             Session.SendPacket(EnterPacketBuilder);
             Session.SendTerrainData();
             zone.SendBeamsToPlayer(this, GridDistricts.All);
 
-            var lockPackets = GetLockPackets();
+            IEnumerable<Packet> lockPackets = GetLockPackets();
 
             Session.SendPackets(lockPackets);
 
-            foreach (var visibility in GetVisibleUnits())
+            foreach (IUnitVisibility visibility in GetVisibleUnits())
             {
                 Session.SendPacket(visibility.Target.EnterPacketBuilder);
 
@@ -501,7 +471,7 @@ namespace Perpetuum.Players
                     continue;
                 }
 
-                var unitLockPackets = robot.GetLockPackets();
+                IEnumerable<Packet> unitLockPackets = robot.GetLockPackets();
 
                 Session.SendPackets(unitLockPackets);
             }
@@ -509,12 +479,12 @@ namespace Perpetuum.Players
             Session.SendPacket(new GangUpdatePacketBuilder(Visibility.Visible, zone.GetGangMembers(Gang)));
             Session.SendPacket(zone.Weather.GetCurrentWeather().CreateUpdatePacket());
 
-            foreach (var effect in EffectHandler.Effects)
+            foreach (Effect effect in EffectHandler.Effects)
             {
                 Session.SendPacket(new EffectPacketBuilder(effect, true));
             }
 
-            foreach (var module in ActiveModules)
+            foreach (ActiveModule module in ActiveModules)
             {
                 module.ForceUpdate();
             }
@@ -522,7 +492,7 @@ namespace Perpetuum.Players
 
         public void WriteFQLog(string message)
         {
-            var e = new LogEvent
+            LogEvent e = new LogEvent
             {
                 LogType = LogType.Info,
                 Tag = "FQ",
@@ -541,23 +511,23 @@ namespace Perpetuum.Players
         {
             base.OnCombatEvent(source, e);
 
-            var player = Zone.ToPlayerOrGetOwnerPlayer(source);
+            Player player = Zone.ToPlayerOrGetOwnerPlayer(source);
 
             if (player == null)
             {
                 return;
             }
 
-            var logger = LazyInitializer.EnsureInitialized(ref combatLogger, CreateCombatLogger);
+            CombatLogger logger = LazyInitializer.EnsureInitialized(ref combatLogger, CreateCombatLogger);
 
             logger.Log(player, e);
         }
 
         public static Player LoadPlayerAndAddToZone(IZone zone, Character character)
         {
-            using (var scope = Db.CreateTransaction())
+            using (TransactionScope scope = Db.CreateTransaction())
             {
-                var player = (Player)character.GetActiveRobot().ThrowIfNull(ErrorCodes.ARobotMustBeSelected);
+                Player player = (Player)character.GetActiveRobot().ThrowIfNull(ErrorCodes.ARobotMustBeSelected);
 
                 DockingBase dockingBase = null;
                 ZoneEnterType zoneEnterType;
@@ -575,19 +545,19 @@ namespace Perpetuum.Players
                 else
                 {
                     zoneEnterType = ZoneEnterType.Teleport;
-                    zone.Id.ThrowIfNotEqual(character.ZoneId ?? -1, ErrorCodes.InvalidZoneId);
+                    _ = zone.Id.ThrowIfNotEqual(character.ZoneId ?? -1, ErrorCodes.InvalidZoneId);
 
-                    var zonePosition = character.ZonePosition.ThrowIfNull(ErrorCodes.InvalidPosition);
+                    Position? zonePosition = character.ZonePosition.ThrowIfNull(ErrorCodes.InvalidPosition);
 
                     spawnPosition = (Position)zonePosition;
                 }
 
                 spawnPosition = zone.FixZ(spawnPosition);
 
-                var finder = new ClosestWalkablePositionFinder(zone, spawnPosition, player);
-                var validPosition = finder.FindOrThrow();
+                ClosestWalkablePositionFinder finder = new ClosestWalkablePositionFinder(zone, spawnPosition, player);
+                Position validPosition = finder.FindOrThrow();
 
-                var zoneStorage = zone.Configuration.GetStorage();
+                ZoneStorage zoneStorage = zone.Configuration.GetStorage();
 
                 player.Parent = zoneStorage.Eid;
                 player.FullCoreRecharge();
@@ -611,14 +581,14 @@ namespace Perpetuum.Players
         [CanBeNull]
         public Task TeleportToPositionAsync(Position target, bool applyTeleportSickness, bool applyInvulnerable)
         {
-            var zone = Zone;
+            IZone zone = Zone;
 
             if (zone == null)
             {
                 return null;
             }
 
-            var teleport = teleportStrategyFactories.TeleportWithinZoneFactory();
+            TeleportWithinZone teleport = teleportStrategyFactories.TeleportWithinZoneFactory();
 
             if (teleport == null)
             {
@@ -629,14 +599,14 @@ namespace Perpetuum.Players
             teleport.ApplyTeleportSickness = applyTeleportSickness;
             teleport.ApplyInvulnerable = applyInvulnerable;
 
-            var task = teleport.DoTeleportAsync(this);
+            Task task = teleport.DoTeleportAsync(this);
 
             return task?.LogExceptions();
         }
 
         public void SendStartProgressBar(Unit unit, TimeSpan timeout, TimeSpan start)
         {
-            var data = unit.BaseInfoToDictionary();
+            Dictionary<string, object> data = unit.BaseInfoToDictionary();
 
             data.Add(k.timeOut, (int)timeout.TotalMilliseconds);
             data.Add(k.started, (long)start.TotalMilliseconds);
@@ -650,7 +620,7 @@ namespace Perpetuum.Players
 
         public void SendEndProgressBar(Unit unit, bool success = true)
         {
-            var info = unit.BaseInfoToDictionary();
+            Dictionary<string, object> info = unit.BaseInfoToDictionary();
 
             info.Add(k.success, success);
             Message.Builder.SetCommand(Commands.AlarmOver).WithData(info).ToCharacter(Character).Send();
@@ -658,7 +628,7 @@ namespace Perpetuum.Players
 
         public void SendArtifactRadarBeam(Position targetPosition)
         {
-            var builder = Beam.NewBuilder()
+            BeamBuilder builder = Beam.NewBuilder()
                 .WithType(BeamType.artifact_radar)
                 .WithSourcePosition(targetPosition)
                 .WithTargetPosition(targetPosition)
@@ -681,7 +651,7 @@ namespace Perpetuum.Players
             }
             else
             {
-                using (var scope = Db.CreateTransaction())
+                using (TransactionScope scope = Db.CreateTransaction())
                 {
                     Reload();
                     scope.Complete();
@@ -693,14 +663,14 @@ namespace Perpetuum.Players
         {
             CorporationEid = newCorporationEid;
 
-            var playersOnZone = Zone.GetCharacters().ToArray();
+            Character[] playersOnZone = Zone.GetCharacters().ToArray();
 
             if (playersOnZone.Length <= 0)
             {
                 return;
             }
 
-            var result = new Dictionary<string, object>
+            Dictionary<string, object> result = new Dictionary<string, object>
             {
                 {k.corporationEID, newCorporationEid},
                 {k.characterID, Character.Id},
@@ -729,7 +699,7 @@ namespace Perpetuum.Players
         {
             SetCombatState(true);
 
-            var enemyPlayer = enemy as Player;
+            Player enemyPlayer = enemy as Player;
 
             enemyPlayer?.SetCombatState(true);
         }
@@ -746,19 +716,20 @@ namespace Perpetuum.Players
                 unit is WallHealer ||
                 unit is ProximityDeviceBase ||
                 (unit is BlobEmitterUnit b && b.IsPlayerSpawned) ||
-                unit is RemoteControlledCreature;
+                (unit is RemoteControlledCreature remoteControlledCreature &&
+                    remoteControlledCreature.CommandRobot is Player);
         }
 
         protected override void OnDead(Unit killer)
         {
-            HandlePlayerDeadAsync(Zone, killer).ContinueWith(t => base.OnDead(killer));
+            _ = HandlePlayerDeadAsync(Zone, killer).ContinueWith(t => base.OnDead(killer));
         }
 
         protected override void OnTileChanged()
         {
             base.OnTileChanged();
 
-            var zone = Zone;
+            IZone zone = Zone;
 
             if (zone == null)
             {
@@ -767,7 +738,7 @@ namespace Perpetuum.Players
 
             MissionHandler?.MissionUpdateOnTileChange();
 
-            var controlInfo = zone.Terrain.Controls.GetValue(CurrentPosition);
+            TerrainControlInfo controlInfo = zone.Terrain.Controls.GetValue(CurrentPosition);
 
             ApplyHighwayEffect(controlInfo.IsAnyHighway);
 
@@ -783,16 +754,16 @@ namespace Perpetuum.Players
         {
             base.OnCellChanged(lastCellCoord, currentCellCoord);
 
-            var zone = Zone;
+            IZone zone = Zone;
 
             if (zone == null)
             {
                 return;
             }
 
-            Task.Run(() =>
+            _ = Task.Run(() =>
             {
-                var district = currentCellCoord.ComputeDistrict(lastCellCoord);
+                GridDistricts district = currentCellCoord.ComputeDistrict(lastCellCoord);
                 zone.SendBeamsToPlayer(this, district);
                 Session.SendTerrainData();
             }).LogExceptions();
@@ -810,12 +781,7 @@ namespace Perpetuum.Players
 
         protected override bool IsDetected(Unit target)
         {
-            if (Gang.IsMember(target))
-            {
-                return true;
-            }
-
-            return base.IsDetected(target);
+            return Gang.IsMember(target) || base.IsDetected(target);
         }
 
         protected override bool IsHostileFor(Unit unit)
@@ -866,7 +832,7 @@ namespace Perpetuum.Players
 
             if (@lock is UnitLock u)
             {
-                var player = u.Target as Player;
+                Player player = u.Target as Player;
 
                 player?.Session.CancelLogout();
 
@@ -928,7 +894,7 @@ namespace Perpetuum.Players
             MissionHandler.InitMissions();
             Direction = FastRandom.NextDouble();
 
-            var p = DynamicProperties.GetProperty<int>(k.pvpRemaining);
+            IDynamicProperty<int> p = DynamicProperties.GetProperty<int>(k.pvpRemaining);
 
             if (!p.HasValue)
             {
@@ -937,16 +903,6 @@ namespace Perpetuum.Players
 
             ApplyPvPEffect(TimeSpan.FromMilliseconds(p.Value));
             p.Clear();
-        }
-
-        protected override void OnBeforeRemovedFromZone(IZone zone)
-        {
-            var remoteController = this.Modules?.FirstOrDefault(x => x is RemoteControllerModule);
-
-            if (remoteController != null)
-            {
-                (remoteController as RemoteControllerModule).CloseAllChannels();
-            }
         }
 
         protected override void OnRemovedFromZone(IZone zone)
@@ -981,14 +937,14 @@ namespace Perpetuum.Players
                 return;
             }
 
-            var send = (e.UpdateTypes & UnitUpdateTypes.Visibility) > 0 || (e.UpdatedProperties != null && e.UpdatedProperties.Any(p => p.Field.IsPublic()));
+            bool send = (e.UpdateTypes & UnitUpdateTypes.Visibility) > 0 || (e.UpdatedProperties != null && e.UpdatedProperties.Any(p => p.Field.IsPublic()));
 
             if (!send)
             {
                 return;
             }
 
-            var v = Visibility.Invisible;
+            Visibility v = Visibility.Invisible;
 
             if (unit.InZone)
             {
@@ -1010,7 +966,7 @@ namespace Perpetuum.Players
                 return;
             }
 
-            combatTimer.Update(time);
+            _ = combatTimer.Update(time);
 
             if (!combatTimer.Passed)
             {
@@ -1022,7 +978,7 @@ namespace Perpetuum.Players
 
         private void Reload()
         {
-            var container = GetContainer();
+            RobotInventory container = GetContainer();
 
             Debug.Assert(container != null, "container != null");
             container.EnlistTransaction();
@@ -1032,7 +988,7 @@ namespace Perpetuum.Players
 
         private CombatLogger CreateCombatLogger()
         {
-            var logger = combatLoggerFactory(this);
+            CombatLogger logger = combatLoggerFactory(this);
 
             logger.Expired = () =>
             {
@@ -1051,7 +1007,7 @@ namespace Perpetuum.Players
         {
             if (apply)
             {
-                var effectBuilder = NewEffectBuilder().SetType(EffectType.effect_syndicate_area);
+                EffectBuilder effectBuilder = NewEffectBuilder().SetType(EffectType.effect_syndicate_area);
                 ApplyEffect(effectBuilder);
             }
             else
@@ -1064,7 +1020,7 @@ namespace Perpetuum.Players
         {
             if (apply)
             {
-                var effectBuilder = NewEffectBuilder()
+                EffectBuilder effectBuilder = NewEffectBuilder()
                     .SetType(EffectType.effect_highway)
                     .WithPropertyModifier(ItemPropertyModifier.Create(AggregateField.effect_speed_highway_modifier, 1.0));
 
@@ -1088,7 +1044,7 @@ namespace Perpetuum.Players
 
         private void HandlePlayerDead(IZone zone, Unit killer)
         {
-            using (var scope = Db.CreateTransaction())
+            using (TransactionScope scope = Db.CreateTransaction())
             {
                 EnlistTransaction();
 
@@ -1098,29 +1054,29 @@ namespace Perpetuum.Players
 
                     SaveCombatLog(zone, killer);
 
-                    var character = Character;
-                    var dockingBase = character.GetHomeBaseOrCurrentBase();
+                    Character character = Character;
+                    DockingBase dockingBase = character.GetHomeBaseOrCurrentBase();
 
                     dockingBase.DockIn(character, NormalUndockDelay, ZoneExitType.Died);
 
                     PlayerDeathLogger.Log.Write(zone, this, killer);
 
-                    var wasInsured = InsuranceHelper.CheckInsuranceOnDeath(Eid, Definition);
+                    bool wasInsured = InsuranceHelper.CheckInsuranceOnDeath(Eid, Definition);
 
                     if (!Session.AccessLevel.IsAdminOrGm())
                     {
-                        var robotInventory = GetContainer();
+                        RobotInventory robotInventory = GetContainer();
 
                         Debug.Assert(robotInventory != null);
 
-                        var lootItems = new List<LootItem>();
+                        List<LootItem> lootItems = new List<LootItem>();
 
-                        foreach (var module in Modules.Where(m => LootHelper.Roll()))
+                        foreach (Module module in Modules.Where(m => LootHelper.Roll()))
                         {
                             lootItems.Add(LootItemBuilder.Create(module).AsDamaged().Build());
 
-                            var activeModule = module as ActiveModule;
-                            var ammo = activeModule?.GetAmmo();
+                            ActiveModule activeModule = module as ActiveModule;
+                            Items.Ammos.Ammo ammo = activeModule?.GetAmmo();
 
                             if (ammo != null && LootHelper.Roll())
                             {
@@ -1132,11 +1088,9 @@ namespace Perpetuum.Players
                             Repository.Delete(module);
                         }
 
-                        foreach (var item in robotInventory.GetItems(true).Where(i => i is VolumeWrapperContainer))
+                        foreach (Item item in robotInventory.GetItems(true).Where(i => i is VolumeWrapperContainer))
                         {
-                            var wrapper = item as VolumeWrapperContainer;
-
-                            if (wrapper == null)
+                            if (!(item is VolumeWrapperContainer wrapper))
                             {
                                 continue;
                             }
@@ -1146,11 +1100,11 @@ namespace Perpetuum.Players
                             Repository.Delete(wrapper);
                         }
 
-                        foreach (var item in robotInventory
+                        foreach (Item item in robotInventory
                             .GetItems()
                             .Where(i => LootHelper.Roll() && !i.ED.AttributeFlags.NonStackable))
                         {
-                            var qtyMod = FastRandom.NextDouble();
+                            double qtyMod = FastRandom.NextDouble();
 
                             item.Quantity = (int)(item.Quantity * qtyMod);
 
@@ -1184,26 +1138,26 @@ namespace Perpetuum.Players
 
                         if (lootItems.Count > 0)
                         {
-                            var lootContainer = LootContainer.Create()
+                            LootContainer lootContainer = LootContainer.Create()
                                 .AddLoot(lootItems)
                                 .BuildAndAddToZone(zone, CurrentPosition);
 
                             if (lootContainer != null)
                             {
-                                var b = TransactionLogEvent.Builder()
+                                TransactionLogEventBuilder b = TransactionLogEvent.Builder()
                                     .SetTransactionType(TransactionType.PutLoot)
                                     .SetCharacter(character)
                                     .SetContainer(lootContainer.Eid);
 
-                                foreach (var lootItem in lootItems)
+                                foreach (LootItem lootItem in lootItems)
                                 {
-                                    b.SetItem(lootItem.ItemInfo.Definition, lootItem.ItemInfo.Quantity);
+                                    _ = b.SetItem(lootItem.ItemInfo.Definition, lootItem.ItemInfo.Quantity);
                                     Character.LogTransaction(b);
                                 }
                             }
                         }
 
-                        var killedByPlayer = (killer != null && killer.IsPlayer());
+                        bool killedByPlayer = killer != null && killer.IsPlayer();
 
                         Trashcan.Get()
                             .MoveToTrash(this, Session.DisconnectTime, wasInsured, killedByPlayer, Session.InactiveTime);
@@ -1221,7 +1175,7 @@ namespace Perpetuum.Players
                             {
                                 Transaction.Current.OnCommited(() =>
                                 {
-                                    var starterRobotInfo = new Dictionary<string, object>
+                                    Dictionary<string, object> starterRobotInfo = new Dictionary<string, object>
                                     {
                                         {k.baseEID, Eid},
                                         {k.robotEID, activeRobot.Eid}
@@ -1238,12 +1192,12 @@ namespace Perpetuum.Players
                     {
                         this.Repair();
 
-                        var container = dockingBase.GetPublicContainer();
+                        PublicContainer container = dockingBase.GetPublicContainer();
 
                         container.AddItem(this, false);
                     }
 
-                    this.Save();
+                    Save();
 
                     scope.Complete();
                 }

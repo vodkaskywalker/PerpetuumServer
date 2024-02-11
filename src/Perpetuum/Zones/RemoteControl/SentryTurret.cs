@@ -33,7 +33,7 @@ namespace Perpetuum.Zones.RemoteControl
 
         public override void OnAggression(Unit victim)
         {
-            this.Player.OnAggression(victim);
+            CommandRobot.OnAggression(victim);
         }
 
         internal override bool IsHostile(Npc npc)
@@ -43,12 +43,12 @@ namespace Perpetuum.Zones.RemoteControl
 
         internal override bool IsHostile(CombatDrone drone)
         {
-            return IsHostilePlayer(drone.Player);
+            return !(drone.CommandRobot is Player player) || IsHostilePlayer(player);
         }
 
         internal override bool IsHostile(SentryTurret turret)
         {
-            return IsHostilePlayer(turret.Player);
+            return !(turret.CommandRobot is Player player) || IsHostilePlayer(player);
         }
 
         protected override void UpdateUnitVisibility(Unit target)

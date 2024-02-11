@@ -42,7 +42,7 @@ namespace Perpetuum.Zones
                     .Where(x => x is RemoteControlledCreature)
                     .Join(
                         players,
-                        turret => ((RemoteControlledCreature)turret).Player,
+                        turret => ((RemoteControlledCreature)turret).CommandRobot,
                         player => player,
                         (turret, player) => (RemoteControlledCreature)turret);
         }

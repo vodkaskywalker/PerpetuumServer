@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Perpetuum.Accounting.Characters;
 using Perpetuum.Builders;
 using Perpetuum.Containers;
@@ -17,6 +14,9 @@ using Perpetuum.Zones;
 using Perpetuum.Zones.DamageProcessors;
 using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Perpetuum.Robots
 {
@@ -34,30 +34,15 @@ namespace Perpetuum.Robots
 
         public bool IsSelected => RobotHelper.IsSelected(this);
 
-        public override double Health
-        {
-            get
-            {
-                if (IsRepackaged)
-                {
-                    return base.Health;
-                }
-
-                return ArmorMax > 0.0 && Armor > 0.0
+        public override double Health => IsRepackaged
+                    ? base.Health
+                    : ArmorMax > 0.0 && Armor > 0.0
                     ? Armor.Ratio(ArmorMax) * 100
                     : base.Health;
-            }
-        }
 
-        public override double Mass
-        {
-            get { return RobotComponents.Sum(c => c.Mass); }
-        }
+        public override double Mass => RobotComponents.Sum(c => c.Mass);
 
-        public bool HasModule
-        {
-            get { return Modules.Any(); }
-        }
+        public bool HasModule => Modules.Any();
 
         public bool IsItemsInContainer
         {
@@ -68,51 +53,25 @@ namespace Perpetuum.Robots
                     return false;
                 }
 
-                var robotInventory = GetContainer();
+                RobotInventory robotInventory = GetContainer();
 
-                if (robotInventory == null)
-                {
-                    return false;
-                }
-
-                return robotInventory.HasChildren;
+                return robotInventory != null && robotInventory.HasChildren;
             }
         }
 
-        public override bool IsStackable
-        {
-            get { return base.IsStackable && IsRepackaged; }
-        }
+        public override bool IsStackable => base.IsStackable && IsRepackaged;
 
-        public IEnumerable<Extension> ExtensionBonusEnablerExtensions
-        {
-            get { return ExtensionBonuses.Select(cb => new Extension(cb.extensionId, 1)); }
-        }
+        public IEnumerable<Extension> ExtensionBonusEnablerExtensions => ExtensionBonuses.Select(cb => new Extension(cb.extensionId, 1));
 
-        protected IEnumerable<ExtensionBonus> ExtensionBonuses
-        {
-            get { return RobotComponents.SelectMany(component => component.ExtensionBonuses); }
-        }
+        protected IEnumerable<ExtensionBonus> ExtensionBonuses => RobotComponents.SelectMany(component => component.ExtensionBonuses);
 
-        public IEnumerable<Module> Modules
-        {
-            get { return _modules.Value; }
-        }
+        public IEnumerable<Module> Modules => _modules.Value;
 
-        public IEnumerable<ActiveModule> ActiveModules
-        {
-            get { return _activeModules.Value; }
-        }
+        public IEnumerable<ActiveModule> ActiveModules => _activeModules.Value;
 
-        public IEnumerable<Item> Components
-        {
-            get { return _components.Value; }
-        }
+        public IEnumerable<Item> Components => _components.Value;
 
-        public IEnumerable<RobotComponent> RobotComponents
-        {
-            get { return _robotComponents.Value; }
-        }
+        public IEnumerable<RobotComponent> RobotComponents => _robotComponents.Value;
 
         public override double Volume
         {
@@ -123,7 +82,7 @@ namespace Perpetuum.Robots
                     return base.Volume;
                 }
 
-                var volume = RobotComponents.Sum(c => c.Volume);
+                double volume = RobotComponents.Sum(c => c.Volume);
 
                 volume *= Quantity;
 
@@ -131,10 +90,7 @@ namespace Perpetuum.Robots
             }
         }
 
-        public bool IsTrashed
-        {
-            get { return Trashcan.IsItemTrashed(this); }
-        }
+        public bool IsTrashed => Trashcan.IsItemTrashed(this);
 
         protected Robot()
         {
@@ -158,7 +114,7 @@ namespace Perpetuum.Robots
 
         public void VisitModules(IEntityVisitor visitor)
         {
-            foreach (var module in Modules)
+            foreach (Module module in Modules)
             {
                 module.AcceptVisitor(visitor);
             }
@@ -166,7 +122,7 @@ namespace Perpetuum.Robots
 
         public void VisitRobotComponents(IEntityVisitor visitor)
         {
-            foreach (var component in RobotComponents)
+            foreach (RobotComponent component in RobotComponents)
             {
                 component.AcceptVisitor(visitor);
             }
@@ -174,14 +130,14 @@ namespace Perpetuum.Robots
 
         public void VisitRobotInventory(IEntityVisitor visitor)
         {
-            var container = GetContainer();
+            RobotInventory container = GetContainer();
 
             container?.AcceptVisitor(visitor);
         }
 
         public override IDictionary<string, object> GetDebugInfo()
         {
-            var info = base.GetDebugInfo();
+            IDictionary<string, object> info = base.GetDebugInfo();
 
             info.Add("locksCount", _lockHandler.Count);
 
@@ -196,8 +152,8 @@ namespace Perpetuum.Robots
 
         public void FullCoreRecharge()
         {
-            var currentCore = DynamicProperties.GetOrAdd<double>(k.currentCore);
-            var coreMaxValue = CoreMax;
+            double currentCore = DynamicProperties.GetOrAdd<double>(k.currentCore);
+            double coreMaxValue = CoreMax;
 
             if (currentCore >= coreMaxValue)
             {
@@ -216,7 +172,7 @@ namespace Perpetuum.Robots
 
         public void StopAllModules()
         {
-            foreach (var module in ActiveModules)
+            foreach (ActiveModule module in ActiveModules)
             {
                 module.State.SwitchTo(ModuleStateType.Idle);
             }
@@ -230,7 +186,7 @@ namespace Perpetuum.Robots
 
         public void EmptyRobot(Character character, Container targetContainer, bool withContainer = true)
         {
-            foreach (var module in Modules)
+            foreach (Module module in Modules)
             {
                 module.Unequip(targetContainer);
             }
@@ -240,21 +196,21 @@ namespace Perpetuum.Robots
                 return;
             }
 
-            var container = GetContainer();
+            RobotInventory container = GetContainer();
 
             container?.RelocateItems(character, character, container.GetItems(), targetContainer);
         }
 
         public override Dictionary<string, object> ToDictionary()
         {
-            var dictionary = base.ToDictionary();
+            Dictionary<string, object> dictionary = base.ToDictionary();
 
-            foreach (var component in RobotComponents)
+            foreach (RobotComponent component in RobotComponents)
             {
                 dictionary.Add(component.ComponentName, component.ToDictionary());
             }
 
-            var container = GetContainer();
+            RobotInventory container = GetContainer();
 
             if (container != null)
             {
@@ -325,7 +281,7 @@ namespace Perpetuum.Robots
 
         public void CreateComponents()
         {
-            foreach (var component in Template.BuildComponents())
+            foreach (Item component in Template.BuildComponents())
             {
                 AddChild(component);
             }
@@ -345,15 +301,14 @@ namespace Perpetuum.Robots
         {
             States.LockSomething = _lockHandler.Count > 0;
 
-            var unitLock = @lock as UnitLock;
 
-            if (unitLock != null)
+            if (@lock is UnitLock unitLock)
             {
                 UpdateTypes |= UnitUpdateTypes.Lock;
                 UpdateVisibilityOf(unitLock.Target);
             }
 
-            var builder = new AnonymousBuilder<Packet>(() => LockPacketBuilder.BuildPacket(@lock));
+            AnonymousBuilder<Packet> builder = new AnonymousBuilder<Packet>(() => LockPacketBuilder.BuildPacket(@lock));
 
             OnBroadcastPacket(builder.ToProxy());
         }
@@ -364,7 +319,7 @@ namespace Perpetuum.Robots
 
             _lockHandler.Update(time);
 
-            foreach (var robotComponent in RobotComponents)
+            foreach (RobotComponent robotComponent in RobotComponents)
             {
                 robotComponent.Update(time);
             }
@@ -379,12 +334,12 @@ namespace Perpetuum.Robots
         {
             base.OnDamageTaken(source, e);
 
-            var decayChance = this.decayChance.Value;
-            var random = FastRandom.NextDouble();
+            double decayChance = this.decayChance.Value;
+            double random = FastRandom.NextDouble();
 
             if (decayChance >= random)
             {
-                var d = Decay;
+                int d = Decay;
 
                 if (d > 0)
                 {
@@ -396,16 +351,18 @@ namespace Perpetuum.Robots
 
         protected override bool IsDetected(Unit target)
         {
-            if (_lockHandler.IsLocked(target))
-            {
-                return true;
-            }
-
-            return base.IsDetected(target);
+            return _lockHandler.IsLocked(target) || base.IsDetected(target);
         }
 
         protected override void OnRemovedFromZone(IZone zone)
         {
+            Module remoteController = Modules?.FirstOrDefault(x => x is RemoteControllerModule);
+
+            if (remoteController != null)
+            {
+                (remoteController as RemoteControllerModule).CloseAllChannels();
+            }
+
             base.OnRemovedFromZone(zone);
         }
 

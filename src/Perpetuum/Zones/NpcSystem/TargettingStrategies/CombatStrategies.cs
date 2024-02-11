@@ -40,7 +40,7 @@ namespace Perpetuum.Zones.NpcSystem.TargettingStrategies
 
         private static bool TargetPropagatedPrimary(SmartCreature smartCreature, UnitLock[] locks)
         {
-            var propagatedPrimary = locks.FirstOrDefault(x => x.Target == ((smartCreature as RemoteControlledCreature).Player.GetPrimaryLock() as UnitLock)?.Target);
+            var propagatedPrimary = locks.FirstOrDefault(x => x.Target == ((smartCreature as RemoteControlledCreature).CommandRobot.GetPrimaryLock() as UnitLock)?.Target);
 
             if (propagatedPrimary == null)
             {

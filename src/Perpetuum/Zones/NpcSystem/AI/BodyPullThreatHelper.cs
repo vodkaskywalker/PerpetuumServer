@@ -39,9 +39,10 @@ namespace Perpetuum.Zones.NpcSystem.AI
             }
 
             if (smartCreature is RemoteControlledCreature remoteControlledCreature &&
+                (remoteControlledCreature.CommandRobot is Player) &&
                 player.Zone.Configuration.IsAlpha &&
                 !player.HasPvpEffect &&
-                !remoteControlledCreature.Player.HasPvpEffect)
+                !remoteControlledCreature.CommandRobot.HasPvpEffect)
             {
                 return;
             }

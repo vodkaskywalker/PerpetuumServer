@@ -19,10 +19,7 @@ namespace Perpetuum.Zones.RemoteControl
         {
         }
 
-        public bool IsInGuardRange
-        {
-            get { return CurrentPosition.IsInRangeOf2D(HomePosition, GuardRange); }
-        }
+        public bool IsInGuardRange => CurrentPosition.IsInRangeOf2D(HomePosition, GuardRange);
 
         public override void AcceptVisitor(IEntityVisitor visitor)
         {
@@ -39,7 +36,7 @@ namespace Perpetuum.Zones.RemoteControl
 
         public override void OnAggression(Unit victim)
         {
-            this.Player.OnAggression(victim);
+            CommandRobot.OnAggression(victim);
         }
 
         protected override bool IsHostileFor(Unit unit)
@@ -49,18 +46,13 @@ namespace Perpetuum.Zones.RemoteControl
 
         protected override void OnUpdate(TimeSpan time)
         {
-            HomePosition = Player.CurrentPosition;
+            HomePosition = CommandRobot.CurrentPosition;
             base.OnUpdate(time);
         }
 
         protected override bool IsDetected(Unit target)
         {
-            if (!IsCommandBotPrimaryLock(target))
-            {
-                return false;
-            }
-
-            return base.IsDetected(target);
+            return IsCommandBotPrimaryLock(target) && base.IsDetected(target);
         }
 
         internal override bool IsHostile(Npc npc)
@@ -70,12 +62,12 @@ namespace Perpetuum.Zones.RemoteControl
 
         internal override bool IsHostile(CombatDrone drone)
         {
-            return IsHostilePlayer(drone.Player);
+            return !(drone.CommandRobot is Player player) || IsHostilePlayer(player);
         }
 
         internal override bool IsHostile(SentryTurret turret)
         {
-            return IsHostilePlayer(turret.Player);
+            return !(turret.CommandRobot is Player player) || IsHostilePlayer(player);
         }
 
         protected override void OnUnitLockStateChanged(Lock @lock)
@@ -94,17 +86,12 @@ namespace Perpetuum.Zones.RemoteControl
 
         private bool IsCommandBotPrimaryLock(Unit unit)
         {
-            var primaryLock = this.Player.GetPrimaryLock();
+            Lock primaryLock = CommandRobot.GetPrimaryLock();
 
-            if (primaryLock != null &&
+            return primaryLock != null &&
                 primaryLock.State == Locking.LockState.Locked &&
                 primaryLock is UnitLock &&
-                (primaryLock as UnitLock).Target == unit)
-            {
-                return true;
-            }
-
-            return false;
+                (primaryLock as UnitLock).Target == unit;
         }
     }
 }

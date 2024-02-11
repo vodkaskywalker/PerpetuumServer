@@ -1,7 +1,7 @@
 ﻿using Perpetuum.EntityFramework;
+using Perpetuum.Modules;
 using Perpetuum.Modules.EffectModules;
 using Perpetuum.Modules.Weapons;
-using Perpetuum.Modules;
 using Perpetuum.Timers;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.Terrains;
@@ -26,7 +26,8 @@ namespace Perpetuum.Zones.NpcSystem.AI
         IEntityVisitor<CoreBoosterModule>,
         IEntityVisitor<TargetPainterModule>,
         IEntityVisitor<RemoteControlledDrillerModule>,
-        IEntityVisitor<RemoteControlledHarvesterModule>
+        IEntityVisitor<RemoteControlledHarvesterModule>,
+        IEntityVisitor<RemoteControllerModule>
     {
         private const double ENERGY_INJECTOR_THRESHOLD = 0.65;
         private const double ARMOR_REPAIR_THRESHOLD = 0.95;
@@ -52,7 +53,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         public void Update(TimeSpan time)
         {
-            _timer.Update(time);
+            _ = _timer.Update(time);
 
             if (!_timer.Passed)
             {
@@ -71,56 +72,56 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         public void Visit(MissileWeaponModule module)
         {
-            var hasShieldEffect = module.ParentRobot.HasShieldEffect;
+            bool hasShieldEffect = module.ParentRobot.HasShieldEffect;
 
             if (hasShieldEffect)
             {
                 return;
             }
 
-            var primaryLock = module.ParentRobot.GetFinishedPrimaryLock();
+            UnitLock primaryLock = module.ParentRobot.GetFinishedPrimaryLock();
 
             if (primaryLock == null)
             {
                 return;
             }
 
-            var visibility = module.ParentRobot.GetVisibility(primaryLock.Target);
+            Units.IUnitVisibility visibility = module.ParentRobot.GetVisibility(primaryLock.Target);
 
             if (visibility == null)
             {
                 return;
             }
 
-            var result = visibility.GetLineOfSight(true);
+            LOSResult result = visibility.GetLineOfSight(true);
 
             TryActiveModule(result, primaryLock);
         }
 
         public void Visit(WeaponModule module)
         {
-            var hasShieldEffect = module.ParentRobot.HasShieldEffect;
+            bool hasShieldEffect = module.ParentRobot.HasShieldEffect;
 
             if (hasShieldEffect)
             {
                 return;
             }
 
-            var primaryLock = module.ParentRobot.GetFinishedPrimaryLock();
+            UnitLock primaryLock = module.ParentRobot.GetFinishedPrimaryLock();
 
             if (primaryLock == null)
             {
                 return;
             }
 
-            var visibility = module.ParentRobot.GetVisibility(primaryLock.Target);
+            Units.IUnitVisibility visibility = module.ParentRobot.GetVisibility(primaryLock.Target);
 
             if (visibility == null)
             {
                 return;
             }
 
-            var result = visibility.GetLineOfSight(false);
+            LOSResult result = visibility.GetLineOfSight(false);
 
             TryActiveModule(result, primaryLock);
         }
@@ -157,7 +158,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+            UnitLock lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
 
             if (lockTarget == null)
             {
@@ -175,7 +176,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+            UnitLock lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
 
             if (lockTarget == null)
             {
@@ -193,7 +194,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+            UnitLock lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
 
             if (lockTarget == null)
             {
@@ -211,7 +212,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+            UnitLock lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
 
             if (lockTarget == null)
             {
@@ -234,7 +235,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+            UnitLock lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
 
             if (lockTarget == null)
             {
@@ -252,7 +253,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+            UnitLock lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
 
             if (lockTarget == null)
             {
@@ -270,21 +271,21 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+            UnitLock lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
 
             if (lockTarget == null)
             {
                 return;
             }
 
-            var visibility = module.ParentRobot.GetVisibility(lockTarget.Target);
+            Units.IUnitVisibility visibility = module.ParentRobot.GetVisibility(lockTarget.Target);
 
             if (visibility == null)
             {
                 return;
             }
 
-            var r = visibility.GetLineOfSight(false);
+            LOSResult r = visibility.GetLineOfSight(false);
 
             if (r != null && r.hit)
             {
@@ -302,21 +303,21 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+            UnitLock lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
 
             if (lockTarget == null)
             {
                 return;
             }
 
-            var visibility = module.ParentRobot.GetVisibility(lockTarget.Target);
+            Units.IUnitVisibility visibility = module.ParentRobot.GetVisibility(lockTarget.Target);
 
             if (visibility == null)
             {
                 return;
             }
 
-            var r = visibility.GetLineOfSight(false);
+            LOSResult r = visibility.GetLineOfSight(false);
 
             if (r != null && r.hit)
             {
@@ -355,7 +356,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         public void Visit(RemoteControlledDrillerModule module)
         {
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockIndustrialTargetFor(module);
+            TerrainLock lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockIndustrialTargetFor(module);
 
             if (lockTarget == null)
             {
@@ -368,7 +369,7 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         public void Visit(RemoteControlledHarvesterModule module)
         {
-            var lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockIndustrialTargetFor(module);
+            TerrainLock lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockIndustrialTargetFor(module);
 
             if (lockTarget == null)
             {
@@ -376,6 +377,25 @@ namespace Perpetuum.Zones.NpcSystem.AI
             }
 
             module.Lock = lockTarget;
+            module.State.SwitchTo(ModuleStateType.Oneshot);
+        }
+
+        public void Visit(RemoteControllerModule module)
+        {
+            UnitLock lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+
+            if (lockTarget == null)
+            {
+                return;
+            }
+
+            Units.IUnitVisibility visibility = module.ParentRobot.GetVisibility(lockTarget.Target);
+
+            if (visibility == null)
+            {
+                return;
+            }
+
             module.State.SwitchTo(ModuleStateType.Oneshot);
         }
 

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Transactions;
-using Perpetuum.Data;
+﻿using Perpetuum.Data;
 using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
@@ -15,6 +11,10 @@ using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.Terrains;
 using Perpetuum.Zones.Terrains.Materials.Plants.Harvesters;
+using System;
+using System.Diagnostics;
+using System.Linq;
+using System.Transactions;
 
 namespace Perpetuum.Modules
 {
@@ -24,7 +24,7 @@ namespace Perpetuum.Modules
         private readonly PlantHarvester.Factory _plantHarvesterFactory;
         private readonly HarvestingAmountModifierProperty _harverstingAmountModifier;
 
-        public HarvesterModule(CategoryFlags ammoCategoryFlags,PlantHarvester.Factory plantHarvesterFactory) : base(ammoCategoryFlags, true)
+        public HarvesterModule(CategoryFlags ammoCategoryFlags, PlantHarvester.Factory plantHarvesterFactory) : base(ammoCategoryFlags, true)
         {
             _plantHarvesterFactory = plantHarvesterFactory;
             _harverstingAmountModifier = new HarvestingAmountModifierProperty(this);
@@ -59,7 +59,7 @@ namespace Perpetuum.Modules
         protected override int CalculateEp(int materialType)
         {
 
-            var activeGathererModules = this is RemoteControlledHarvesterModule
+            HarvesterModule[] activeGathererModules = this is RemoteControlledHarvesterModule
                 ? ParentRobot.ActiveModules.OfType<RemoteControlledHarvesterModule>().Where(m => m.State.Type != ModuleStateType.Idle).ToArray()
                 : ParentRobot.ActiveModules.OfType<HarvesterModule>().Where(m => m.State.Type != ModuleStateType.Idle).ToArray();
 
@@ -68,25 +68,20 @@ namespace Perpetuum.Modules
                 return 0;
             }
 
-            var avgCycleTime = activeGathererModules.Select(m => m.CycleTime).Average();
-            var t = TimeSpan.FromDays(1).Divide(avgCycleTime);
-            var chance = (double)MAX_EP_PER_DAY / t.Ticks;
+            TimeSpan avgCycleTime = activeGathererModules.Select(m => m.CycleTime).Average();
+            TimeSpan t = TimeSpan.FromDays(1).Divide(avgCycleTime);
+            double chance = (double)MAX_EP_PER_DAY / t.Ticks;
 
             chance /= activeGathererModules.Length;
 
-            var rand = FastRandom.NextDouble();
+            double rand = FastRandom.NextDouble();
 
-            if (rand <= chance)
-            {
-                return 1;
-            }
-
-            return 0;
+            return rand <= chance ? 1 : 0;
         }
 
         protected override void OnAction()
         {
-            var zone = Zone;
+            IZone zone = Zone;
 
             if (zone == null)
             {
@@ -99,51 +94,52 @@ namespace Perpetuum.Modules
 
         public void DoHarvesting(IZone zone)
         {
-            var terrainLock = GetLock().ThrowIfNotType<TerrainLock>(ErrorCodes.InvalidLockType);
+            TerrainLock terrainLock = GetLock().ThrowIfNotType<TerrainLock>(ErrorCodes.InvalidLockType);
 
             CreateBeam(terrainLock.Location, BeamState.AlignToTerrain);
 
-            using (var scope = Db.CreateTransaction())
+            using (TransactionScope scope = Db.CreateTransaction())
             {
                 using (new TerrainUpdateMonitor(zone))
                 {
-                    var plantInfo = zone.Terrain.Plants.GetValue(terrainLock.Location);
-                    var amountModifier = _harverstingAmountModifier.GetValueByPlantType(plantInfo.type);
+                    Zones.Terrains.Materials.Plants.PlantInfo plantInfo = zone.Terrain.Plants.GetValue(terrainLock.Location);
+                    double amountModifier = _harverstingAmountModifier.GetValueByPlantType(plantInfo.type);
 
                     IPlantHarvester plantHarvester = _plantHarvesterFactory(zone, amountModifier);
 
-                    var harvestedPlants = plantHarvester.HarvestPlant(terrainLock.Location);
+                    System.Collections.Generic.IEnumerable<ItemInfo> harvestedPlants = plantHarvester.HarvestPlant(terrainLock.Location);
 
                     Debug.Assert(ParentRobot != null, "ParentRobot != null");
 
-                    var container = ParentRobot.GetContainer();
+                    Robots.RobotInventory container = ParentRobot.GetContainer();
 
                     Debug.Assert(container != null, "container != null");
                     container.EnlistTransaction();
 
-                    var player = ParentRobot is RemoteControlledCreature
-                        ? (ParentRobot as RemoteControlledCreature).Player
+                    Player player = ParentRobot is RemoteControlledCreature remoteControlledCreature &&
+                        remoteControlledCreature.CommandRobot is Player ownerPlayer
+                        ? ownerPlayer
                         : ParentRobot as Player;
 
-                    Debug.Assert(player != null,"player != null");
+                    Debug.Assert(player != null, "player != null");
 
-                    foreach (var extractedMaterial in harvestedPlants)
+                    foreach (ItemInfo extractedMaterial in harvestedPlants)
                     {
-                        var item = (Item)Factory.CreateWithRandomEID(extractedMaterial.Definition);
+                        Item item = (Item)Factory.CreateWithRandomEID(extractedMaterial.Definition);
 
                         item.Owner = Owner;
                         item.Quantity = extractedMaterial.Quantity;
                         container.AddItem(item, true);
 
-                        var extractedHarvestDefinition = extractedMaterial.Definition;
-                        var extractedQuantity = extractedMaterial.Quantity;
+                        int extractedHarvestDefinition = extractedMaterial.Definition;
+                        int extractedQuantity = extractedMaterial.Quantity;
 
                         player.MissionHandler.EnqueueMissionEventInfo(new HarvestPlantEventInfo(player, extractedHarvestDefinition, extractedQuantity, terrainLock.Location));
                         player.Zone?.HarvestLogHandler.EnqueueHarvestLog(extractedHarvestDefinition, extractedQuantity);
                     }
 
                     container.Save();
-                    OnGathererMaterial(zone, player, (int) plantInfo.type);
+                    OnGathererMaterial(zone, player, (int)plantInfo.type);
                     Transaction.Current.OnCommited(() => container.SendUpdateToOwnerAsync());
                     scope.Complete();
                 }
