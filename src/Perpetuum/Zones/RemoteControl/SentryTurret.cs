@@ -3,6 +3,7 @@ using Perpetuum.Players;
 using Perpetuum.Services.Standing;
 using Perpetuum.Units;
 using Perpetuum.Zones.NpcSystem;
+using System;
 
 namespace Perpetuum.Zones.RemoteControl
 {
@@ -58,6 +59,16 @@ namespace Perpetuum.Zones.RemoteControl
             {
                 UpdateVisibility(target);
             }
+        }
+
+        protected override void OnUpdate(TimeSpan time)
+        {
+            if (!IsInOperationalRange)
+            {
+                Kill();
+            }
+
+            base.OnUpdate(time);
         }
     }
 }

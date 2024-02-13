@@ -17,11 +17,21 @@ namespace Perpetuum.Zones.LandMines
     {
         private const int BeamDistance = 600;
         private readonly IntervalTimer probingInterval = new IntervalTimer(TimeSpan.FromSeconds(2));
+        private readonly IntervalTimer gracePeriodInterval = new IntervalTimer(TimeSpan.FromSeconds(15));
 
         public int TriggerMass => ED.Options.GetOption<int>("triggerMass");
 
         protected override void OnUpdate(TimeSpan time)
         {
+            if (!gracePeriodInterval.Passed)
+            {
+                _ = gracePeriodInterval.Update(time);
+
+                return;
+            }
+
+            _ = gracePeriodInterval.Update(time);
+
             UnitDespawnHelper despawnHelper = GetDespawnHelper();
 
             _ = probingInterval.Update(time);
@@ -77,12 +87,12 @@ namespace Perpetuum.Zones.LandMines
 
         #region probe functions
 
-        // egy adott pillanatban kiket lat
         [CanBeNull]
         public override List<Player> GetNoticedUnits()
         {
             return GetVisibleUnits().Select(v => v.Target).OfType<Player>().ToList();
         }
+
         protected override bool IsDetected(Unit target)
         {
             double range = ED.Config.item_work_range ?? 5.0;

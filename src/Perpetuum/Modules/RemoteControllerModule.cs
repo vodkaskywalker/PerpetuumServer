@@ -116,25 +116,11 @@ namespace Perpetuum.Modules
                     return;
                 }
 
-                Position spawnPosition = Zone.FixZ(targetPosition);
-
                 Zone.Units
                     .OfType<RemoteControlledCreature>()
-                    .WithinRange(spawnPosition, DistanceConstants.RCU_DEPLOY_RANGE_FROM_RCU)
+                    .WithinRange(Zone.FixZ(targetPosition), DistanceConstants.RCU_DEPLOY_RANGE_FROM_RCU)
                     .Any()
                     .ThrowIfTrue(ErrorCodes.RemoteControlledTurretInRange);
-
-                Zone.Units
-                    .OfType<DockingBase>()
-                    .WithinRange(spawnPosition, DistanceConstants.RCU_DEPLOY_RANGE_FROM_BASE)
-                    .Any()
-                    .ThrowIfTrue(ErrorCodes.NotDeployableNearObject);
-
-                Zone.Units
-                    .OfType<Teleport>()
-                    .WithinRange(spawnPosition, DistanceConstants.RCU_DEPLOY_RANGE_FROM_TELEPORT)
-                    .Any()
-                    .ThrowIfTrue(ErrorCodes.TeleportIsInRange);
 
                 LOSResult r = Zone.IsInLineOfSight(ParentRobot, targetPosition.AddToZ(SentryTurretHeight), false);
 
@@ -165,6 +151,20 @@ namespace Perpetuum.Modules
             {
                 remoteControlledCreature = (SentryTurret)Factory.CreateWithRandomEID(ammo.ED.Options.TurretId);
                 remoteControlledCreature.Behavior = Behavior.Create(BehaviorType.RemoteControlledTurret);
+
+                Position spawnPosition = Zone.FixZ(targetPosition);
+
+                Zone.Units
+                    .OfType<DockingBase>()
+                    .WithinRange(spawnPosition, DistanceConstants.RCU_DEPLOY_RANGE_FROM_BASE)
+                    .Any()
+                    .ThrowIfTrue(ErrorCodes.NotDeployableNearObject);
+
+                Zone.Units
+                    .OfType<Teleport>()
+                    .WithinRange(spawnPosition, DistanceConstants.RCU_DEPLOY_RANGE_FROM_TELEPORT)
+                    .Any()
+                    .ThrowIfTrue(ErrorCodes.TeleportIsInRange);
             }
             else if (ammo.ED.Options.TurretType == TurretType.Mining || ammo.ED.Options.TurretType == TurretType.Harvesting)
             {

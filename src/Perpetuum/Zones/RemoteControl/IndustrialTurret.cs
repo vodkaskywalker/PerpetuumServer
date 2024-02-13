@@ -1,16 +1,15 @@
-﻿using Perpetuum.Containers;
-using Perpetuum.Data;
+﻿using Perpetuum.Data;
 using Perpetuum.Log;
 using Perpetuum.Players;
 using Perpetuum.Services.Looting;
+using Perpetuum.Services.Standing;
 using Perpetuum.Units;
 using Perpetuum.Zones.NpcSystem;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System;
-using System.Security.Policy;
-using Perpetuum.Services.Standing;
+using System.Transactions;
 
 namespace Perpetuum.Zones.RemoteControl
 {
@@ -51,17 +50,17 @@ namespace Perpetuum.Zones.RemoteControl
 
         public void EjectCargo(IZone zone)
         {
-            using (var scope = Db.CreateTransaction())
+            using (TransactionScope scope = Db.CreateTransaction())
             {
                 try
                 {
-                    var robotInventory = GetContainer();
+                    Robots.RobotInventory robotInventory = GetContainer();
 
                     Debug.Assert(robotInventory != null);
 
-                    var lootItems = new List<LootItem>();
+                    List<LootItem> lootItems = new List<LootItem>();
 
-                    foreach (var item in robotInventory
+                    foreach (Items.Item item in robotInventory
                         .GetItems()
                         .Where(i => !i.ED.AttributeFlags.NonStackable))
                     {
@@ -81,12 +80,12 @@ namespace Perpetuum.Zones.RemoteControl
 
                     if (lootItems.Count > 0)
                     {
-                        var lootContainer = LootContainer.Create()
+                        _ = LootContainer.Create()
                             .AddLoot(lootItems)
                             .BuildAndAddToZone(zone, CurrentPosition);
                     }
 
-                    this.Save();
+                    Save();
 
                     scope.Complete();
                 }
@@ -95,6 +94,16 @@ namespace Perpetuum.Zones.RemoteControl
                     Logger.Exception(ex);
                 }
             }
+        }
+
+        protected override void OnUpdate(TimeSpan time)
+        {
+            if (!IsInOperationalRange)
+            {
+                Kill();
+            }
+
+            base.OnUpdate(time);
         }
     }
 }

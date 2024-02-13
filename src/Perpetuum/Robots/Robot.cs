@@ -354,7 +354,7 @@ namespace Perpetuum.Robots
             return _lockHandler.IsLocked(target) || base.IsDetected(target);
         }
 
-        protected override void OnRemovedFromZone(IZone zone)
+        protected override void OnBeforeRemovedFromZone(IZone zone)
         {
             Module remoteController = Modules?.FirstOrDefault(x => x is RemoteControllerModule);
 
@@ -363,7 +363,7 @@ namespace Perpetuum.Robots
                 (remoteController as RemoteControllerModule).CloseAllChannels();
             }
 
-            base.OnRemovedFromZone(zone);
+            base.OnBeforeRemovedFromZone(zone);
         }
 
         private void InitComponents()

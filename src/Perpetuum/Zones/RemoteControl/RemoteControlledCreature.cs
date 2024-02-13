@@ -26,6 +26,8 @@ namespace Perpetuum.Zones.RemoteControl
             set => despawnHelper = UnitDespawnHelper.Create(this, value);
         }
 
+        public bool IsInOperationalRange => CurrentPosition.IsInRangeOf2D(CommandRobot.CurrentPosition, HomeRange);
+
         public override bool IsStationary => true;
 
         public override double CallForHelpArmorThreshold => SentryTurretCallForHelpArmorThreshold;
