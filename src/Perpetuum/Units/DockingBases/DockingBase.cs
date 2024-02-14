@@ -167,7 +167,7 @@ namespace Perpetuum.Units.DockingBases
             character.ZoneId = null;
             character.ZonePosition = null;
 
-            Transaction.Current.OnCommited(() => JoinChannel(character));
+            Transaction.Current.OnCommited(() => TryJoinChannel(character));
         }
 
         protected IEnumerable<Character> GetCharacters()
@@ -250,7 +250,7 @@ namespace Perpetuum.Units.DockingBases
 
         protected virtual bool CanCreateEquippedStartRobot => Zone?.Configuration.Protected ?? false;
 
-        public virtual void JoinChannel(Character character)
+        protected virtual void JoinChannel(Character character)
         {
             ChannelManager.JoinChannel(ChannelName,character,ChannelMemberRole.Undefined,null);
         }
@@ -258,6 +258,22 @@ namespace Perpetuum.Units.DockingBases
         public void LeaveChannel(Character character)
         {
             ChannelManager.LeaveChannel(ChannelName,character);
+        }
+
+        /// <summary>
+        /// Check and joins/leave character in/from the docking base chat, if possible.
+        /// </summary>
+        /// <param name="character">Character being checked.</param>
+        public void TryJoinChannel(Character character)
+        {
+            if (IsDockingAllowed(character) == ErrorCodes.NoError)
+            {
+                JoinChannel(character);
+
+                return;
+            }
+
+            LeaveChannel(character);
         }
 
         public static bool Exists(long baseEid)
