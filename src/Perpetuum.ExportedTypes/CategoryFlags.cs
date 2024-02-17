@@ -377,6 +377,7 @@ namespace Perpetuum.ExportedTypes
         cf_ammo_mining_calibration_programs = 0x000000000C030416,
         cf_ammo_industrial_aoe_calibration_programs = 0x000000000D030416,
         cf_ammo_mining_probe_calibration_programs = 0x000000000E030416,
+        cf_ammo_rcu_calibration_programs = 0x000000000F030416,
         cf_module_calibration_programs = 0x0000000000040416,
         cf_armor_calibration_programs = 0x0000000001040416,
         cf_ew_calibration_programs = 0x0000000002040416,
