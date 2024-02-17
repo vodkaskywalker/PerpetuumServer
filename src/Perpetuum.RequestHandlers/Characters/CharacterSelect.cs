@@ -45,7 +45,7 @@ namespace Perpetuum.RequestHandlers.Characters
                 {
                     character.ZoneId = null;
                     character.ZonePosition = null;
-                    character.GetCurrentDockingBase()?.JoinChannel(character);
+                    character.GetCurrentDockingBase()?.TryJoinChannel(character);
                 }
 
                 var corporation = character.GetCorporation();
