@@ -1,12 +1,13 @@
-using System.Collections.Generic;
-using System.Linq;
+using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Players;
 using Perpetuum.Zones.Blobs.BlobEmitters;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Perpetuum.Zones.ProximityProbes
 {
-    public class ProximityProbe : ProximityDeviceBase , IBlobEmitter
+    public class ProximityProbe : ProximityDeviceBase, IBlobEmitter
     {
         protected internal override void UpdatePlayerVisibility(Player player)
         {
@@ -15,14 +16,14 @@ namespace Perpetuum.Zones.ProximityProbes
 
         public override List<Player> GetNoticedUnits()
         {
-            return GetVisibleUnits().Select(v=>v.Target).OfType<Player>().ToList();
+            return GetVisibleUnits().Select(v => v.Target).OfType<Player>().ToList();
         }
 
         protected override bool IsActive
         {
             get
             {
-                var coreRatio = Core.Ratio(CoreMax);
+                double coreRatio = Core.Ratio(CoreMax);
                 return coreRatio > 0.98;
             }
         }
@@ -31,7 +32,7 @@ namespace Perpetuum.Zones.ProximityProbes
         {
             get
             {
-                var blobEmission = GetPropertyModifier(AggregateField.blob_emission);
+                Items.ItemPropertyModifier blobEmission = GetPropertyModifier(AggregateField.blob_emission);
                 return blobEmission.Value;
             }
         }
@@ -40,8 +41,16 @@ namespace Perpetuum.Zones.ProximityProbes
         {
             get
             {
-                var blobEmissionRadius = GetPropertyModifier(AggregateField.blob_emission_radius);
+                Items.ItemPropertyModifier blobEmissionRadius = GetPropertyModifier(AggregateField.blob_emission_radius);
                 return blobEmissionRadius.Value;
+            }
+        }
+
+        public override void AcceptVisitor(IEntityVisitor visitor)
+        {
+            if (!TryAcceptVisitor(this, visitor))
+            {
+                base.AcceptVisitor(visitor);
             }
         }
     }

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Perpetuum.Accounting.Characters;
+﻿using Perpetuum.Accounting.Characters;
 using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Groups.Corporations;
@@ -12,6 +9,9 @@ using Perpetuum.Units;
 using Perpetuum.Units.DockingBases;
 using Perpetuum.Zones.PBS;
 using Perpetuum.Zones.Teleporting;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Perpetuum.Zones.ProximityProbes
 {
@@ -23,7 +23,7 @@ namespace Perpetuum.Zones.ProximityProbes
     }
 
     //ez van kinn a terepen
-    public abstract class ProximityDeviceBase : Unit ,  ICharactersRegistered
+    public abstract class ProximityDeviceBase : Unit, ICharactersRegistered
     {
         private readonly CharactersRegisterHelper<ProximityDeviceBase> _charactersRegisterHelper;
         private IntervalTimer _probingInterval = new IntervalTimer(TimeSpan.FromSeconds(10));
@@ -52,7 +52,7 @@ namespace Perpetuum.Zones.ProximityProbes
         // TODO: have to find better solution
         public UnitDespawnHelper GetDespawnHelper()
         {
-            return this._despawnHelper;
+            return _despawnHelper;
         }
 
         protected internal override void UpdatePlayerVisibility(Player player)
@@ -63,24 +63,28 @@ namespace Perpetuum.Zones.ProximityProbes
         public override void AcceptVisitor(IEntityVisitor visitor)
         {
             if (!TryAcceptVisitor(this, visitor))
+            {
                 base.AcceptVisitor(visitor);
+            }
         }
 
         protected override void OnUpdate(TimeSpan time)
         {
             base.OnUpdate(time);
 
-            _probingInterval.Update(time);
+            _ = _probingInterval.Update(time);
 
             if (!_probingInterval.Passed)
+            {
                 return;
+            }
 
             _probingInterval.Reset();
 
             if (IsActive)
             {
                 //detect
-                var robotsNearMe = GetNoticedUnits();
+                List<Player> robotsNearMe = GetNoticedUnits();
 
                 //do something
                 OnUnitsFound(robotsNearMe);
@@ -88,8 +92,8 @@ namespace Perpetuum.Zones.ProximityProbes
 
             if (_despawnHelper == null)
             {
-                var m = GetPropertyModifier(AggregateField.despawn_time);
-                var timespan = TimeSpan.FromMilliseconds((int)m.Value);
+                Items.ItemPropertyModifier m = GetPropertyModifier(AggregateField.despawn_time);
+                TimeSpan timespan = TimeSpan.FromMilliseconds((int)m.Value);
                 SetDespawnTime(timespan);
             }
 
@@ -103,7 +107,7 @@ namespace Perpetuum.Zones.ProximityProbes
         //ezt kell hivogatni requestbol, ha valtozott
         public void ReloadRegistration()
         {
-           _charactersRegisterHelper.ReloadRegistration();
+            _charactersRegisterHelper.ReloadRegistration();
         }
 
         public Character[] GetRegisteredCharacters()
@@ -138,7 +142,7 @@ namespace Perpetuum.Zones.ProximityProbes
             Zone.UnitService.RemoveUserUnit(this);
             Logger.Info("probe got deleted " + Eid);
         }
-        
+
         public virtual void OnDeviceCreated()
         {
             //elso info arrol hogy letrejott
@@ -146,7 +150,7 @@ namespace Perpetuum.Zones.ProximityProbes
             Logger.Info("probe created " + Eid);
 
             SendDeviceCreated();
-           
+
         }
 
 
@@ -154,13 +158,19 @@ namespace Perpetuum.Zones.ProximityProbes
         {
             //itt lehet mindenfele, pl most kuldunk egy kommandot amire a kliens terkepet frissit
 
-            if (unitsFound.Count <= 0) return;
+            if (unitsFound.Count <= 0)
+            {
+                return;
+            }
 
-            var registerdCharacters = GetRegisteredCharacters();
+            Character[] registerdCharacters = GetRegisteredCharacters();
 
-            if (registerdCharacters.Length <= 0) return;
+            if (registerdCharacters.Length <= 0)
+            {
+                return;
+            }
 
-            var infoDict = CreateInfoDictionaryForProximityProbe(unitsFound);
+            Dictionary<string, object> infoDict = CreateInfoDictionaryForProximityProbe(unitsFound);
 
             Message.Builder.SetCommand(Commands.ProximityProbeInfo).WithData(infoDict).ToCharacters(registerdCharacters).Send();
         }
@@ -175,9 +185,9 @@ namespace Perpetuum.Zones.ProximityProbes
 
         public Dictionary<string, object> GetProbeInfo(bool includeRegistered = true)
         {
-            var info = BaseInfoToDictionary();
+            Dictionary<string, object> info = BaseInfoToDictionary();
 
-            var probeDict = new Dictionary<string, object>();
+            Dictionary<string, object> probeDict = new Dictionary<string, object>();
 
             if (includeRegistered)
             {
@@ -202,20 +212,20 @@ namespace Perpetuum.Zones.ProximityProbes
 
         public void SendDeviceCreated()
         {
-            var membersToInfom = GetAllPossibleMembersToInfom();
+            IEnumerable<Character> membersToInfom = GetAllPossibleMembersToInfom();
             Message.Builder.SetCommand(Commands.ProximityProbeCreated).WithData(ToDictionary()).ToCharacters(membersToInfom).Send();
         }
 
         public void SendUpdateToAllPossibleMembers()
         {
-            var members = GetAllPossibleMembersToInfom();
+            IEnumerable<Character> members = GetAllPossibleMembersToInfom();
 
             Message.Builder.SetCommand(Commands.ProximityProbeUpdate).WithData(ToDictionary()).ToCharacters(members).Send();
         }
 
         private void SendDeviceDead()
         {
-            var membersToInfom = GetAllPossibleMembersToInfom();
+            IEnumerable<Character> membersToInfom = GetAllPossibleMembersToInfom();
 
             Message.Builder.SetCommand(Commands.ProximityProbeDead).WithData(ToDictionary()).ToCharacters(membersToInfom).Send();
         }
@@ -228,19 +238,19 @@ namespace Perpetuum.Zones.ProximityProbes
         private IEnumerable<Character> GetProximityBoard(long corporationEid)
         {
             const CorporationRole roleMask = CorporationRole.CEO | CorporationRole.DeputyCEO | CorporationRole.Accountant;
-            return CorporationManager.LoadCorporationMembersWithAnyRole(corporationEid,roleMask);
+            return CorporationManager.LoadCorporationMembersWithAnyRole(corporationEid, roleMask);
         }
 
-        public Dictionary<string, object> CreateInfoDictionaryForProximityProbe(  List<Player> unitsFound)
+        public Dictionary<string, object> CreateInfoDictionaryForProximityProbe(List<Player> unitsFound)
         {
-            var infoDict = GetProbeInfo(false);
+            Dictionary<string, object> infoDict = GetProbeInfo(false);
 
-            var unitsInfo = unitsFound.ToDictionary("c", p =>
+            Dictionary<string, object> unitsInfo = unitsFound.ToDictionary("c", p =>
             {
                 return new Dictionary<string, object>
                 {
                     {k.characterID, p.Character.Id},
-                    {k.x, p.CurrentPosition.X}, 
+                    {k.x, p.CurrentPosition.X},
                     {k.y, p.CurrentPosition.Y}
                 };
             });
@@ -250,7 +260,7 @@ namespace Perpetuum.Zones.ProximityProbes
             return infoDict;
         }
 
-        public void Init(IEnumerable<Character> summonerCharacters )
+        public void Init(IEnumerable<Character> summonerCharacters)
         {
             PBSRegisterHelper.WriteRegistersToDb(Eid, summonerCharacters);
             _probingInterval.Interval = TimeSpan.FromMilliseconds(GetProximityCheckInterval());
@@ -258,7 +268,7 @@ namespace Perpetuum.Zones.ProximityProbes
 
         public virtual int GetProximityCheckInterval()
         {
-            var config = EntityDefault.Get(Definition).Config;
+            DefinitionConfig config = EntityDefault.Get(Definition).Config;
 
             if (config.cycle_time == null)
             {
@@ -266,7 +276,7 @@ namespace Perpetuum.Zones.ProximityProbes
                 return 150000;
             }
 
-            return ((int) config.cycle_time) + FastRandom.NextInt(0,250);
+            return ((int)config.cycle_time) + FastRandom.NextInt(0, 250);
         }
 
         public bool IsRegistered(Character character)
@@ -281,35 +291,30 @@ namespace Perpetuum.Zones.ProximityProbes
                 return ErrorCodes.NoError;
             }
 
-            var corporationEid = character.CorporationEid;
+            long corporationEid = character.CorporationEid;
 
             if (corporationEid != Owner)
             {
                 return ErrorCodes.AccessDenied;
             }
 
-            var role = Corporation.GetRoleFromSql(character);
+            CorporationRole role = Corporation.GetRoleFromSql(character);
 
-            if (IsAllProbesVisible(role))
-            {
-                return ErrorCodes.NoError;
-            }
-
-            return ErrorCodes.AccessDenied;
+            return IsAllProbesVisible(role) ? ErrorCodes.NoError : ErrorCodes.AccessDenied;
         }
 
         public Dictionary<string, object> GetProbeRegistrationInfo()
         {
-            var ownerCorporation = Corporation.GetOrThrow(Owner);
-            var maxRegistered = ownerCorporation.GetMaximumRegisteredProbesAmount();
-            var currentRegistered = GetRegisteredCharacters().Length;
-            var boardMembers = ownerCorporation.GetBoardMembersCount();
+            Corporation ownerCorporation = Corporation.GetOrThrow(Owner);
+            int maxRegistered = ownerCorporation.GetMaximumRegisteredProbesAmount();
+            int currentRegistered = GetRegisteredCharacters().Length;
+            int boardMembers = ownerCorporation.GetBoardMembersCount();
 
-            var result = new Dictionary<string, object>
+            Dictionary<string, object> result = new Dictionary<string, object>
             {
                 {k.eid, Eid },
                 {"maxRegistered", maxRegistered},
-                {"freeSlots", (maxRegistered - (currentRegistered - boardMembers).Clamp(0, int.MaxValue))},
+                {"freeSlots", maxRegistered - (currentRegistered - boardMembers).Clamp(0, int.MaxValue)},
                 {"currentlyRegistered", currentRegistered},
                 {"boardMembers", boardMembers},
             };
