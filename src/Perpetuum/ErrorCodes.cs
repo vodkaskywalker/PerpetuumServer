@@ -713,5 +713,6 @@ namespace Perpetuum
         RespecTokenIsNotReadyYet,
         MaxBandwidthExceed,
         RemoteControlledTurretInRange,
+        TurretNotDeployableNearObject,
     }
 }

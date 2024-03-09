@@ -158,13 +158,13 @@ namespace Perpetuum.Modules
                     .OfType<DockingBase>()
                     .WithinRange(spawnPosition, DistanceConstants.RCU_DEPLOY_RANGE_FROM_BASE)
                     .Any()
-                    .ThrowIfTrue(ErrorCodes.NotDeployableNearObject);
+                    .ThrowIfTrue(ErrorCodes.TurretNotDeployableNearObject);
 
                 Zone.Units
                     .OfType<Teleport>()
                     .WithinRange(spawnPosition, DistanceConstants.RCU_DEPLOY_RANGE_FROM_TELEPORT)
                     .Any()
-                    .ThrowIfTrue(ErrorCodes.TeleportIsInRange);
+                    .ThrowIfTrue(ErrorCodes.TurretNotDeployableNearObject);
             }
             else if (ammo.ED.Options.TurretType == TurretType.Mining || ammo.ED.Options.TurretType == TurretType.Harvesting)
             {

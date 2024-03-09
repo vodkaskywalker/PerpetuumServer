@@ -276,7 +276,6 @@ namespace Perpetuum.Bootstrapper
 
         public void Init(string gameRoot)
         {
-            Thread.Sleep(10000);
             _builder = new ContainerBuilder();
             InitContainer(gameRoot);
             _container = _builder.Build();
@@ -870,7 +869,7 @@ namespace Perpetuum.Bootstrapper
 #if DEBUG
                 TimeRange intrusionWaitTime = TimeRange.FromLength(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(15));
 #else
-                var intrusionWaitTime = TimeRange.FromLength(TimeSpan.FromHours(8), TimeSpan.FromHours(8));
+                TimeRange intrusionWaitTime = TimeRange.FromLength(TimeSpan.FromHours(8), TimeSpan.FromHours(8));
 #endif
                 e.Instance.IntrusionWaitTime = intrusionWaitTime;
             });
