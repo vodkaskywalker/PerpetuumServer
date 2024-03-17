@@ -12,7 +12,7 @@ namespace Perpetuum.RequestHandlers.Zone
             {
                 var eid = request.Data.GetOrDefault<long>(k.eid);
 
-                var probeBase = request.Zone.GetUnit(eid) as ProximityProbeBase;
+                var probeBase = request.Zone.GetUnit(eid) as ProximityDeviceBase;
                 if (probeBase == null)
                     return;
 

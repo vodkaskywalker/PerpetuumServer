@@ -1,9 +1,10 @@
 ﻿using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
+using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Units;
 using Perpetuum.Zones.Effects;
-using Perpetuum.Zones.NpcSystem;
+using Perpetuum.Zones.NpcSystem.ThreatManaging;
 
 namespace Perpetuum.Modules.EffectModules
 {
@@ -21,7 +22,9 @@ namespace Perpetuum.Modules.EffectModules
         public override void AcceptVisitor(IEntityVisitor visitor)
         {
             if (!TryAcceptVisitor(this, visitor))
+            {
                 base.AcceptVisitor(visitor);
+            }
         }
 
         protected override bool CanApplyEffect(Unit target)
@@ -29,17 +32,24 @@ namespace Perpetuum.Modules.EffectModules
             if (FastRandom.NextDouble() > ModifyValueByOptimalRange(target, 1.0))
             {
                 OnError(ErrorCodes.AccuracyCheckFailed);
+
                 return false;
             }
 
             if (!IsCategory(CategoryFlags.cf_longrange_webber))
+            {
                 return true;
+            }
 
             var result = GetLineOfSight(target);
+
             if (!result.hit)
+            {
                 return true;
+            }
 
             OnError(ErrorCodes.LOSFailed);
+
             return false;
         }
 
@@ -51,12 +61,16 @@ namespace Perpetuum.Modules.EffectModules
         protected override void SetupEffect(EffectBuilder effectBuilder)
         {
             var effectProperty = _effectMassivnesSpeedMaxModifier.ToPropertyModifier();
+
             effectProperty.Add(effectBuilder.Owner.Massiveness);
 
             if (effectProperty.Value >= 1.0)
+            {
                 effectProperty.ResetToDefaultValue();
+            }
 
-            effectBuilder.SetType(EffectType.effect_demobilizer)
+            effectBuilder
+                .SetType(EffectType.effect_demobilizer)
                 .SetSource(ParentRobot)
                 .WithPropertyModifier(effectProperty);
         }

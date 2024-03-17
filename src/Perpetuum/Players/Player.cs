@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Transactions;
-using Perpetuum.Accounting.Characters;
+﻿using Perpetuum.Accounting.Characters;
 using Perpetuum.Builders;
 using Perpetuum.Collections.Spatial;
 using Perpetuum.Common.Loggers.Transaction;
@@ -25,7 +18,6 @@ using Perpetuum.Services.Looting;
 using Perpetuum.Services.MissionEngine;
 using Perpetuum.Services.MissionEngine.MissionTargets;
 using Perpetuum.Services.MissionEngine.TransportAssignments;
-using Perpetuum.Services.Strongholds;
 using Perpetuum.Timers;
 using Perpetuum.Units;
 using Perpetuum.Units.DockingBases;
@@ -44,136 +36,126 @@ using Perpetuum.Zones.NpcSystem;
 using Perpetuum.Zones.PBS;
 using Perpetuum.Zones.PlantTools;
 using Perpetuum.Zones.ProximityProbes;
+using Perpetuum.Zones.RemoteControl;
 using Perpetuum.Zones.Teleporting;
 using Perpetuum.Zones.Teleporting.Strategies;
 using Perpetuum.Zones.Terrains;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Transactions;
 
 namespace Perpetuum.Players
 {
-    public class PlayerMovement
+    public sealed class Player : Robot, IBlobableUnit, IBlobEmitter
     {
-        private static readonly TimeSpan _minStepTime = TimeSpan.FromMilliseconds(50);
-        private static readonly TimeSpan _maxElapsedTime = TimeSpan.FromSeconds(1);
-        private readonly Player _player;
+        private readonly IExtensionReader extensionReader;
+        private readonly ICorporationManager corporationManager;
+        private readonly MissionHandler.Factory missionHandlerFactory;
+        private readonly ITeleportStrategyFactories teleportStrategyFactories;
+        private readonly DockingBaseHelper dockingBaseHelper;
+        private readonly CombatLogger.Factory combatLoggerFactory;
+        private readonly IBlobEmitter blobEmitter;
+        private readonly BlobHandler<Player> blobHandler;
+        private readonly PlayerMovement movement;
+        private readonly IntervalTimer combatTimer = new IntervalTimer(TimeSpan.FromSeconds(10));
+        private CombatLogger combatLogger;
+        private PlayerMoveCheckQueue check;
+        private CancellableDespawnHelper despawnHelper;
 
-        public PlayerMovement(Player player)
+        public static readonly TimeSpan NormalUndockDelay = TimeSpan.FromSeconds(7);
+        public const int ARKHE_REQUEST_TIMER_MINUTES_PVP = 3;
+        public const int ARKHE_REQUEST_TIMER_MINUTES_NPC = 1;
+
+        private bool HasAggressorEffect => EffectHandler.ContainsEffect(EffectType.effect_aggressor);
+
+        public long CorporationEid { get; set; }
+
+        public IZoneSession Session { get; private set; }
+
+        public Character Character { get; set; } = Character.None;
+
+        public bool HasGMStealth { get; set; }
+
+        public MissionHandler MissionHandler { get; private set; }
+
+        public bool HasSelfTeleportEnablerEffect => EffectHandler.ContainsEffect(EffectType.effect_teleport_self_enabler);
+
+        public Gang Gang { get; set; }
+
+        public bool IsInSafeArea
         {
-            _player = player;
-        }
-
-        public void Update(TimeSpan elapsed)
-        {
-            var speed = _player.Speed;
-            if (speed <= 0.0)
-                return;
-
-            elapsed = elapsed.Min(_maxElapsedTime);
-
-            var angle = _player.Direction * MathHelper.PI2;
-            var vx = Math.Sin(angle) * speed;
-            var vy = Math.Cos(angle) * speed;
-
-            var px = _player.CurrentPosition.X;
-            var py = _player.CurrentPosition.Y;
-
-            while (elapsed > TimeSpan.Zero)
+            get
             {
-                var time = _minStepTime;
+                IZone zone = Zone;
 
-                if (elapsed < _minStepTime)
-                    time = elapsed;
-
-                elapsed -= _minStepTime;
-
-                var nx = px + (vx * time.TotalSeconds);
-                var ny = py - (vy * time.TotalSeconds);
-
-                var dx = (int)px - (int)nx;
-                var dy = (int)py - (int)ny;
-
-                if (dx != 0 || dy != 0)
-                {
-                    // csak akkor kell ha csempevaltas volt
-                    if (!_player.IsWalkable((int)nx, (int)ny))
-                    {
-                        //_player.Zone.CreateAlignedDebugBeam(BeamType.red_10sec, new Position(nx, ny));
-                        break;
-                    }
-                }
-
-                px = nx;
-                py = ny;
-                //_player.Zone.CreateAlignedDebugBeam(BeamType.blue_10sec, new Position(px, py));
+                return zone != null
+&& (zone.Configuration.Protected ||
+                    EffectHandler.ContainsEffect(EffectType.effect_syndicate_area) ||
+                    EffectHandler.ContainsEffect(EffectType.effect_safe_spot));
             }
-            _player.TryMove(new Position(px, py));
-            //_player.Zone.CreateAlignedDebugBeam(BeamType.orange_10sec, new Position(px, py));
         }
-    }
 
-    public class ErrorPacketBuilder : IBuilder<Packet>
-    {
-        private readonly ErrorCodes _error;
-
-        public ErrorPacketBuilder(ErrorCodes error)
+        public override bool IsLockable
         {
-            _error = error;
+            get
+            {
+                bool isInvulnerable = IsInvulnerable;
+
+                return !isInvulnerable && base.IsLockable;
+            }
         }
 
-        public Packet Build()
-        {
-            return new Packet(ZoneCommand.Error) {Error = _error};
-        }
-    }
+        public IBlobHandler BlobHandler => blobHandler;
 
-    public sealed class Player : Robot,IBlobableUnit,IBlobEmitter
-    {
-        private readonly IExtensionReader _extensionReader;
-        private readonly ICorporationManager _corporationManager;
-        private readonly MissionHandler.Factory _missionHandlerFactory;
-        private readonly ITeleportStrategyFactories _teleportStrategyFactories;
-        private readonly DockingBaseHelper _dockingBaseHelper;
-        private readonly CombatLogger.Factory _combatLoggerFactory;
-        private readonly IBlobEmitter _blobEmitter;
-        private readonly BlobHandler<Player> _blobHandler;
-        private readonly PlayerMovement _movement;
-        private CombatLogger _combatLogger;
-        private PlayerMoveCheckQueue _check;
-        private CancellableDespawnHelper _despawnHelper;
+        public double BlobEmission => blobEmitter.BlobEmission;
 
-        public Player(IExtensionReader extensionReader,
+        public double BlobEmissionRadius => blobEmitter.BlobEmissionRadius;
+
+        public Player(
+            IExtensionReader extensionReader,
             ICorporationManager corporationManager,
             MissionHandler.Factory missionHandlerFactory,
             ITeleportStrategyFactories teleportStrategyFactories,
             DockingBaseHelper dockingBaseHelper,
-            CombatLogger.Factory combatLoggerFactory
-            )
+            CombatLogger.Factory combatLoggerFactory)
         {
-            _extensionReader = extensionReader;
-            _corporationManager = corporationManager;
-            _missionHandlerFactory = missionHandlerFactory;
-            _teleportStrategyFactories = teleportStrategyFactories;
-            _dockingBaseHelper = dockingBaseHelper;
-            _combatLoggerFactory = combatLoggerFactory;
+            this.extensionReader = extensionReader;
+            this.corporationManager = corporationManager;
+            this.missionHandlerFactory = missionHandlerFactory;
+            this.teleportStrategyFactories = teleportStrategyFactories;
+            this.dockingBaseHelper = dockingBaseHelper;
+            this.combatLoggerFactory = combatLoggerFactory;
             Session = ZoneSession.None;
-            _movement = new PlayerMovement(this);
+            movement = new PlayerMovement(this);
 
-            _blobEmitter = new BlobEmitter(this);
-            _blobHandler = new BlobHandler<Player>(this);
+            blobEmitter = new BlobEmitter(this);
+            blobHandler = new BlobHandler<Player>(this);
         }
 
-        public long CorporationEid { get; set; }
-        public IZoneSession Session { get; private set; }
-        public Character Character { get; set; } = Character.None;
-        public bool HasGMStealth { get; set; }
+        public void EnableSelfTeleport(TimeSpan duration, int affectedZoneId = -1)
+        {
+            if (affectedZoneId != -1 && Zone.Id != affectedZoneId)
+            {
+                return;
+            }
+
+            ApplySelfTeleportEnablerEffect(duration);
+        }
 
         public bool TryMove(Position position)
         {
             if (!IsWalkable(position))
+            {
                 return false;
+            }
 
-            _check.EnqueueMove(position);
-
+            check.EnqueueMove(position);
             CurrentPosition = position;
+
             return true;
         }
 
@@ -182,98 +164,12 @@ namespace Perpetuum.Players
             Session = session;
         }
 
-        public MissionHandler MissionHandler { get; private set; }
-
-        private bool HasAggressorEffect
-        {
-            get { return EffectHandler.ContainsEffect(EffectType.effect_aggressor); }
-        }
-
-        public bool HasSelfTeleportEnablerEffect
-        {
-            get { return EffectHandler.ContainsEffect(EffectType.effect_teleport_self_enabler); }
-        }
-
-        public Gang Gang { get; set; }
-
-        public bool IsInSafeArea
-        {
-            get
-            {
-                var zone = Zone;
-                if (zone == null)
-                    return false;
-
-                return zone.Configuration.Protected || EffectHandler.ContainsEffect(EffectType.effect_syndicate_area) || EffectHandler.ContainsEffect(EffectType.effect_safe_spot);
-            }
-        }
-
-        public override bool IsLockable
-        {
-            get
-            {
-                var isInvulnerable = IsInvulnerable;
-
-                if (isInvulnerable)
-                    return false;
-
-                return base.IsLockable;
-            }
-        }
-
-        public IBlobHandler BlobHandler
-        {
-            get { return _blobHandler; }
-        }
-
-        public double BlobEmission
-        {
-            get { return _blobEmitter.BlobEmission; }
-        }
-
-        public double BlobEmissionRadius
-        {
-            get { return _blobEmitter.BlobEmissionRadius; }
-        }
-
-
         public override void AcceptVisitor(IEntityVisitor visitor)
         {
             if (!TryAcceptVisitor(this, visitor))
+            {
                 base.AcceptVisitor(visitor);
-        }
-
-        protected override void OnEnterZone(IZone zone, ZoneEnterType enterType)
-        {
-            base.OnEnterZone(zone, enterType); //aa
-            _check = PlayerMoveCheckQueue.Create(this, CurrentPosition);
-
-            zone.SendPacketToGang(Gang, new GangUpdatePacketBuilder(Visibility.Visible, this));
-            
-            MissionHandler = _missionHandlerFactory(zone, this);
-            MissionHandler.InitMissions();
-
-            Direction = FastRandom.NextDouble();
-
-            var p = DynamicProperties.GetProperty<int>(k.pvpRemaining);
-            if (!p.HasValue)
-                return;
-
-            ApplyPvPEffect(TimeSpan.FromMilliseconds(p.Value));
-            p.Clear();
-        }
-
-        protected override void OnRemovedFromZone(IZone zone)
-        {
-            Session.SendPacket(ExitPacketBuilder);
-            zone.SendPacketToGang(Gang, new GangUpdatePacketBuilder(Visibility.Invisible, this));
-
-            _check.StopAndDispose();
-
-            if (!States.LocalTeleport)
-                Session.Stop();
-
-            base.OnRemovedFromZone(zone);
+            }
         }
 
         public override void OnUpdateToDb()
@@ -286,26 +182,34 @@ namespace Perpetuum.Players
                     DynamicProperties.Update(k.currentCore, Core);
                 }
 
-                var zone = Zone;
+                IZone zone = Zone;
+
                 if (zone == null || States.Dead)
-                    return;
-
-                var character = Character;
-                character.ZoneId = zone.Id;
-                character.ZonePosition = CurrentPosition;
-
-                var p = DynamicProperties.GetProperty<int>(k.pvpRemaining);
-
-                var pvpEffect = EffectHandler.GetEffectsByType(EffectType.effect_pvp).FirstOrDefault();
-                if (pvpEffect == null)
                 {
-                    p.Clear();
                     return;
                 }
 
-                var effectTimer = pvpEffect.Timer;
+                Character character = Character;
+
+                character.ZoneId = zone.Id;
+                character.ZonePosition = CurrentPosition;
+
+                IDynamicProperty<int> p = DynamicProperties.GetProperty<int>(k.pvpRemaining);
+                Effect pvpEffect = EffectHandler.GetEffectsByType(EffectType.effect_pvp).FirstOrDefault();
+
+                if (pvpEffect == null)
+                {
+                    p.Clear();
+
+                    return;
+                }
+
+                IntervalTimer effectTimer = pvpEffect.Timer;
+
                 if (effectTimer != null)
+                {
                     p.Value = (int)effectTimer.Remaining.TotalMilliseconds;
+                }
             }
             finally
             {
@@ -313,49 +217,36 @@ namespace Perpetuum.Players
             }
         }
 
-        protected override void OnUpdate(TimeSpan time)
-        {
-            base.OnUpdate(time);
-            UpdateCombat(time);
-            _movement.Update(time);
-            _blobHandler.Update(time);
-            MissionHandler.Update(time);
-
-            _combatLogger?.Update(time);
-            _despawnHelper?.Update(time, this);
-        }
-
         public void SetStrongholdDespawn(TimeSpan time, UnitDespawnStrategy strategy)
         {
-            if (_despawnHelper == null)
+            if (despawnHelper == null)
             {
-                _despawnHelper = CancellableDespawnHelper.Create(this, time);
-                _despawnHelper.DespawnStrategy = strategy;
+                despawnHelper = CancellableDespawnHelper.Create(this, time);
+                despawnHelper.DespawnStrategy = strategy;
             }
         }
 
         public void ClearStrongholdDespawn()
         {
-            _despawnHelper?.Cancel(this);
-            _despawnHelper = null;
+            despawnHelper?.Cancel(this);
+            despawnHelper = null;
         }
 
         public void SendModuleProcessError(Module module, ErrorCodes error)
         {
-            var packet = new Packet(ZoneCommand.ModuleEvaluateError);
+            Packet packet = new Packet(ZoneCommand.ModuleEvaluateError);
 
             packet.AppendByte((byte)module.ParentComponent.Type);
-            packet.AppendByte((byte) module.Slot);
+            packet.AppendByte((byte)module.Slot);
             packet.AppendInt((int)error);
-
             Session.SendPacket(packet);
         }
 
         public void ApplyInvulnerableEffect()
         {
             RemoveInvulnerableEffect(); // Remove existing effect, set new
-            var builder = NewEffectBuilder().SetType(EffectType.effect_invulnerable);
-            builder.WithDurationModifier(0.75); //Reduce span of syndicate protection
+            EffectBuilder builder = NewEffectBuilder().SetType(EffectType.effect_invulnerable);
+            _ = builder.WithDurationModifier(0.75); //Reduce span of syndicate protection
             ApplyEffect(builder);
         }
 
@@ -366,32 +257,34 @@ namespace Perpetuum.Players
 
         public void ApplyTeleportSicknessEffect()
         {
-            var zone = Zone;
-            if (zone == null || zone is TrainingZone)
-                return;
+            IZone zone = Zone;
 
-            var effectBuilder = NewEffectBuilder().SetType(EffectType.effect_teleport_sickness);
+            if (zone == null || zone is TrainingZone)
+            {
+                return;
+            }
+
+            EffectBuilder effectBuilder = NewEffectBuilder().SetType(EffectType.effect_teleport_sickness);
 
             if (HasPvpEffect)
             {
-                effectBuilder.WithDurationModifier(3.0);
+                _ = effectBuilder.WithDurationModifier(3.0);
             }
 
             ApplyEffect(effectBuilder);
         }
 
-        private void ApplyAggressorEffect()
-        {
-            ApplyEffect(NewEffectBuilder().SetType(EffectType.effect_aggressor));
-        }
-
         public void ApplySelfTeleportEnablerEffect(TimeSpan duration)
         {
-            var effect = EffectHandler.GetEffectsByType(EffectType.effect_teleport_self_enabler).FirstOrDefault();
-            if (effect != null)
-                EffectHandler.Remove(effect);
+            Effect effect = EffectHandler.GetEffectsByType(EffectType.effect_teleport_self_enabler).FirstOrDefault();
 
-            var builder = NewEffectBuilder().SetType(EffectType.effect_teleport_self_enabler).WithDuration(duration);
+            if (effect != null)
+            {
+                EffectHandler.Remove(effect);
+            }
+
+            EffectBuilder builder = NewEffectBuilder().SetType(EffectType.effect_teleport_self_enabler).WithDuration(duration);
+
             ApplyEffect(builder);
         }
 
@@ -402,38 +295,40 @@ namespace Perpetuum.Players
 
         public void CheckDockingConditionsAndThrow(long baseEid, bool checkRange = true)
         {
-            if ( !Session.AccessLevel.IsAdminOrGm())
+            if (!Session.AccessLevel.IsAdminOrGm())
             {
                 HasAggressorEffect.ThrowIfTrue(ErrorCodes.NotAllowedForAggressors);
                 HasPvpEffect.ThrowIfTrue(ErrorCodes.CantDockThisState);
                 HasTeleportSicknessEffect.ThrowIfTrue(ErrorCodes.CantDockThisState);
             }
 
-            var zone = Zone;
+            IZone zone = Zone;
+
             if (zone == null)
-                return;
-
-            var dockingBase = _dockingBaseHelper.GetDockingBase(baseEid);
-            if (dockingBase == null)
-                return;
-
-            if (dockingBase.Zone == zone)
             {
-                // csak akkor van range check ha a terepen van
-                if (checkRange)
-                {
-                    // alapbol van checkrange
-                    dockingBase.IsInDockingRange(this).ThrowIfFalse(ErrorCodes.DockingOutOfRange);
-                }
+                return;
             }
 
-            var currentAccess = Session.AccessLevel;
+            DockingBase dockingBase = dockingBaseHelper.GetDockingBase(baseEid);
+
+            if (dockingBase == null)
+            {
+                return;
+            }
+
+            if (dockingBase.Zone == zone && checkRange)
+            {
+                dockingBase.IsInDockingRange(this).ThrowIfFalse(ErrorCodes.DockingOutOfRange);
+            }
+
+            AccessLevel currentAccess = Session.AccessLevel;
+
             if (!currentAccess.IsAdminOrGm())
             {
-                dockingBase.IsDockingAllowed(Character).ThrowIfError();
+                _ = dockingBase.IsDockingAllowed(Character).ThrowIfError();
             }
 
-            DockToBase(zone,dockingBase);
+            DockToBase(zone, dockingBase);
         }
 
         /// <summary>
@@ -445,277 +340,31 @@ namespace Perpetuum.Players
         {
             States.Dock = true;
 
-            var publicContainer = dockingBase.GetPublicContainer();
+            PublicContainer publicContainer = dockingBase.GetPublicContainer();
 
             FullArmorRepair();
 
             publicContainer.AddItem(this, false);
             publicContainer.Save();
-            dockingBase.DockIn(Character,NormalUndockDelay,ZoneExitType.Docked);
+            dockingBase.DockIn(Character, NormalUndockDelay, ZoneExitType.Docked);
 
             Transaction.Current.OnCommited(() =>
             {
                 RemoveFromZone();
                 MissionHelper.MissionAdvanceDockInTarget(Character.Id, zone.Id, CurrentPosition);
-                TransportAssignment.DeliverTransportAssignmentAsync(Character);
+                _ = TransportAssignment.DeliverTransportAssignmentAsync(Character);
             });
-        }
-
-        public static readonly TimeSpan NormalUndockDelay = TimeSpan.FromSeconds(7);
-
-
-        protected override void OnDead(Unit killer)
-        {
-            HandlePlayerDeadAsync(Zone, killer).ContinueWith(t => base.OnDead(killer));
-        }
-
-        private Task HandlePlayerDeadAsync(IZone zone, Unit killer)
-        {
-            return Task.Run(() => HandlePlayerDead(zone, killer));
-        }
-
-        public const int ARKHE_REQUEST_TIMER_MINUTES_PVP = 3;
-        public const int ARKHE_REQUEST_TIMER_MINUTES_NPC = 1;
-
-
-        //ennek mindenkepp vegig kell futnia
-        private void HandlePlayerDead(IZone zone, Unit killer)
-        {
-            using (var scope = Db.CreateTransaction())
-            {
-                EnlistTransaction();
-                try
-                {
-                    killer = zone.ToPlayerOrGetOwnerPlayer(killer) ?? killer;
-
-                    SaveCombatLog(zone, killer);
-
-                    var character = Character;
-
-                    var dockingBase = character.GetHomeBaseOrCurrentBase();
-                    dockingBase.DockIn(character,NormalUndockDelay, ZoneExitType.Died);
-
-                    PlayerDeathLogger.Log.Write(zone, this, killer);
-
-                    //pay out insurance if needed
-                    var wasInsured = InsuranceHelper.CheckInsuranceOnDeath(Eid, Definition);
-
-                    if (!Session.AccessLevel.IsAdminOrGm())
-                    {
-                        var robotInventory = GetContainer();
-                        Debug.Assert(robotInventory != null);
-
-                        var lootItems = new List<LootItem>();
-
-                        // minden fittelt modul
-                        foreach (var module in Modules.Where(m => LootHelper.Roll()))
-                        {
-                            lootItems.Add(LootItemBuilder.Create(module).AsDamaged().Build());
-
-                            var activeModule = module as ActiveModule;
-                            var ammo = activeModule?.GetAmmo();
-                            if (ammo != null)
-                            {
-                                if (LootHelper.Roll())
-                                    lootItems.Add(LootItemBuilder.Create(ammo).Build());
-                            }
-
-                            // szedjuk le a robotrol
-                            module.Parent = robotInventory.Eid; //in case the container is full
-
-                            //toroljuk is le, nem kell ez sehova mar
-                            Repository.Delete(module);
-                        }
-
-                        foreach (var item in robotInventory.GetItems(true).Where(i => i is VolumeWrapperContainer))
-                        {
-                            //Transport assignments
-                            var wrapper = item as VolumeWrapperContainer;
-                            if (wrapper == null)
-                                continue;
-
-                            lootItems.AddRange(wrapper.GetLootItems());
-                            wrapper.SetAllowDelete();
-                            Repository.Delete(wrapper);
-                        }
-
-                        // elkerunk minden itemet a kontenerbol es valogatunk belole 50% szerint
-                        foreach (var item in robotInventory.GetItems().Where(i => LootHelper.Roll() && !i.ED.AttributeFlags.NonStackable))
-                        {
-                            var qtyMod = FastRandom.NextDouble();
-                            item.Quantity = (int)(item.Quantity * qtyMod);
-
-                            if (item.Quantity > 0)
-                            {
-                                lootItems.Add(LootItemBuilder.Create(item.Definition).SetQuantity(item.Quantity).SetRepackaged(item.ED.AttributeFlags.Repackable).Build());
-                            }
-                            else
-                            {
-                                robotInventory.RemoveItemOrThrow(item);
-
-                                //toroljuk is le, nem kell ez mar
-                                Repository.Delete(item);
-                            }
-                        }
-
-                        //Check if paint was applied + paint drop chance
-                        if (ED.Config.Tint != Tint && LootHelper.Roll(0.5))
-                        {
-                            //Paint Query
-                            //TODO: performance => cache paints in static collection
-                            //TODO: performance => cache if painted, and paint entitydef on undock
-                            EntityDefault paint = EntityDefault.Reader.GetAll()
-                                .Where(i => i.CategoryFlags == CategoryFlags.cf_paints)
-                                .Where(i => i.Config.Tint == Tint).First();
-                            if (paint != null)
-                            {
-                                lootItems.Add(LootItemBuilder.Create(paint.Definition).SetQuantity(1).SetDamaged(false).Build());
-                            }
-                        }
-
-                        if (lootItems.Count > 0)
-                        {
-                            var lootContainer = LootContainer.Create().AddLoot(lootItems).BuildAndAddToZone(zone, CurrentPosition);
-
-                            if (lootContainer != null)
-                            {
-                                var b = TransactionLogEvent.Builder().SetTransactionType(TransactionType.PutLoot).SetCharacter(character).SetContainer(lootContainer.Eid);
-                                foreach (var lootItem in lootItems)
-                                {
-                                    b.SetItem(lootItem.ItemInfo.Definition,lootItem.ItemInfo.Quantity);
-                                    Character.LogTransaction(b);
-                                }
-                            }
-                        }
-
-                        var killedByPlayer = (killer != null && killer.IsPlayer());
-
-                        Trashcan.Get().MoveToTrash(this,Session.DisconnectTime, wasInsured, killedByPlayer,Session.InactiveTime);
-
-                        character.NextAvailableRobotRequestTime = DateTime.Now.AddMinutes(killedByPlayer ? ARKHE_REQUEST_TIMER_MINUTES_PVP : ARKHE_REQUEST_TIMER_MINUTES_NPC);
-
-                        Robot activeRobot = null;
-
-                        if (!killedByPlayer)
-                        {
-                            activeRobot = dockingBase.CreateStarterRobotForCharacter(character);
-
-                            if (activeRobot != null)
-                            {
-                                Transaction.Current.OnCommited(() =>
-                                {
-                                    var starterRobotInfo = new Dictionary<string, object>
-                                    {
-                                        {k.baseEID, Eid},
-                                        {k.robotEID, activeRobot.Eid}
-                                    };
-
-                                    Message.Builder.SetCommand(Commands.StarterRobotCreated).WithData(starterRobotInfo).ToCharacter(character).Send();
-                                });
-                            }
-                        }
-
-                        character.SetActiveRobot(activeRobot);
-                    }
-                    else
-                    {
-                        // mert rendesek vagyunk
-                        this.Repair();
-
-                        // csak az adminok miatt kell
-                        var container = dockingBase.GetPublicContainer();
-                        container.AddItem(this, false);
-                    }
-
-                    this.Save();
-
-                    scope.Complete();
-                }
-                catch (Exception ex)
-                {
-                    Logger.Exception(ex);
-                }
-            }
-        }
-
-        protected override void OnTileChanged()
-        {
-            base.OnTileChanged();
-
-            var zone = Zone;
-            if (zone == null)
-                return;
-
-            MissionHandler?.MissionUpdateOnTileChange();
-
-            var controlInfo = zone.Terrain.Controls.GetValue(CurrentPosition);
-
-            ApplyHighwayEffect(controlInfo.IsAnyHighway);
-
-            if (zone.Configuration.Protected)
-                return;
-
-            //PVP zone
-            ApplySyndicateAreaEffect(controlInfo.SyndicateArea);
-        }
-
-        protected override void OnCellChanged(CellCoord lastCellCoord, CellCoord currentCellCoord)
-        {
-            base.OnCellChanged(lastCellCoord,currentCellCoord);
-
-            var zone = Zone;
-            if ( zone == null )
-                return;
-
-            Task.Run(() =>
-            {
-                var district = currentCellCoord.ComputeDistrict(lastCellCoord);
-                zone.SendBeamsToPlayer(this,district);
-                Session.SendTerrainData();
-            }).LogExceptions();
         }
 
         public ErrorCodes CheckPvp()
         {
-            var zone = Zone;
+            IZone zone = Zone;
+
             Debug.Assert(zone != null);
 
-            if (!HasPvpEffect && (zone.Configuration.Protected || EffectHandler.ContainsEffect(EffectType.effect_syndicate_area)))
-                return ErrorCodes.PvpIsNotAllowed;
-
-            return ErrorCodes.NoError;
-        }
-
-        private void ApplySyndicateAreaEffect(bool apply)
-        {
-            if ( apply )
-            {
-                var effectBuilder = NewEffectBuilder().SetType(EffectType.effect_syndicate_area);
-                ApplyEffect(effectBuilder);
-            }
-            else
-            {
-                EffectHandler.RemoveEffectsByType(EffectType.effect_syndicate_area);
-            }
-        }
-
-        private void ApplyHighwayEffect(bool apply)
-        {
-            if (apply)
-            {
-                var effectBuilder = NewEffectBuilder().SetType(EffectType.effect_highway)
-                                                      .WithPropertyModifier(ItemPropertyModifier.Create(AggregateField.effect_speed_highway_modifier, 1.0));
-                ApplyEffect(effectBuilder);
-            }
-            else
-            {
-                EffectHandler.RemoveEffectsByType(EffectType.effect_highway);
-            }
-        }
-
-        private bool IsInSameCorporation(Player player)
-        {
-            return (CorporationEid == player.CorporationEid) && !IsInDefaultCorporation();
+            return !HasPvpEffect && (zone.Configuration.Protected || EffectHandler.ContainsEffect(EffectType.effect_syndicate_area))
+                ? ErrorCodes.PvpIsNotAllowed
+                : ErrorCodes.NoError;
         }
 
         public bool IsInDefaultCorporation()
@@ -725,23 +374,28 @@ namespace Perpetuum.Players
 
         public override ItemPropertyModifier GetPropertyModifier(AggregateField field)
         {
-            var modifier = base.GetPropertyModifier(field);
+            ItemPropertyModifier modifier = base.GetPropertyModifier(field);
 
             if (Character == Character.None)
+            {
                 return modifier;
+            }
 
-            var characterExtensions = Character.GetExtensions();
-            var extensions = _extensionReader.GetExtensions();
-
-            var extensionBonus = characterExtensions.Select(e => extensions[e.id])
+            CharacterExtensionCollection characterExtensions = Character.GetExtensions();
+            System.Collections.Immutable.ImmutableDictionary<int, ExtensionInfo> extensions = extensionReader.GetExtensions();
+            double extensionBonus = characterExtensions
+                .Select(e => extensions[e.id])
                 .Where(e => e.aggregateField == field)
                 .Sum(e => characterExtensions.GetLevel(e.id) * e.bonus);
 
-            extensionBonus += ExtensionBonuses.Where(e => e.aggregateField == field).Sum(e => characterExtensions.GetLevel(e.extensionId) * e.bonus);
+            extensionBonus += ExtensionBonuses
+                .Where(e => e.aggregateField == field)
+                .Sum(e => characterExtensions.GetLevel(e.extensionId) * e.bonus);
 
             if (!extensionBonus.IsZero())
             {
-                var m = ItemPropertyModifier.Create(field,extensionBonus);
+                ItemPropertyModifier m = ItemPropertyModifier.Create(field, extensionBonus);
+
                 m.NormalizeExtensionBonus();
                 m.Modify(ref modifier);
             }
@@ -749,42 +403,40 @@ namespace Perpetuum.Players
             return modifier;
         }
 
-        private bool IsUnitPVPAggro(Unit unit)
-        {
-            return unit is MobileTeleport
-                || unit is IPBSObject
-                || unit is WallHealer
-                || unit is ProximityProbeBase
-                || (unit is BlobEmitterUnit b && b.IsPlayerSpawned);
-        }
-
         public override void OnAggression(Unit victim)
         {
             base.OnAggression(victim);
-
             AddInCombatWith(victim);
 
             if (victim is ITaggable taggable)
+            {
                 taggable.Tag(this, TimeSpan.Zero);
+            }
 
             if (IsUnitPVPAggro(victim))
             {
                 ApplyPvPEffect();
+
                 return;
             }
 
             if (!(victim is Player victimPlayer))
+            {
                 return;
+            }
 
             victimPlayer.Session.CancelLogout();
-
             ApplyPvPEffect();
 
             if (IsInSameCorporation(victimPlayer))
+            {
                 return;
+            }
 
             if (HasPvpEffect && victimPlayer.HasPvpEffect)
+            {
                 return;
+            }
         }
 
         public void OnPvpSupport(Unit target)
@@ -795,49 +447,44 @@ namespace Perpetuum.Players
             }
         }
 
-        public override string InfoString
-        {
-            get { return $"Player:{Character.Id}:{Definition}:{Eid}"; }
-        }
+        public override string InfoString => $"Player:{Character.Id}:{Definition}:{Eid}";
 
         public void SendInitSelf()
         {
-            var zone = Zone;
+            IZone zone = Zone;
+
             Debug.Assert(zone != null, "zone != null");
-
             Session.SendPacket(EnterPacketBuilder);
-
-            // terrain
             Session.SendTerrainData();
+            zone.SendBeamsToPlayer(this, GridDistricts.All);
 
-            // beams
-            zone.SendBeamsToPlayer(this,GridDistricts.All);
+            IEnumerable<Packet> lockPackets = GetLockPackets();
 
-            // elkuldjuk az osszes lockot
-            var lockPackets = GetLockPackets();
             Session.SendPackets(lockPackets);
 
-            foreach (var visibility in GetVisibleUnits())
+            foreach (IUnitVisibility visibility in GetVisibleUnits())
             {
                 Session.SendPacket(visibility.Target.EnterPacketBuilder);
 
-                var robot = visibility.Target as Robot;
-                if (robot == null)
+                if (!(visibility.Target is Robot robot))
+                {
                     continue;
+                }
 
-                var unitLockPackets = robot.GetLockPackets();
+                IEnumerable<Packet> unitLockPackets = robot.GetLockPackets();
+
                 Session.SendPackets(unitLockPackets);
             }
 
             Session.SendPacket(new GangUpdatePacketBuilder(Visibility.Visible, zone.GetGangMembers(Gang)));
             Session.SendPacket(zone.Weather.GetCurrentWeather().CreateUpdatePacket());
 
-            foreach (var effect in EffectHandler.Effects)
+            foreach (Effect effect in EffectHandler.Effects)
             {
                 Session.SendPacket(new EffectPacketBuilder(effect, true));
             }
 
-            foreach (var module in ActiveModules)
+            foreach (ActiveModule module in ActiveModules)
             {
                 module.ForceUpdate();
             }
@@ -845,19 +492,14 @@ namespace Perpetuum.Players
 
         public void WriteFQLog(string message)
         {
-            var e = new LogEvent
+            LogEvent e = new LogEvent
             {
                 LogType = LogType.Info,
                 Tag = "FQ",
-                Message = $"{InfoString} - {message}"
+                Message = $"{InfoString} - {message}",
             };
 
             Logger.Log(e);
-        }
-
-        private void SendError(ErrorCodes error)
-        {
-            Session.SendPacket(new ErrorPacketBuilder(error));
         }
 
         public void SendForceUpdate()
@@ -865,210 +507,73 @@ namespace Perpetuum.Players
             Session.SendPacket(new UnitUpdatePacketBuilder(this, UpdatePacketControl.ForceReposition));
         }
 
-
-        protected override void OnBroadcastPacket(IBuilder<Packet> packetBuilder)
-        {
-            base.OnBroadcastPacket(packetBuilder);
-            Session.SendPacket(packetBuilder.Build());
-        }
-
-        protected override void OnUnitVisibilityUpdated(Unit target,Visibility visibility)
-        {
-            switch (visibility)
-            {
-                case Visibility.Visible:
-                {
-                    target.BroadcastPacket += OnUnitBroadcastPacket;
-                    target.Updated += OnUnitUpdated;
-                    Session.SendPacket(target.EnterPacketBuilder);
-                    break;
-                }
-                case Visibility.Invisible:
-                {
-                    target.BroadcastPacket -= OnUnitBroadcastPacket;
-                    target.Updated -= OnUnitUpdated;
-                    Session.SendPacket(target.ExitPacketBuilder);
-                    break;
-                }
-
-            }
-
-            if (Gang.IsMember(target))
-            {
-                Session.SendPacket(new GangUpdatePacketBuilder(visibility,(Player) target));
-            }
-
-            base.OnUnitVisibilityUpdated(target,visibility);
-        }
-
-        private void OnUnitUpdated(Unit unit, UnitUpdatedEventArgs e)
-        {
-            if (!Gang.IsMember(unit)) 
-                return;
-
-            var send = (e.UpdateTypes & UnitUpdateTypes.Visibility) > 0 || (e.UpdatedProperties != null && e.UpdatedProperties.Any(p => p.Field.IsPublic()));
-            if (!send)
-                return;
-
-            var v = Visibility.Invisible;
-            if (unit.InZone)
-                v = Visibility.Visible;
-
-            Session.SendPacket(new GangUpdatePacketBuilder(v,(Player) unit));
-        }
-
-        private void OnUnitBroadcastPacket(Unit sender, Packet packet)
-        {
-            Session.SendPacket(packet);
-        }
-
-        protected override void OnLockStateChanged(Lock @lock)
-        {
-            base.OnLockStateChanged(@lock);
-
-            if (@lock is UnitLock u)
-            {
-                var player = u.Target as Player;
-                player?.Session.CancelLogout();
-
-                if (@lock.State == LockState.Locked)
-                {
-                    //  !!
-                    //  this will enqueue primary, secondary, and will also fire if a primary is converted to secondary
-                    //  !!
-
-                    var npc = u.Target as Npc;
-
-                    if (npc != null)
-                    {
-                        MissionHandler.EnqueueMissionEventInfo(new LockUnitEventInfo(this, npc, npc.CurrentPosition));
-                        MissionHandler.SignalParticipationByLocking(npc.GetMissionGuid());
-                    }
-                }
-            }
-
-            if (@lock.State == LockState.Inprogress && EffectHandler.ContainsEffect(EffectType.effect_invulnerable))
-            {
-              EffectHandler.RemoveEffectsByType(EffectType.effect_invulnerable);
-            }
-        }
-
-        protected override void OnEffectChanged(Effect effect, bool apply)
-        {
-            base.OnEffectChanged(effect,apply);
-
-            if (!apply) 
-                return;
-
-            switch (effect.Type)
-            {
-                case EffectType.effect_demobilizer:
-                    {
-                        OnCombatEvent(effect.Source, new DemobilizerEventArgs());
-                        break;
-                    }
-
-                case EffectType.effect_sensor_supress:
-                    {
-                        OnCombatEvent(effect.Source,new SensorDampenerEventArgs());
-                        break;
-                    }
-            }
-        }
-
-        protected override void OnLockError(Lock @lock, ErrorCodes error)
-        {
-            SendError(error);
-            base.OnLockError(@lock, error);
-        }
-
         public override void OnCombatEvent(Unit source, CombatEventArgs e)
         {
             base.OnCombatEvent(source, e);
 
-            var player = Zone.ToPlayerOrGetOwnerPlayer(source);
+            Player player = Zone.ToPlayerOrGetOwnerPlayer(source);
+
             if (player == null)
+            {
                 return;
+            }
 
-            var logger = LazyInitializer.EnsureInitialized(ref _combatLogger, CreateCombatLogger);
-            logger.Log(player,e);
+            CombatLogger logger = LazyInitializer.EnsureInitialized(ref combatLogger, CreateCombatLogger);
+
+            logger.Log(player, e);
         }
 
-        private CombatLogger CreateCombatLogger()
+        public static Player LoadPlayerAndAddToZone(IZone zone, Character character)
         {
-            var logger = _combatLoggerFactory(this);
-            logger.Expired = () =>
+            using (TransactionScope scope = Db.CreateTransaction())
             {
-                _combatLogger = null;
-            };
-            return logger;
-        }
-
-        private void SaveCombatLog(IZone zone, Unit killer)
-        {
-            _combatLogger?.Save(zone,killer);
-        }
-
-        public static Player LoadPlayerAndAddToZone(IZone zone,Character character)
-        {
-            using (var scope = Db.CreateTransaction())
-            {
-                var player = (Player)character.GetActiveRobot().ThrowIfNull(ErrorCodes.ARobotMustBeSelected);
+                Player player = (Player)character.GetActiveRobot().ThrowIfNull(ErrorCodes.ARobotMustBeSelected);
 
                 DockingBase dockingBase = null;
-
                 ZoneEnterType zoneEnterType;
                 Position spawnPosition;
+
                 if (character.IsDocked)
                 {
-                    // ha bazisrol jott
                     zoneEnterType = ZoneEnterType.Undock;
-
                     dockingBase = character.GetCurrentDockingBase();
                     spawnPosition = UndockSpawnPositionSelector.SelectSpawnPosition(dockingBase);
-
                     character.ZoneId = zone.Id;
                     character.ZonePosition = spawnPosition;
                     character.IsDocked = false;
                 }
                 else
                 {
-                    // ha teleportalt
                     zoneEnterType = ZoneEnterType.Teleport;
+                    _ = zone.Id.ThrowIfNotEqual(character.ZoneId ?? -1, ErrorCodes.InvalidZoneId);
 
-                    zone.Id.ThrowIfNotEqual(character.ZoneId ?? -1, ErrorCodes.InvalidZoneId);
+                    Position? zonePosition = character.ZonePosition.ThrowIfNull(ErrorCodes.InvalidPosition);
 
-                    var zonePosition = character.ZonePosition.ThrowIfNull(ErrorCodes.InvalidPosition);
                     spawnPosition = (Position)zonePosition;
                 }
 
                 spawnPosition = zone.FixZ(spawnPosition);
 
-                // keresunk neki valami jo poziciot
-                var finder = new ClosestWalkablePositionFinder(zone, spawnPosition, player);
-                var validPosition = finder.FindOrThrow();
+                ClosestWalkablePositionFinder finder = new ClosestWalkablePositionFinder(zone, spawnPosition, player);
+                Position validPosition = finder.FindOrThrow();
 
-                // parentoljuk a zonahoz <<< NAGYON FONTOS - TILOS MASHOGY kulonben bennmaradnak a (pbs) bazison a robotok, es pl letorlodnek amikor kilovik a bazist
-                var zoneStorage = zone.Configuration.GetStorage();
+                ZoneStorage zoneStorage = zone.Configuration.GetStorage();
+
                 player.Parent = zoneStorage.Eid;
                 player.FullCoreRecharge();
-
-                // elmentjuk
                 player.Save();
 
-                // csak akkor rakjuk ki ha volt rendes commit
                 Transaction.Current.OnCommited(() =>
                 {
                     dockingBase?.LeaveChannel(character);
-
                     player.CorporationEid = character.CorporationEid;
                     zone.SetGang(player);
-
-                    player.AddToZone(zone,validPosition,zoneEnterType);
+                    player.AddToZone(zone, validPosition, zoneEnterType);
                     player.ApplyInvulnerableEffect();
                 });
 
                 scope.Complete();
+
                 return player;
             }
         }
@@ -1076,24 +581,192 @@ namespace Perpetuum.Players
         [CanBeNull]
         public Task TeleportToPositionAsync(Position target, bool applyTeleportSickness, bool applyInvulnerable)
         {
-            var zone = Zone;
-            if (zone == null)
-                return null;
+            IZone zone = Zone;
 
-            var teleport = _teleportStrategyFactories.TeleportWithinZoneFactory();
-            if (teleport == null)
+            if (zone == null)
+            {
                 return null;
+            }
+
+            TeleportWithinZone teleport = teleportStrategyFactories.TeleportWithinZoneFactory();
+
+            if (teleport == null)
+            {
+                return null;
+            }
 
             teleport.TargetPosition = target;
             teleport.ApplyTeleportSickness = applyTeleportSickness;
             teleport.ApplyInvulnerable = applyInvulnerable;
-            var task = teleport.DoTeleportAsync(this);
+
+            Task task = teleport.DoTeleportAsync(this);
+
             return task?.LogExceptions();
+        }
+
+        public void SendStartProgressBar(Unit unit, TimeSpan timeout, TimeSpan start)
+        {
+            Dictionary<string, object> data = unit.BaseInfoToDictionary();
+
+            data.Add(k.timeOut, (int)timeout.TotalMilliseconds);
+            data.Add(k.started, (long)start.TotalMilliseconds);
+            data.Add(k.now, (long)start.TotalMilliseconds);
+            Message.Builder
+                .SetCommand(Commands.AlarmStart)
+                .WithData(data)
+                .ToCharacter(Character)
+                .Send();
+        }
+
+        public void SendEndProgressBar(Unit unit, bool success = true)
+        {
+            Dictionary<string, object> info = unit.BaseInfoToDictionary();
+
+            info.Add(k.success, success);
+            Message.Builder.SetCommand(Commands.AlarmOver).WithData(info).ToCharacter(Character).Send();
+        }
+
+        public void SendArtifactRadarBeam(Position targetPosition)
+        {
+            BeamBuilder builder = Beam.NewBuilder()
+                .WithType(BeamType.artifact_radar)
+                .WithSourcePosition(targetPosition)
+                .WithTargetPosition(targetPosition)
+                .WithState(BeamState.AlignToTerrain)
+                .WithDuration(TimeSpan.FromSeconds(30));
+
+            Session.SendBeam(builder);
+        }
+
+        public bool IsStandingMatch(long targetCorporationEid, double? standingLimit)
+        {
+            return corporationManager.IsStandingMatch(targetCorporationEid, CorporationEid, standingLimit);
+        }
+
+        public void ReloadContainer()
+        {
+            if (Transaction.Current != null)
+            {
+                Reload();
+            }
+            else
+            {
+                using (TransactionScope scope = Db.CreateTransaction())
+                {
+                    Reload();
+                    scope.Complete();
+                }
+            }
+        }
+
+        public void UpdateCorporationOnZone(long newCorporationEid)
+        {
+            CorporationEid = newCorporationEid;
+
+            Character[] playersOnZone = Zone.GetCharacters().ToArray();
+
+            if (playersOnZone.Length <= 0)
+            {
+                return;
+            }
+
+            Dictionary<string, object> result = new Dictionary<string, object>
+            {
+                {k.corporationEID, newCorporationEid},
+                {k.characterID, Character.Id},
+            };
+
+            Message.Builder.SetCommand(Commands.CharacterUpdate).WithData(result).ToCharacters(playersOnZone).Send();
         }
 
         public override void UpdateVisibilityOf(Unit target)
         {
             target.UpdatePlayerVisibility(this);
+        }
+
+        public void SetCombatState(bool state)
+        {
+            States.Combat = state;
+            combatTimer.Reset();
+
+            if (state)
+            {
+                Session.ResetLogoutTimer();
+            }
+        }
+
+        public void AddInCombatWith(Unit enemy)
+        {
+            SetCombatState(true);
+
+            Player enemyPlayer = enemy as Player;
+
+            enemyPlayer?.SetCombatState(true);
+        }
+
+        public bool IsInSameCorporation(Player player)
+        {
+            return (CorporationEid == player.CorporationEid) && !IsInDefaultCorporation();
+        }
+
+        public bool IsUnitPVPAggro(Unit unit)
+        {
+            return unit is MobileTeleport ||
+                unit is IPBSObject ||
+                unit is WallHealer ||
+                unit is ProximityDeviceBase ||
+                (unit is BlobEmitterUnit b && b.IsPlayerSpawned) ||
+                (unit is RemoteControlledCreature remoteControlledCreature &&
+                    remoteControlledCreature.CommandRobot is Player);
+        }
+
+        protected override void OnDead(Unit killer)
+        {
+            _ = HandlePlayerDeadAsync(Zone, killer).ContinueWith(t => base.OnDead(killer));
+        }
+
+        protected override void OnTileChanged()
+        {
+            base.OnTileChanged();
+
+            IZone zone = Zone;
+
+            if (zone == null)
+            {
+                return;
+            }
+
+            MissionHandler?.MissionUpdateOnTileChange();
+
+            TerrainControlInfo controlInfo = zone.Terrain.Controls.GetValue(CurrentPosition);
+
+            ApplyHighwayEffect(controlInfo.IsAnyHighway);
+
+            if (zone.Configuration.Protected)
+            {
+                return;
+            }
+
+            ApplySyndicateAreaEffect(controlInfo.SyndicateArea);
+        }
+
+        protected override void OnCellChanged(CellCoord lastCellCoord, CellCoord currentCellCoord)
+        {
+            base.OnCellChanged(lastCellCoord, currentCellCoord);
+
+            IZone zone = Zone;
+
+            if (zone == null)
+            {
+                return;
+            }
+
+            _ = Task.Run(() =>
+            {
+                GridDistricts district = currentCellCoord.ComputeDistrict(lastCellCoord);
+                zone.SendBeamsToPlayer(this, district);
+                Session.SendTerrainData();
+            }).LogExceptions();
         }
 
         protected override void UpdateUnitVisibility(Unit target)
@@ -1108,10 +781,7 @@ namespace Perpetuum.Players
 
         protected override bool IsDetected(Unit target)
         {
-            if ( Gang.IsMember(target) )
-                return true;
-
-            return base.IsDetected(target);
+            return Gang.IsMember(target) || base.IsDetected(target);
         }
 
         protected override bool IsHostileFor(Unit unit)
@@ -1119,123 +789,423 @@ namespace Perpetuum.Players
             return unit.IsHostile(this);
         }
 
+        protected override void OnBroadcastPacket(IBuilder<Packet> packetBuilder)
+        {
+            base.OnBroadcastPacket(packetBuilder);
+            Session.SendPacket(packetBuilder.Build());
+        }
+
+        protected override void OnUnitVisibilityUpdated(Unit target, Visibility visibility)
+        {
+            switch (visibility)
+            {
+                case Visibility.Visible:
+                    {
+                        target.BroadcastPacket += OnUnitBroadcastPacket;
+                        target.Updated += OnUnitUpdated;
+                        Session.SendPacket(target.EnterPacketBuilder);
+
+                        break;
+                    }
+                case Visibility.Invisible:
+                    {
+                        target.BroadcastPacket -= OnUnitBroadcastPacket;
+                        target.Updated -= OnUnitUpdated;
+                        Session.SendPacket(target.ExitPacketBuilder);
+
+                        break;
+                    }
+
+            }
+
+            if (Gang.IsMember(target))
+            {
+                Session.SendPacket(new GangUpdatePacketBuilder(visibility, (Player)target));
+            }
+
+            base.OnUnitVisibilityUpdated(target, visibility);
+        }
+
+        protected override void OnLockStateChanged(Lock @lock)
+        {
+            base.OnLockStateChanged(@lock);
+
+            if (@lock is UnitLock u)
+            {
+                Player player = u.Target as Player;
+
+                player?.Session.CancelLogout();
+
+                if (@lock.State == LockState.Locked)
+                {
+                    if (u.Target is Npc npc)
+                    {
+                        MissionHandler.EnqueueMissionEventInfo(new LockUnitEventInfo(this, npc, npc.CurrentPosition));
+                        MissionHandler.SignalParticipationByLocking(npc.GetMissionGuid());
+                    }
+                }
+            }
+
+            if (@lock.State == LockState.Inprogress && EffectHandler.ContainsEffect(EffectType.effect_invulnerable))
+            {
+                EffectHandler.RemoveEffectsByType(EffectType.effect_invulnerable);
+            }
+        }
+
+        protected override void OnEffectChanged(Effect effect, bool apply)
+        {
+            base.OnEffectChanged(effect, apply);
+
+            if (!apply)
+            {
+                return;
+            }
+
+            switch (effect.Type)
+            {
+                case EffectType.effect_demobilizer:
+                    {
+                        OnCombatEvent(effect.Source, new DemobilizerEventArgs());
+
+                        break;
+                    }
+
+                case EffectType.effect_sensor_supress:
+                    {
+                        OnCombatEvent(effect.Source, new SensorDampenerEventArgs());
+
+                        break;
+                    }
+            }
+        }
+
+        protected override void OnLockError(Lock @lock, ErrorCodes error)
+        {
+            SendError(error);
+            base.OnLockError(@lock, error);
+        }
+
+        protected override void OnEnterZone(IZone zone, ZoneEnterType enterType)
+        {
+            base.OnEnterZone(zone, enterType);
+            check = PlayerMoveCheckQueue.Create(this, CurrentPosition);
+            zone.SendPacketToGang(Gang, new GangUpdatePacketBuilder(Visibility.Visible, this));
+            MissionHandler = missionHandlerFactory(zone, this);
+            MissionHandler.InitMissions();
+            Direction = FastRandom.NextDouble();
+
+            IDynamicProperty<int> p = DynamicProperties.GetProperty<int>(k.pvpRemaining);
+
+            if (!p.HasValue)
+            {
+                return;
+            }
+
+            ApplyPvPEffect(TimeSpan.FromMilliseconds(p.Value));
+            p.Clear();
+        }
+
+        protected override void OnRemovedFromZone(IZone zone)
+        {
+            Session.SendPacket(ExitPacketBuilder);
+            zone.SendPacketToGang(Gang, new GangUpdatePacketBuilder(Visibility.Invisible, this));
+            check.StopAndDispose();
+
+            if (!States.LocalTeleport)
+            {
+                Session.Stop();
+            }
+
+            base.OnRemovedFromZone(zone);
+        }
+
+        protected override void OnUpdate(TimeSpan time)
+        {
+            base.OnUpdate(time);
+            UpdateCombat(time);
+            movement.Update(time);
+            blobHandler.Update(time);
+            MissionHandler.Update(time);
+            combatLogger?.Update(time);
+            despawnHelper?.Update(time, this);
+        }
+
+        private void OnUnitUpdated(Unit unit, UnitUpdatedEventArgs e)
+        {
+            if (!Gang.IsMember(unit))
+            {
+                return;
+            }
+
+            bool send = (e.UpdateTypes & UnitUpdateTypes.Visibility) > 0 || (e.UpdatedProperties != null && e.UpdatedProperties.Any(p => p.Field.IsPublic()));
+
+            if (!send)
+            {
+                return;
+            }
+
+            Visibility v = Visibility.Invisible;
+
+            if (unit.InZone)
+            {
+                v = Visibility.Visible;
+            }
+
+            Session.SendPacket(new GangUpdatePacketBuilder(v, (Player)unit));
+        }
+
+        private void OnUnitBroadcastPacket(Unit sender, Packet packet)
+        {
+            Session.SendPacket(packet);
+        }
+
         private void UpdateCombat(TimeSpan time)
         {
             if (!States.Combat)
+            {
                 return;
+            }
 
-            _combatTimer.Update(time);
+            _ = combatTimer.Update(time);
 
-            if ( !_combatTimer.Passed)
+            if (!combatTimer.Passed)
+            {
                 return;
+            }
 
             SetCombatState(false);
         }
 
-        private void SetCombatState(bool state)
+        private void Reload()
         {
-            States.Combat = state;
-            _combatTimer.Reset();
+            RobotInventory container = GetContainer();
 
-            if ( state )
-                Session.ResetLogoutTimer();
+            Debug.Assert(container != null, "container != null");
+            container.EnlistTransaction();
+            container.ReloadItems(Character);
+            container.SendUpdateToOwner();
         }
 
-        private readonly IntervalTimer _combatTimer = new IntervalTimer(TimeSpan.FromSeconds(10));
-
-        private void AddInCombatWith(Unit enemy)
+        private CombatLogger CreateCombatLogger()
         {
-            SetCombatState(true);
+            CombatLogger logger = combatLoggerFactory(this);
 
-            var enemyPlayer = enemy as Player;
-            enemyPlayer?.SetCombatState(true);
-        }
-
-        public void SendStartProgressBar(Unit unit, TimeSpan timeout, TimeSpan start)
-        {
-            var data = unit.BaseInfoToDictionary();
-
-            data.Add(k.timeOut, (int)timeout.TotalMilliseconds);
-            data.Add(k.started, (long)start.TotalMilliseconds);
-            data.Add(k.now, (long)start.TotalMilliseconds);
-
-
-            Message.Builder.SetCommand(Commands.AlarmStart).WithData(data).ToCharacter(Character).Send();
-        }
-
-        public  void SendEndProgressBar( Unit unit, bool success = true)
-        {
-            var info = unit.BaseInfoToDictionary();
-            info.Add(k.success, success);
-            Message.Builder.SetCommand(Commands.AlarmOver).WithData(info).ToCharacter(Character).Send();
-        }
-
-        public void SendArtifactRadarBeam(Position targetPosition)
-        {
-            var builder = Beam.NewBuilder()
-                              .WithType(BeamType.artifact_radar)
-                              .WithSourcePosition(targetPosition)
-                              .WithTargetPosition(targetPosition)
-                              .WithState(BeamState.AlignToTerrain)
-                              .WithDuration(TimeSpan.FromSeconds(30));
-
-            Session.SendBeam(builder);
-        }
-
-        public bool IsStandingMatch(long targetCorporationEid, double? standingLimit)
-        {
-            return _corporationManager.IsStandingMatch(targetCorporationEid, CorporationEid, standingLimit);
-        }
-
-        public void ReloadContainer()
-        {
-            void Reload()
+            logger.Expired = () =>
             {
-                var container = GetContainer();
-                Debug.Assert(container != null,"container != null");
+                combatLogger = null;
+            };
 
-                container.EnlistTransaction();
-                container.ReloadItems(Character);
-                container.SendUpdateToOwner();
+            return logger;
+        }
+
+        private void SaveCombatLog(IZone zone, Unit killer)
+        {
+            combatLogger?.Save(zone, killer);
+        }
+
+        private void ApplySyndicateAreaEffect(bool apply)
+        {
+            if (apply)
+            {
+                EffectBuilder effectBuilder = NewEffectBuilder().SetType(EffectType.effect_syndicate_area);
+                ApplyEffect(effectBuilder);
             }
-
-            if (Transaction.Current != null)
-                Reload();
             else
             {
-                using (var scope = Db.CreateTransaction())
+                EffectHandler.RemoveEffectsByType(EffectType.effect_syndicate_area);
+            }
+        }
+
+        private void ApplyHighwayEffect(bool apply)
+        {
+            if (apply)
+            {
+                EffectBuilder effectBuilder = NewEffectBuilder()
+                    .SetType(EffectType.effect_highway)
+                    .WithPropertyModifier(ItemPropertyModifier.Create(AggregateField.effect_speed_highway_modifier, 1.0));
+
+                ApplyEffect(effectBuilder);
+            }
+            else
+            {
+                EffectHandler.RemoveEffectsByType(EffectType.effect_highway);
+            }
+        }
+
+        private void SendError(ErrorCodes error)
+        {
+            Session.SendPacket(new ErrorPacketBuilder(error));
+        }
+
+        private Task HandlePlayerDeadAsync(IZone zone, Unit killer)
+        {
+            return Task.Run(() => HandlePlayerDead(zone, killer));
+        }
+
+        private void HandlePlayerDead(IZone zone, Unit killer)
+        {
+            using (TransactionScope scope = Db.CreateTransaction())
+            {
+                EnlistTransaction();
+
+                try
                 {
-                    Reload();
+                    killer = zone.ToPlayerOrGetOwnerPlayer(killer) ?? killer;
+
+                    SaveCombatLog(zone, killer);
+
+                    Character character = Character;
+                    DockingBase dockingBase = character.GetHomeBaseOrCurrentBase();
+
+                    dockingBase.DockIn(character, NormalUndockDelay, ZoneExitType.Died);
+
+                    PlayerDeathLogger.Log.Write(zone, this, killer);
+
+                    bool wasInsured = InsuranceHelper.CheckInsuranceOnDeath(Eid, Definition);
+
+                    if (!Session.AccessLevel.IsAdminOrGm())
+                    {
+                        RobotInventory robotInventory = GetContainer();
+
+                        Debug.Assert(robotInventory != null);
+
+                        List<LootItem> lootItems = new List<LootItem>();
+
+                        foreach (Module module in Modules.Where(m => LootHelper.Roll()))
+                        {
+                            lootItems.Add(LootItemBuilder.Create(module).AsDamaged().Build());
+
+                            ActiveModule activeModule = module as ActiveModule;
+                            Items.Ammos.Ammo ammo = activeModule?.GetAmmo();
+
+                            if (ammo != null && LootHelper.Roll())
+                            {
+                                lootItems.Add(LootItemBuilder.Create(ammo).Build());
+                            }
+
+                            module.Parent = robotInventory.Eid;
+
+                            Repository.Delete(module);
+                        }
+
+                        foreach (Item item in robotInventory.GetItems(true).Where(i => i is VolumeWrapperContainer))
+                        {
+                            if (!(item is VolumeWrapperContainer wrapper))
+                            {
+                                continue;
+                            }
+
+                            lootItems.AddRange(wrapper.GetLootItems());
+                            wrapper.SetAllowDelete();
+                            Repository.Delete(wrapper);
+                        }
+
+                        foreach (Item item in robotInventory
+                            .GetItems()
+                            .Where(i => LootHelper.Roll() && !i.ED.AttributeFlags.NonStackable))
+                        {
+                            double qtyMod = FastRandom.NextDouble();
+
+                            item.Quantity = (int)(item.Quantity * qtyMod);
+
+                            if (item.Quantity > 0)
+                            {
+                                lootItems.Add(
+                                    LootItemBuilder
+                                        .Create(item.Definition)
+                                        .SetQuantity(item.Quantity)
+                                        .SetRepackaged(item.ED.AttributeFlags.Repackable)
+                                        .Build());
+                            }
+                            else
+                            {
+                                robotInventory.RemoveItemOrThrow(item);
+                                Repository.Delete(item);
+                            }
+                        }
+
+                        if (ED.Config.Tint != Tint && LootHelper.Roll(0.5))
+                        {
+                            EntityDefault paint = EntityDefault.Reader.GetAll()
+                                .Where(i => i.CategoryFlags == CategoryFlags.cf_paints)
+                                .Where(i => i.Config.Tint == Tint).First();
+
+                            if (paint != null)
+                            {
+                                lootItems.Add(LootItemBuilder.Create(paint.Definition).SetQuantity(1).SetDamaged(false).Build());
+                            }
+                        }
+
+                        if (lootItems.Count > 0)
+                        {
+                            LootContainer lootContainer = LootContainer.Create()
+                                .AddLoot(lootItems)
+                                .BuildAndAddToZone(zone, CurrentPosition);
+
+                            if (lootContainer != null)
+                            {
+                                TransactionLogEventBuilder b = TransactionLogEvent.Builder()
+                                    .SetTransactionType(TransactionType.PutLoot)
+                                    .SetCharacter(character)
+                                    .SetContainer(lootContainer.Eid);
+
+                                foreach (LootItem lootItem in lootItems)
+                                {
+                                    _ = b.SetItem(lootItem.ItemInfo.Definition, lootItem.ItemInfo.Quantity);
+                                    Character.LogTransaction(b);
+                                }
+                            }
+                        }
+
+                        bool killedByPlayer = killer != null && killer.IsPlayer();
+
+                        Trashcan.Get()
+                            .MoveToTrash(this, Session.DisconnectTime, wasInsured, killedByPlayer, Session.InactiveTime);
+
+                        character.NextAvailableRobotRequestTime =
+                            DateTime.Now.AddMinutes(killedByPlayer ? ARKHE_REQUEST_TIMER_MINUTES_PVP : ARKHE_REQUEST_TIMER_MINUTES_NPC);
+
+                        Robot activeRobot = null;
+
+                        if (!killedByPlayer)
+                        {
+                            activeRobot = dockingBase.CreateStarterRobotForCharacter(character);
+
+                            if (activeRobot != null)
+                            {
+                                Transaction.Current.OnCommited(() =>
+                                {
+                                    Dictionary<string, object> starterRobotInfo = new Dictionary<string, object>
+                                    {
+                                        {k.baseEID, Eid},
+                                        {k.robotEID, activeRobot.Eid}
+                                    };
+
+                                    Message.Builder.SetCommand(Commands.StarterRobotCreated).WithData(starterRobotInfo).ToCharacter(character).Send();
+                                });
+                            }
+                        }
+
+                        character.SetActiveRobot(activeRobot);
+                    }
+                    else
+                    {
+                        this.Repair();
+
+                        PublicContainer container = dockingBase.GetPublicContainer();
+
+                        container.AddItem(this, false);
+                    }
+
+                    Save();
+
                     scope.Complete();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Exception(ex);
                 }
             }
         }
-
-        public void UpdateCorporationOnZone(long newCorporationEid)
-        {
-            CorporationEid = newCorporationEid;
-
-            var playersOnZone = Zone.GetCharacters().ToArray();
-            if (playersOnZone.Length <= 0)
-                return;
-
-            var result = new Dictionary<string,object>
-            {
-                {k.corporationEID, newCorporationEid},
-                {k.characterID, Character.Id},
-            };
-
-            Message.Builder.SetCommand(Commands.CharacterUpdate).WithData(result).ToCharacters(playersOnZone).Send();
-        }
-
-        public void EnableSelfTeleport(TimeSpan duration, int affectedZoneId = -1)
-        {
-            if (affectedZoneId != -1 && Zone.Id != affectedZoneId)
-                return;
-
-            ApplySelfTeleportEnablerEffect(duration);
-        }
-
-
     }
 }

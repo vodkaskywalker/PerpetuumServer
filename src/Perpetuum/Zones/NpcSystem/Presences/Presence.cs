@@ -1,17 +1,19 @@
+using Perpetuum.Log;
+using Perpetuum.Timers;
+using Perpetuum.Zones.NpcSystem.Flocks;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using Perpetuum.Log;
-using Perpetuum.Timers;
-using Perpetuum.Zones.NpcSystem.Flocks;
 
 namespace Perpetuum.Zones.NpcSystem.Presences
 {
-    public class Presence : INpcGroup
+    public class Presence : ISmartCreatureGroup
     {
-        public int ID { get; private set; }
         private ImmutableHashSet<Flock> _flocks = ImmutableHashSet<Flock>.Empty;
+        private readonly IntervalTimer _updateTimer = new IntervalTimer(TimeSpan.FromSeconds(2));
+
+        public int ID { get; private set; }
 
         public IPresenceConfiguration Configuration { get; private set; }
 
@@ -22,35 +24,22 @@ namespace Perpetuum.Zones.NpcSystem.Presences
 
         public IEnumerable<Flock> Flocks => _flocks;
 
+        public FlockFactory FlockFactory { private get; set; }
+
+        public virtual Area Area => Configuration.Area;
+
+        public string Name => Configuration.Name;
+
+        public IEnumerable<SmartCreature> Members
+        {
+            get { return _flocks.SelectMany(f => f.Members); }
+        }
+
         public Presence(IZone zone, IPresenceConfiguration configuration)
         {
             Zone = zone;
             Configuration = configuration;
             ID = Configuration.ID;
-        }
-
-        public FlockFactory FlockFactory { private get; set; }
-
-        protected void ClearFlocks()
-        {
-            Flock[] removedFlocks = null;
-
-            ImmutableInterlocked.Update(ref _flocks, f =>
-            {
-                removedFlocks = f.ToArray();
-                return f.Clear();
-            });
-
-            foreach (var flock in removedFlocks)
-            {
-                flock.RemoveAllMembersFromZone(true);
-            }
-        }
-
-        private void AddFlock(Flock flock)
-        {
-            ImmutableInterlocked.Update(ref _flocks, f => f.Add(flock));
-            OnFlockAdded(flock);
         }
 
         public void RemoveFlock(Flock flock)
@@ -59,32 +48,14 @@ namespace Perpetuum.Zones.NpcSystem.Presences
             OnFlockRemoved(flock);
         }
 
-        protected virtual void OnFlockAdded(Flock flock)
-        {
-            Log($"Flock added. {flock.Configuration.Name}");
-            flock.NpcCreated += OnFlockNpcCreated;
-        }
-
-        private void OnFlockNpcCreated(Npc npc)
-        {
-            npc.SetGroup(this);
-        }
-
-        private void OnFlockRemoved(Flock flock)
-        {
-            flock.NpcCreated -= OnFlockNpcCreated;
-            flock.RemoveAllMembersFromZone(true);
-            Log($"Flock removed. {flock.Configuration.Name}");
-        }
-
-        private readonly IntervalTimer _updateTimer = new IntervalTimer(TimeSpan.FromSeconds(2));
-
         public void Update(TimeSpan time)
         {
             _updateTimer.Update(time);
 
             if (!_updateTimer.Passed)
+            {
                 return;
+            }
 
             OnUpdate(_updateTimer.Elapsed);
 
@@ -95,8 +66,6 @@ namespace Perpetuum.Zones.NpcSystem.Presences
 
             _updateTimer.Reset();
         }
-
-        protected virtual void OnUpdate(TimeSpan time) { }
 
         public IDictionary<string, object> ToDictionary(bool withFlock = false)
         {
@@ -117,11 +86,78 @@ namespace Perpetuum.Zones.NpcSystem.Presences
             if (withFlock)
             {
                 var counter = 0;
-                var dictionary = Flocks.Select(f => f.ToDictionary()).ToDictionary<IDictionary<string, object>, string, object>(o => "f" + counter++, o => o);
+                var dictionary = Flocks
+                    .Select(f => f.ToDictionary())
+                    .ToDictionary<IDictionary<string, object>, string, object>(o => "f" + counter++, o => o);
+
                 result.Add(k.flock, dictionary);
             }
 
             return result;
+        }
+
+        public Flock CreateAndAddFlock(IFlockConfiguration configuration)
+        {
+            var flock = CreateFlock(configuration);
+            AddFlock(flock);
+
+            return flock;
+        }
+
+        public Flock CreateFlock(IFlockConfiguration flockConfiguration)
+        {
+            return FlockFactory(flockConfiguration, this);
+        }
+
+        public virtual void LoadFlocks()
+        {
+            var configs = FlockConfigurationRepository.GetAllByPresence(this).Where(t => t.Enabled);
+
+            CreateAndAddFlocks(configs);
+        }
+
+        public override string ToString()
+        {
+            return $"{Name}:{Configuration.ID}:{Zone.Id}";
+        }
+
+        public void AddDebugInfoToDictionary(IDictionary<string, object> dictionary)
+        {
+
+        }
+
+        public virtual void Log(string message)
+        {
+            Logger.Info($"[Presence] ({ToString()}) - {message}");
+        }
+
+        protected void ClearFlocks()
+        {
+            Flock[] removedFlocks = null;
+
+            ImmutableInterlocked.Update(
+                ref _flocks,
+                f =>
+                {
+                    removedFlocks = f.ToArray();
+
+                    return f.Clear();
+                });
+
+            foreach (var flock in removedFlocks)
+            {
+                flock.RemoveAllMembersFromZone(true);
+            }
+        }
+
+        protected virtual void OnFlockAdded(Flock flock)
+        {
+            Log($"Flock added. {flock.Configuration.Name}");
+            flock.NpcCreated += OnFlockNpcCreated;
+        }
+
+        protected virtual void OnUpdate(TimeSpan time)
+        {
         }
 
         protected void CreateAndAddFlocks(IEnumerable<IFlockConfiguration> configurations)
@@ -141,49 +177,26 @@ namespace Perpetuum.Zones.NpcSystem.Presences
         protected Flock CreateAndAddFlock(int flockID)
         {
             var configuration = FlockConfigurationRepository.Get(flockID);
+
             return CreateAndAddFlock(configuration);
         }
 
-        public Flock CreateAndAddFlock(IFlockConfiguration configuration)
+        private void AddFlock(Flock flock)
         {
-            var flock = CreateFlock(configuration);
-            AddFlock(flock);
-            return flock;
+            ImmutableInterlocked.Update(ref _flocks, f => f.Add(flock));
+            OnFlockAdded(flock);
         }
 
-        public Flock CreateFlock(IFlockConfiguration flockConfiguration)
+        private void OnFlockNpcCreated(Npc npc)
         {
-            return FlockFactory(flockConfiguration, this);
+            npc.SetGroup(this);
         }
 
-        public virtual Area Area => Configuration.Area;
-
-        public virtual void LoadFlocks()
+        private void OnFlockRemoved(Flock flock)
         {
-            var configs = FlockConfigurationRepository.GetAllByPresence(this).Where(t => t.Enabled);
-            CreateAndAddFlocks(configs);
-        }
-
-        public override string ToString()
-        {
-            return $"{Name}:{Configuration.ID}:{Zone.Id}";
-        }
-
-        public string Name => Configuration.Name;
-
-        public IEnumerable<Npc> Members
-        {
-            get { return _flocks.SelectMany(f => f.Members); }
-        }
-
-        public void AddDebugInfoToDictionary(IDictionary<string, object> dictionary)
-        {
-
-        }
-
-        public virtual void Log(string message)
-        {
-            Logger.Info($"[Presence] ({ToString()}) - {message}");
+            flock.NpcCreated -= OnFlockNpcCreated;
+            flock.RemoveAllMembersFromZone(true);
+            Log($"Flock removed. {flock.Configuration.Name}");
         }
     }
 }

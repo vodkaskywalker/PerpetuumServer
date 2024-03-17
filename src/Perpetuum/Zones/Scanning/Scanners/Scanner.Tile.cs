@@ -10,8 +10,8 @@ namespace Perpetuum.Zones.Scanning.Scanners
         public void Visit(TileScannerAmmo ammo)
         {
             var area = _zone.CreateArea(_player.CurrentPosition, ammo.ScanRange);
-
             var builder = MineralScanResultBuilder.Create(_player.Zone, ammo.MaterialType);
+
             builder.ScanArea = area;
             builder.ScanAccuracy = _module.ScanAccuracy;
 
@@ -20,6 +20,7 @@ namespace Perpetuum.Zones.Scanning.Scanners
             _module.LastScanResult = result;
 
             var mineralLayer = _zone.Terrain.GetMaterialLayer(ammo.MaterialType) as MineralLayer;
+
             if (mineralLayer != null)
             {
                 if (result.FoundAny)

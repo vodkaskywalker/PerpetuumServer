@@ -1,799 +1,40 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
-using System.Linq;
-using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
-using Perpetuum.Collections;
 using Perpetuum.Data;
 using Perpetuum.EntityFramework;
-using Perpetuum.ExportedTypes;
-using Perpetuum.Items;
 using Perpetuum.Log;
-using Perpetuum.Modules.Weapons;
-using Perpetuum.PathFinders;
 using Perpetuum.Players;
 using Perpetuum.Services.Looting;
 using Perpetuum.Services.MissionEngine;
 using Perpetuum.Services.MissionEngine.MissionTargets;
-using Perpetuum.StateMachines;
-using Perpetuum.Timers;
 using Perpetuum.Units;
-using Perpetuum.Zones.DamageProcessors;
 using Perpetuum.Zones.Eggs;
-using Perpetuum.Zones.Locking;
-using Perpetuum.Zones.Locking.Locks;
-using Perpetuum.Zones.Movements;
-using Perpetuum.Zones.NpcSystem.Flocks;
-using Perpetuum.Zones.Terrains;
+using Perpetuum.Zones.RemoteControl;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Numerics;
+using System.Threading.Tasks;
 
 namespace Perpetuum.Zones.NpcSystem
 {
-
-    public enum NpcBehaviorType
+    public class Npc : SmartCreature, ITaggable
     {
-        Passive,
-        Neutral,
-        Aggressive
-    }
-
-    public enum NpcSpecialType
-    {
-        Normal,
-        Boss
-    }
-
-    public abstract class NpcAI : IState
-    {
-        protected readonly Npc npc;
-
-        protected NpcAI(Npc npc)
-        {
-            this.npc = npc;
-        }
-
-        public virtual void Enter()
-        {
-            WriteLog("enter state = " + GetType().Name);
-        }
-
-        public virtual void Exit()
-        {
-            npc.StopMoving();
-            WriteLog("exit state = " + GetType().Name);
-        }
-
-        public abstract void Update(TimeSpan time);
-
-        protected virtual void ToHomeAI()
-        {
-            npc.AI.Push(new HomingAI(npc));
-        }
-
-        protected virtual void ToAggressorAI()
-        {
-            if (npc.Behavior.Type == NpcBehaviorType.Passive)
-                return;
-
-            npc.AI.Push(new AggressorAI(npc));
-        }
-
-        [Conditional("DEBUG")]
-        protected void WriteLog(string message)
-        {
-            //Logger.DebugInfo($"NpcAI: {message}");
-        }
-    }
-
-    public class IdleAI : NpcAI
-    {
-        private RandomMovement _movement;
-
-        public IdleAI(Npc npc) : base(npc) { }
-
-        public override void Enter()
-        {
-            npc.StopAllModules();
-            npc.ResetLocks();
-            _movement = new RandomMovement(npc.HomePosition, npc.HomeRange);
-            _movement.Start(npc);
-            base.Enter();
-        }
-
-        public override void Update(TimeSpan time)
-        {
-            if (!npc.IsInHomeRange)
-            {
-                ToHomeAI();
-                return;
-            }
-
-            if (npc.ThreatManager.IsThreatened)
-            {
-                ToAggressorAI();
-                return;
-            }
-
-            _movement?.Update(npc, time);
-        }
-    }
-
-    public class StationaryIdleAI : NpcAI
-    {
-        public StationaryIdleAI(Npc npc) : base(npc) { }
-
-        public override void Enter()
-        {
-            npc.StopAllModules();
-            npc.ResetLocks();
-            base.Enter();
-        }
-
-        public override void Update(TimeSpan time)
-        {
-            if (npc.ThreatManager.IsThreatened)
-            {
-                ToAggressorAI();
-            }
-        }
-
-        protected override void ToHomeAI() { }
-
-        protected override void ToAggressorAI()
-        {
-            if (npc.Behavior.Type == NpcBehaviorType.Passive)
-                return;
-
-            npc.AI.Push(new StationaryCombatAI(npc));
-        }
-    }
-
-    public class StationaryCombatAI : CombatAI
-    {
-        private readonly IntervalTimer _updateFrequency = new IntervalTimer(650);
-        public StationaryCombatAI(Npc npc) : base(npc) { }
-
-        protected override PrimaryLockSelectionStrategySelector InitSelector()
-        {
-            return PrimaryLockSelectionStrategySelector.Create()
-                .WithStrategy(PrimaryLockStrategy.Hostile, 1)
-                .WithStrategy(PrimaryLockStrategy.Closest, 2)
-                .WithStrategy(PrimaryLockStrategy.OptimalRange, 3)
-                .WithStrategy(PrimaryLockStrategy.Random, 10)
-                .Build();
-        }
-
-        public override void Update(TimeSpan time)
-        {
-            FindHostiles(time);
-            base.Update(time);
-        }
-
-        private void FindHostiles(TimeSpan time)
-        {
-            _updateFrequency.Update(time);
-            if (_updateFrequency.Passed)
-            {
-                _updateFrequency.Reset();
-                npc.LookingForHostiles();
-            }
-        }
-
-        protected override TimeSpan SetPrimaryDwellTime()
-        {
-            return FastRandom.NextTimeSpan(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(25));
-        }
-    }
-
-    public class CombatAI : NpcAI
-    {
-        private List<ModuleActivator> _moduleActivators;
-        protected bool _npcHasMissiles = false;
-        private const int UPDATE_FREQ = 1650;
-        private TimeSpan _hostilesUpdateFrequency = TimeSpan.FromMilliseconds(UPDATE_FREQ);
-        private readonly IntervalTimer _processHostilesTimer = new IntervalTimer(UPDATE_FREQ);
-        private readonly IntervalTimer _primarySelectTimer = new IntervalTimer(UPDATE_FREQ);
-        private PrimaryLockSelectionStrategySelector _stratSelector;
-        public CombatAI(Npc npc) : base(npc) { }
-
-        protected virtual PrimaryLockSelectionStrategySelector InitSelector()
-        {
-            return PrimaryLockSelectionStrategySelector.Create()
-                .WithStrategy(PrimaryLockStrategy.Hostile, 9)
-                .WithStrategy(PrimaryLockStrategy.Random, 1)
-                .Build();
-        }
-
-        public override void Enter()
-        {
-            _stratSelector = InitSelector();
-            _moduleActivators = npc.ActiveModules.Select(m => new ModuleActivator(m)).ToList();
-            _npcHasMissiles = npc.ActiveModules.OfType<MissileWeaponModule>().Any();
-            _processHostilesTimer.Update(_hostilesUpdateFrequency);
-            _primarySelectTimer.Update(_hostilesUpdateFrequency);
-            base.Enter();
-        }
-
-        public override void Update(TimeSpan time)
-        {
-            UpdateHostiles(time);
-            UpdatePrimaryTarget(time);
-            RunModules(time);
-        }
-
-        protected void UpdateHostiles(TimeSpan time)
-        {
-            _processHostilesTimer.Update(time);
-            if (_processHostilesTimer.Passed)
-            {
-                _processHostilesTimer.Reset();
-                ProcessHostiles();
-            }
-        }
-
-        protected void UpdatePrimaryTarget(TimeSpan time)
-        {
-            _primarySelectTimer.Update(time);
-            if (_primarySelectTimer.Passed)
-            {
-                var success = SelectPrimaryTarget();
-                SetPrimaryUpdateDelay(success);
-            }
-        }
-
-        protected void RunModules(TimeSpan time)
-        {
-            foreach (var activator in _moduleActivators)
-            {
-                activator.Update(time);
-            }
-        }
-
-        private UnitLock[] GetValidLocks()
-        {
-            return npc.GetLocks().Select(l => (UnitLock)l).Where(u => IsLockValidTarget(u)).ToArray();
-        }
-
-        private bool SelectPrimaryTarget()
-        {
-            var validLocks = GetValidLocks();
-            if (validLocks.Length < 1)
-                return false;
-
-            return _stratSelector?.TryUseStrategy(npc, validLocks) ?? false;
-        }
-
-        private bool IsLockValidTarget(UnitLock unitLock)
-        {
-            if (unitLock == null || unitLock.State != LockState.Locked)
-                return false;
-
-            var visibility = npc.GetVisibility(unitLock.Target);
-            if (visibility == null)
-                return false;
-
-            var r = visibility.GetLineOfSight(_npcHasMissiles);
-            if (r != null)
-            {
-                if (r.hit && (r.blockingFlags & BlockingFlags.Plant) == 0)
-                    return false;
-            }
-            return unitLock.Target.GetDistance(npc) < npc.MaxCombatRange;
-        }
-
-        protected virtual TimeSpan SetPrimaryDwellTime()
-        {
-            return FastRandom.NextTimeSpan(TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(10));
-        }
-
-        protected virtual void SetPrimaryUpdateDelay(bool newPrimary)
-        {
-            if (newPrimary)
-            {
-                _primarySelectTimer.Interval = SetPrimaryDwellTime();
-            }
-            else if (GetValidLocks().Length > 0)
-            {
-                _primarySelectTimer.Interval = TimeSpan.FromSeconds(1);
-            }
-            else if (npc.GetLocks().Count > 0)
-            {
-                _primarySelectTimer.Interval = TimeSpan.FromSeconds(1.5);
-            }
-            else
-            {
-                _primarySelectTimer.Interval = TimeSpan.FromSeconds(3.5);
-            }
-        }
-
-        protected bool IsAttackable(Hostile hostile)
-        {
-            if (!hostile.unit.InZone)
-                return false;
-
-            if (hostile.unit.States.Dead)
-                return false;
-
-            if (!hostile.unit.IsLockable)
-                return false;
-
-            if (hostile.unit.IsAttackable != ErrorCodes.NoError)
-                return false;
-
-            if (hostile.unit.IsInvulnerable)
-                return false;
-
-            if (npc.Behavior.Type == NpcBehaviorType.Neutral)
-            {
-                if (hostile.IsExpired)
-                    return false;
-            }
-
-            var isVisible = npc.IsVisible(hostile.unit);
-            if (!isVisible)
-                return false;
-
-            return true;
-        }
-
-        private void SetLockForHostile(Hostile hostile)
-        {
-            var mostHated = GetPrimaryOrMostHatedHostile() == hostile;
-
-            var l = npc.GetLockByUnit(hostile.unit);
-            if (l == null)
-            {
-                if (TryMakeFreeLockSlotFor(hostile))
-                    npc.AddLock(hostile.unit, mostHated);
-            }
-            else
-            {
-                if (mostHated && !l.Primary)
-                    npc.SetPrimaryLock(l.Id);
-            }
-        }
-
-        protected virtual void ProcessHostiles()
-        {
-            var hostileEnumerator = npc.ThreatManager.Hostiles.GetEnumerator();
-            while (hostileEnumerator.MoveNext())
-            {
-                var hostile = hostileEnumerator.Current;
-                if (!IsAttackable(hostile))
-                {
-                    npc.ThreatManager.Remove(hostile);
-                    npc.AddPseudoThreat(hostile.unit);
-                    continue;
-                }
-
-                if (!npc.IsInLockingRange(hostile.unit))
-                    continue;
-
-                SetLockForHostile(hostile);
-            }
-        }
-
-        protected bool TryMakeFreeLockSlotFor(Hostile hostile)
-        {
-            if (npc.HasFreeLockSlot)
-                return true;
-
-            var weakestLock = npc.ThreatManager.Hostiles.SkipWhile(h => h != hostile).Skip(1).Select(h => npc.GetLockByUnit(h.unit)).LastOrDefault();
-            if (weakestLock == null)
-                return false;
-
-            weakestLock.Cancel();
-            return true;
-        }
-
-        protected Hostile GetPrimaryOrMostHatedHostile()
-        {
-            var primaryHostile = npc.ThreatManager.Hostiles.Where(h => h.unit == (npc.GetPrimaryLock() as UnitLock)?.Target).FirstOrDefault();
-            if (primaryHostile != null)
-                return primaryHostile;
-            return npc.ThreatManager.GetMostHatedHostile();
-        }
-    }
-
-    public class HomingAI : CombatAI
-    {
-        private PathMovement _movement;
-        private readonly double _maxReturnHomeRadius;
-        private readonly PathFinder _pathFinder;
-
-        public HomingAI(Npc npc) : base(npc)
-        {
-            _maxReturnHomeRadius = (npc.HomeRange * 0.4).Clamp(3, 20);
-            _pathFinder = new AStarFinder(Heuristic.Manhattan, npc.IsWalkable);
-        }
-
-        public override void Enter()
-        {
-            var randomHome = npc.Zone.FindPassablePointInRadius(npc.HomePosition, (int)_maxReturnHomeRadius);
-            if(randomHome == default)
-            {
-                randomHome = npc.HomePosition;
-            }
-            _pathFinder.FindPathAsync(npc.CurrentPosition, randomHome).ContinueWith(t =>
-            {
-                var path = t.Result;
-                if (path == null)
-                {
-                    WriteLog("Path not found! (" + npc.CurrentPosition + " => " + npc.HomePosition + ")");
-
-                    var f = new AStarFinder(Heuristic.Manhattan,(x,y) => true);
-                    path = f.FindPath(npc.CurrentPosition, npc.HomePosition);
-
-                    if (path == null)
-                    {
-                        WriteLog("Safe path not found! (" + npc.CurrentPosition + " => " + npc.HomePosition + ")");
-                    }
-                }
-
-                _movement = new PathMovement(path);
-                _movement.Start(npc);
-                npc.BossInfo?.OnDeAggro();
-            });
-
-            base.Enter();
-        }
-
-        public override void Update(TimeSpan time)
-        {
-            if (_movement != null)
-            {
-                _movement.Update(npc, time);
-
-                if (_movement.Arrived)
-                {
-                    npc.AI.Pop();
-                    return;
-                }
-            }
-
-            base.Update(time);
-        }
-
-        protected override void ToHomeAI() { }
-        protected override void ToAggressorAI() { }
-    }
-
-    public class AggressorAI : CombatAI
-    {
-        public AggressorAI(Npc npc) : base(npc){ }
-
-        protected override void ToAggressorAI(){ }
-
-        public override void Exit()
-        {
-            _source?.Cancel();
-
-            base.Exit();
-        }
-
-        public override void Update(TimeSpan time)
-        {
-            if (!npc.IsInHomeRange)
-            {
-                npc.AI.Push(new HomingAI(npc));
-                return;
-            }
-
-            if (!npc.ThreatManager.IsThreatened)
-            {
-                EnterEvadeMode();
-                return;
-            }
-
-            UpdateHostile(time);
-
-            base.Update(time);
-        }
-
-        private void EnterEvadeMode()
-        {
-            npc.AI.Pop();
-            npc.AI.Push(new HomingAI(npc));
-            WriteLog("Enter evade mode.");
-        }
-
-        private Position _lastTargetPosition;
-        private PathMovement _movement;
-        private PathMovement _nextMovement;
-
-        private void UpdateHostile(TimeSpan time)
-        {
-            var mostHated = GetPrimaryOrMostHatedHostile();
-            if (mostHated == null)
-                return;
-
-            if (!mostHated.unit.CurrentPosition.IsEqual2D(_lastTargetPosition))
-            {
-                _lastTargetPosition = mostHated.unit.CurrentPosition;
-
-                var findNewTargetPosition = false;
-
-                if (!npc.IsInRangeOf3D(mostHated.unit, npc.BestCombatRange))
-                {
-                    findNewTargetPosition = true;
-                }
-                else
-                {
-                    var visibility = npc.GetVisibility(mostHated.unit);
-                    if (visibility != null)
-                    {
-                        var r = visibility.GetLineOfSight(_npcHasMissiles);
-                        if (r.hit)
-                            findNewTargetPosition = true;
-                    }
-                }
-
-                if (findNewTargetPosition)
-                {
-                    FindNewAttackPositionAsync(mostHated.unit).ContinueWith(t =>
-                    {
-                        if (t.IsCanceled)
-                            return;
-
-                        var path = t.Result;
-                        if (path == null)
-                        {
-                            npc.ThreatManager.Remove(mostHated);
-                            npc.AddPseudoThreat(mostHated.unit);
-                            return;
-                        }
-
-                        Interlocked.Exchange(ref _nextMovement,new PathMovement(path));
-                    });
-                }
-            }
-
-            if (_nextMovement != null)
-            {
-                _movement = Interlocked.Exchange(ref _nextMovement, null);
-                _movement.Start(npc);
-            }
-
-            _movement?.Update(npc, time);
-        }
-
-        private CancellationTokenSource _source;
-
-        private const int SQRT2 = 141;
-        private const int WEIGHT = 1000;
-
-        private Task<List<Point>> FindNewAttackPositionAsync(Unit hostile)
-        {
-            _source?.Cancel();
-
-            _source = new CancellationTokenSource();
-            return Task.Run(() => FindNewAttackPosition(hostile, _source.Token), _source.Token);
-        }
-
-        private List<Point> FindNewAttackPosition(Unit hostile,CancellationToken cancellationToken)
-        {
-            var end = hostile.CurrentPosition.GetRandomPositionInRange2D(0, npc.BestCombatRange - 1).ToPoint();
-
-            npc.StopMoving();
-
-            var maxNode = Math.Pow(npc.HomeRange, 2) * Math.PI;
-            var pq = new PriorityQueue<Node>((int) maxNode);
-            var startNode = new Node(npc.CurrentPosition);
-
-            pq.Enqueue(startNode);
-
-            var closed = new HashSet<Point>();
-            closed.Add(startNode.position);
-
-            Node current;
-            while (pq.TryDequeue(out current))
-            {
-                if (cancellationToken.IsCancellationRequested)
-                    return null;
-
-                if (IsValidAttackPosition(hostile, current.position))
-                    return BuildPath(current);
-
-                foreach (var n in current.position.GetNeighbours())
-                {
-                    if (closed.Contains(n))
-                        continue;
-
-                    closed.Add(n);
-
-                    if (!npc.IsWalkable(n.X, n.Y))
-                        continue;
-
-                    if (!n.IsInRange(npc.HomePosition, npc.HomeRange))
-                        continue;
-
-                    var newG = current.g + (n.X - current.position.X == 0 || n.Y - current.position.Y == 0 ? 100 : SQRT2);
-                    var newH = Heuristic.Manhattan.Calculate(n.X, n.Y, end.X, end.Y) * WEIGHT;
-
-                    var newNode = new Node(n)
-                    {
-                        g = newG,
-                        f = newG + newH,
-                        parent = current
-                    };
-
-                    pq.Enqueue(newNode);
-                }
-            }
-
-            return null;
-        }
-
-        private bool IsValidAttackPosition(Unit hostile,Point position)
-        {
-            var position3 = npc.Zone.FixZ(position.ToPosition()).AddToZ(npc.Height);
-
-            if (!hostile.CurrentPosition.IsInRangeOf3D(position3, npc.BestCombatRange))
-                return false;
-
-            var r = npc.Zone.IsInLineOfSight(position3, hostile, false);
-            return !r.hit;
-        }
-
-        private static List<Point> BuildPath(Node current)
-        {
-            var stack = new Stack<Point>();
-
-            var node = current;
-            while (node != null)
-            {
-                stack.Push(node.position);
-                node = node.parent;
-            }
-
-            return stack.ToList();
-        }
-
-        private class Node : IComparable<Node>
-        {
-            public readonly Point position;
-            public Node parent;
-            public int g;
-            public int f;
-
-            public Node(Point position)
-            {
-                this.position = position;
-            }
-
-            public int CompareTo(Node other)
-            {
-                return f - other.f;
-            }
-
-            public override int GetHashCode()
-            {
-                return position.GetHashCode();
-            }
-        }
-    }
-
-    public class NpcBehavior
-    {
-        public NpcBehaviorType Type { get; private set; }
-
-        protected NpcBehavior(NpcBehaviorType type)
-        {
-            Type = type;
-        }
-
-        public static NpcBehavior Create(NpcBehaviorType type)
-        {
-            switch (type)
-            {
-                case NpcBehaviorType.Neutral:
-                    return new NeutralBehavior();
-                case NpcBehaviorType.Aggressive:
-                    return new AggressiveBehavior();
-                case NpcBehaviorType.Passive:
-                    return new PassiveBehavior();
-                default:
-                    return new PassiveBehavior();
-            }
-        }
-    }
-
-    public class PassiveBehavior : NpcBehavior
-    {
-        public PassiveBehavior() : base(NpcBehaviorType.Passive)
-        {
-        }
-    }
-
-    public class NeutralBehavior : NpcBehavior
-    {
-        public NeutralBehavior() : base(NpcBehaviorType.Neutral)
-        {
-        }
-    }
-
-    public class AggressiveBehavior : NpcBehavior
-    {
-        public AggressiveBehavior() : base(NpcBehaviorType.Aggressive)
-        {
-        }
-    }
-
-    public class Npc : Creature, ITaggable
-    {
-        private readonly TagHelper _tagHelper;
-        private const double CALL_FOR_HELP_ARMOR_THRESHOLD = 0.2;
-        private readonly ThreatManager _threatManager;
-        private Lazy<int> _maxCombatRange;
-        private Lazy<int> _optimalCombatRange;
-        private TimeSpan _lastHelpCalled;
-        private readonly IPseudoThreatManager _pseudoThreatManager;
+        private readonly TagHelper tagHelper;
 
         public Npc(TagHelper tagHelper)
         {
-            _maxCombatRange = new Lazy<int>(CalculateMaxCombatRange);
-            _optimalCombatRange = new Lazy<int>(CalculateCombatRange);
-            _tagHelper = tagHelper;
-            _threatManager = new ThreatManager();
-            AI = new StackFSM();
-            _pseudoThreatManager = new PseudoThreatManager();
+            this.tagHelper = tagHelper;
         }
 
-        public NpcBehavior Behavior { get; set; }
         public NpcSpecialType SpecialType { get; set; }
-        public NpcBossInfo BossInfo { get; set; }
+
         public int EP { get; private set; }
-
-        [CanBeNull]
-        private INpcGroup _group;
-
-        public void SetGroup(INpcGroup group)
-        {
-            _group = group;
-        }
-
-        public INpcGroup Group
-        {
-            get { return _group; }
-        }
-
-        public StackFSM AI { get; private set; }
-
-        public IThreatManager ThreatManager
-        {
-            get { return _threatManager; }
-        }
 
         public ILootGenerator LootGenerator { get; set; }
 
-        public double HomeRange { get; set; }
-        public Position HomePosition { get; set; }
-
-        public bool IsInHomeRange
+        public void Tag(Player tagger, TimeSpan duration)
         {
-            get { return CurrentPosition.IsInRangeOf2D(HomePosition, HomeRange); }
-        }
-
-        public int BestCombatRange
-        {
-            get { return _optimalCombatRange.Value; }
-        }
-
-        public int MaxCombatRange
-        {
-            get { return _maxCombatRange.Value; }
-        }
-
-        public bool IsStationary
-        {
-            get { return MaxSpeed.IsZero(); }
-        }
-
-        public void Tag(Player tagger,TimeSpan duration)
-        {
-            _tagHelper.DoTagging(this,tagger,duration);
+            tagHelper.DoTagging(this, tagger, duration);
         }
 
         [CanBeNull]
@@ -802,82 +43,11 @@ namespace Perpetuum.Zones.NpcSystem
             return TagHelper.GetTagger(this);
         }
 
-        public void AddThreat(Unit hostile, Threat threat, bool spreadToGroup)
-        {
-            if (hostile.IsPlayer())
-            {
-                BossInfo?.OnAggro(hostile as Player);
-            }
-            _threatManager.GetOrAddHostile(hostile).AddThreat(threat);
-
-            RemovePseudoThreat(hostile);
-
-            if (!spreadToGroup)
-                return;
-
-            var group = _group;
-            if (@group == null)
-                return;
-
-            var t = Threat.Multiply(threat, 0.5);
-
-            foreach (var member in @group.Members)
-            {
-                if (member == this)
-                    continue;
-                member.AddThreat(hostile,t,false);
-            }
-        }
-
-        public void AddPseudoThreat(Unit hostile)
-        {
-            _pseudoThreatManager.AddOrRefreshExisting(hostile);
-        }
-
-        private readonly IntervalTimer _psuedoUpdateFreq = new IntervalTimer(TimeSpan.FromMilliseconds(650));
-        private void UpdatePseudoThreats(TimeSpan time)
-        {
-            _psuedoUpdateFreq.Update(time);
-            if (_psuedoUpdateFreq.Passed)
-            {
-                _pseudoThreatManager.Update(_psuedoUpdateFreq.Elapsed);
-                _psuedoUpdateFreq.Reset();
-            }
-        }
-
-        private void RemovePseudoThreat(Unit hostile)
-        {
-            _pseudoThreatManager.Remove(hostile);
-        }
-
         public override void AcceptVisitor(IEntityVisitor visitor)
         {
             if (!TryAcceptVisitor(this, visitor))
-                base.AcceptVisitor(visitor);
-        }
-
-        protected override void OnPropertyChanged(ItemProperty property)
-        {
-            base.OnPropertyChanged(property);
-
-            switch (property.Field)
             {
-                case AggregateField.locking_range:
-                {
-                    _optimalCombatRange = new Lazy<int>(CalculateCombatRange);
-                    _maxCombatRange = new Lazy<int>(CalculateMaxCombatRange);
-                    break;
-                }
-                case AggregateField.armor_current:
-                {
-                    var percentage = Armor.Ratio(ArmorMax);
-                    if (percentage <= CALL_FOR_HELP_ARMOR_THRESHOLD)
-                    {
-                        CallingForHelp();
-                    }
-
-                    break;
-                }
+                base.AcceptVisitor(visitor);
             }
         }
 
@@ -892,207 +62,55 @@ namespace Perpetuum.Zones.NpcSystem
             info.Add("homeDistance", homeDistance);
             info.Add("coreMax", CoreMax);
             info.Add("coreCurrent", Core);
-            info.Add("bestCombatRange", BestCombatRange);
+            info.Add("bestCombatRange", BestActionRange);
 
             var currentAI = AI.Current;
+
             if (currentAI != null)
+            {
                 info.Add("fsm", currentAI.GetType().Name);
+            }
 
-            info.Add("threat", _threatManager.ToDebugString());
-
-            _group?.AddDebugInfoToDictionary(info);
-
-            info.Add("ismission",GetMissionGuid() != Guid.Empty);
+            info.Add("threat", ThreatManager.ToDebugString());
+            Group?.AddDebugInfoToDictionary(info);
+            info.Add("ismission", GetMissionGuid() != Guid.Empty);
 
             return info;
-        }
-
-        protected override void OnDamageTaken(Unit source, DamageTakenEventArgs e)
-        {
-            base.OnDamageTaken(source, e);
-
-            var player = Zone.ToPlayerOrGetOwnerPlayer(source);
-            if (player == null)
-                return;
-
-            BossInfo?.OnDamageTaken(this, player);
-            AddThreat(player, new Threat(ThreatType.Damage, e.TotalDamage * 0.9), true);
         }
 
         protected override void OnDead(Unit killer)
         {
             var zone = Zone;
             var tagger = GetTagger();
+
             Debug.Assert(zone != null, "zone != null");
 
             BossInfo?.OnDeath(this, killer);
-            HandleNpcDeadAsync(zone, killer, tagger).ContinueWith((t) => base.OnDead(killer)).LogExceptions();
+            HandleNpcDeadAsync(zone, killer, tagger)
+                .ContinueWith((t) => base.OnDead(killer))
+                .LogExceptions();
         }
 
-        private Task HandleNpcDeadAsync(IZone zone, Unit killer, Player tagger)
+        public override bool IsWalkable(Vector2 position)
         {
-            return Task.Run(() => HandleNpcDead(zone, killer, tagger));
+            return Zone.IsWalkableForNpc((int)position.X, (int)position.Y, Slope);
         }
 
-        private void HandleNpcDead([NotNull] IZone zone, Unit killer, Player tagger)
+        public override bool IsWalkable(Position position)
         {
-            Logger.DebugInfo($"   >>>> NPC died.  Killer unitName:{killer.Name} o:{killer.Owner}   Tagger botname:{tagger?.Name} o:{killer.Owner} characterId:{tagger?.Character.Id}");
-
-            using (var scope = Db.CreateTransaction())
-            {
-
-                if (BossInfo?.IsLootSplit ?? false)
-                {
-                    //Boss - Split loot equally to all participants
-                    List<Player> participants = new List<Player>();
-                    participants = ThreatManager.Hostiles.Select(x => zone.ToPlayerOrGetOwnerPlayer(x.unit)).ToList();
-                    if (participants.Count > 0)
-                    {
-                        ISplittableLootGenerator splitLooter = new SplittableLootGenerator(LootGenerator);
-                        List<ILootGenerator> lootGenerators = splitLooter.GetGenerators(participants.Count);
-                        for (var i = 0; i < participants.Count; i++)
-                        {
-                            LootContainer.Create().SetOwner(participants[i]).AddLoot(lootGenerators[i]).BuildAndAddToZone(zone, participants[i].CurrentPosition);
-                        }
-                    }
-                }
-                else
-                {
-                    //Normal case: loot can awarded in full to tagger
-                    LootContainer.Create().SetOwner(tagger).AddLoot(LootGenerator).BuildAndAddToZone(zone, CurrentPosition);
-                }
-
-
-                var killerPlayer = zone.ToPlayerOrGetOwnerPlayer(killer);
-
-                if (GetMissionGuid() != Guid.Empty)
-                {
-                    Logger.DebugInfo("   >>>> NPC is mission related.");
-
-                    SearchForMissionOwnerAndSubmitKill(zone, killer);
-                }
-                else
-                {
-                    Logger.DebugInfo("   >>>> independent NPC.");
-
-                    if (killerPlayer != null)
-                        EnqueueKill(killerPlayer, killer);
-                }
-
-                if (EP > 0)
-                {
-                    var awardedPlayers = new List<Unit>();
-                    foreach (var hostile in ThreatManager.Hostiles)
-                    {
-                        var playerUnit = hostile.unit;
-                        var hostilePlayer = zone.ToPlayerOrGetOwnerPlayer(playerUnit);
-                        hostilePlayer?.Character.AddExtensionPointsBoostAndLog(EpForActivityType.Npc, EP);
-                        awardedPlayers.Add(playerUnit);
-                    }
-
-                    _pseudoThreatManager.AwardPseudoThreats(awardedPlayers, zone, EP);
-                }
-
-                scope.Complete();
-            }
+            return Zone.IsWalkableForNpc((int)position.X, (int)position.Y, Slope);
         }
 
-
-        /// <summary>
-        /// This occurs when aoe kills the npc. 
-        /// Background task that searches for the related missionguid and sumbits the kill for that specific player
-        /// </summary>
-        private void SearchForMissionOwnerAndSubmitKill(IZone zone, Unit killerUnit)
+        public override bool IsWalkable(int x, int y)
         {
-            var missionGuid = GetMissionGuid();
-            var missionOwner = MissionHelper.FindMissionOwnerByGuid(missionGuid);
-
-            var missionOwnerPlayer = zone.GetPlayer(missionOwner);
-            if (missionOwnerPlayer == null)
-            {
-                //the owner is not this zone
-                //address the mission plugin directly
-
-                var info = new Dictionary<string, object>
-                {
-                    {k.characterID, missionOwner.Id},
-                    {k.guid, missionGuid.ToString()},
-                    {k.type, MissionTargetType.kill_definition},
-                    {k.definition, ED.Definition},
-                    {k.increase ,1},
-                    {k.zoneID, zone.Id},
-                    {k.position, killerUnit.CurrentPosition}
-                };
-
-                if (killerUnit is Player killerPlayer && killerPlayer.Character.Id != missionOwner.Id)
-                {
-                    info[k.assistingCharacterID] = killerPlayer.Character.Id;
-                }
-
-                Task.Run(() =>
-                {
-                    MissionHelper.MissionProcessor.NpcGotKilledInAway(missionOwner,missionGuid,info);
-                });
-                return;
-            }
-                
-            //local enqueue, this is the proper player, we can skip gang
-            EnqueueKill(missionOwnerPlayer, killerUnit);
-        }
-
-        private void EnqueueKill(Player missionOwnerPlayer, Unit killerUnit)
-        {
-            var eventSourcePlayer = missionOwnerPlayer;
-            var killerPlayer = killerUnit as Player;
-            if (killerPlayer != null && !killerPlayer.Equals(missionOwnerPlayer))
-            {
-                eventSourcePlayer = killerPlayer;
-            }
-
-            Logger.DebugInfo($"   >>>> EventSource: botName:{eventSourcePlayer.Name} o:{eventSourcePlayer.Owner} characterId:{eventSourcePlayer.Character.Id} MissionOwner: botName:{missionOwnerPlayer.Name} o:{missionOwnerPlayer.Owner} characterId:{missionOwnerPlayer.Character.Id}");
-
-            //local enqueue, this is the proper player, we can skip gang
-            missionOwnerPlayer.MissionHandler.EnqueueMissionEventInfoLocally(new KillEventInfo(eventSourcePlayer, this, CurrentPosition));
-        }
-
-        protected override void OnTileChanged()
-        {
-            base.OnTileChanged();
-            LookingForHostiles();
-        }
-
-        public void LookingForHostiles()
-        {
-            foreach (var visibility in GetVisibleUnits())
-            {
-                AddBodyPullThreat(visibility.Target);
-            }
-        }
-
-        protected override void OnUpdate(TimeSpan time)
-        {
-            base.OnUpdate(time);
-
-            AI.Update(time);
-
-            UpdatePseudoThreats(time);
+            return Zone.IsWalkableForNpc(x, y, Slope);
         }
 
         protected override void OnEnterZone(IZone zone, ZoneEnterType enterType)
         {
             SetEP(zone);
-            States.Aggressive = Behavior.Type == NpcBehaviorType.Aggressive;
 
             base.OnEnterZone(zone, enterType);
-
-            if (IsStationary)
-            {
-                AI.Push(new StationaryIdleAI(this));
-            }
-            else
-            {
-                AI.Push(new IdleAI(this));
-            }
         }
 
         private void SetEP(IZone zone)
@@ -1116,60 +134,24 @@ namespace Perpetuum.Zones.NpcSystem
         {
             get
             {
-                var s = $"Npc:{ED.Name}:{Eid}";
+                var infoString = $"Npc:{ED.Name}:{Eid}";
 
                 var zone = Zone;
                 if (zone != null)
                 {
-                    s += " z:" + zone.Id;
+                    infoString += " z:" + zone.Id;
                 }
 
-                if (_group != null)
-                    s += " g:" + _group.Name;
+                if (Group != null)
+                {
+                    infoString += " g:" + Group.Name;
+                }
 
-                return s;
+                return infoString;
             }
         }
 
-        private const double AGGRO_RANGE = 30;
-
-        private bool IsInAggroRange(Unit target)
-        {
-            return IsStationary || IsInRangeOf3D(target, AGGRO_RANGE);
-        }
-
-        private readonly TimeKeeper _debounceLockChange = new TimeKeeper(TimeSpan.FromSeconds(2.5));
-        protected override void OnUnitLockStateChanged(Lock @lock)
-        {
-            if (!_debounceLockChange.Expired)
-                return;
-
-            var unitLock = @lock as UnitLock;
-            if (unitLock == null)
-                return;
-
-            if (unitLock.Target != this)
-                return;
-
-            if (unitLock.State != LockState.Locked)
-                return;
-
-            var threatValue = unitLock.Primary ? Threat.LOCK_PRIMARY : Threat.LOCK_SECONDARY;
-            AddThreat(unitLock.Owner, new Threat(ThreatType.Lock, threatValue), true);
-            _debounceLockChange.Reset();
-        }
-
-        private readonly TimeKeeper _debounceBodyPull = new TimeKeeper(TimeSpan.FromSeconds(2.5));
-        protected override void OnUnitTileChanged(Unit target)
-        {
-            if (!_debounceBodyPull.Expired)
-                return;
-
-            AddBodyPullThreat(target);
-            _debounceBodyPull.Reset();
-        }
-
-        internal override bool IsHostile(Player player)
+        public override bool IsHostile(Player player)
         {
             return true;
         }
@@ -1179,169 +161,158 @@ namespace Perpetuum.Zones.NpcSystem
             return true;
         }
 
-        /// <summary>
-        /// This determines if threat can be added to a target based on the following:
-        ///  - Is the target already on the threat manager
-        ///  - Or is the npc non-passive and the Threat is of some defined type
-        /// </summary>
-        /// <param name="target">Unit target</param>
-        /// <param name="threat">Threat threat</param>
-        /// <returns>If the target can be a threat</returns>
-        public bool CanAddThreatTo(Unit target, Threat threat)
+        internal override bool IsHostile(SentryTurret turret)
         {
-            if (_threatManager.Contains(target))
-                return true;
-
-            if (Behavior.Type == NpcBehaviorType.Passive)
-                return false;
-
-            return threat.type != ThreatType.Undefined;
+            return true;
         }
 
-        private void AddBodyPullThreat(Unit enemy)
+        internal override bool IsHostile(IndustrialTurret turret)
         {
-            if ( !IsHostile(enemy))
-                return;
-
-            var helper = new BodyPullThreatHelper(this);
-            enemy.AcceptVisitor(helper);
+            return true;
         }
 
-        public bool CallForHelp { private get; set; }
-
-        private void CallingForHelp()
+        internal override bool IsHostile(CombatDrone drone)
         {
-            if (!CallForHelp)
-                return;
+            return true;
+        }
 
-            if (!GlobalTimer.IsPassed(ref _lastHelpCalled, TimeSpan.FromSeconds(5)))
-                return;
+        protected override bool IsHostileFor(Unit unit)
+        {
+            return unit.IsHostile(this);
+        }
 
-            var group = _group;
-            if (group == null)
-                return;
-
-            foreach (var member in group.Members.Where(flockMember => flockMember != this))
+        protected override void UpdateUnitVisibility(Unit target)
+        {
+            if (target is RemoteControlledCreature)
             {
-                member.HelpingFor(this);
+                UpdateVisibility(target);
             }
         }
 
-        private void HelpingFor(Npc caller)
+        private Task HandleNpcDeadAsync(IZone zone, Unit killer, Player tagger)
         {
-            if (Armor.Ratio(ArmorMax) < CALL_FOR_HELP_ARMOR_THRESHOLD)
-                return;
-            
-            _threatManager.Clear();
-            foreach (var hostile in caller.ThreatManager.Hostiles)
-            {
-                AddThreat(hostile.unit,new Threat(ThreatType.Undefined,hostile.Threat),true);
-            }
+            return Task.Run(() => HandleNpcDead(zone, killer, tagger));
         }
 
-        public void AddAssistThreat(Unit assistant, Unit target, Threat threat)
+        private void HandleNpcDead([NotNull] IZone zone, Unit killer, Player tagger)
         {
-            if ( !_threatManager.Contains(target) )
-                return;
+            Logger.DebugInfo($"   >>>> NPC died.  Killer unitName:{killer.Name} o:{killer.Owner}   Tagger botname:{tagger?.Name} o:{killer.Owner} characterId:{tagger?.Character.Id}");
 
-            if ( !CanAddThreatTo(assistant,threat))
-                return;
-
-            AddThreat(assistant,threat,true);
-        }
-
-        private int CalculateCombatRange()
-        {
-            double range = (int)ActiveModules.Where(m => m.IsRanged)
-                         .Select(module => module.OptimalRange)
-                         .Concat(new[] { MaxTargetingRange })
-                         .Min();
-
-            range *= BEST_COMBAT_RANGE_MODIFIER;
-            range = Math.Max(3, range);
-            return (int) range;
-        }
-
-        private int CalculateMaxCombatRange()
-        {
-            double range = ActiveModules.Where(m => m.IsRanged)
-                         .Select(module => (int)(module.OptimalRange + module.Falloff))
-                         .Max();
-
-            range = Math.Max(3, range);
-            return (int)range;
-        }
-
-        private const double BEST_COMBAT_RANGE_MODIFIER = 0.9;
-
-        private class BodyPullThreatHelper : IEntityVisitor<Player>,IEntityVisitor<AreaBomb>
-        {
-            private readonly Npc _npc;
-
-            public BodyPullThreatHelper(Npc npc)
+            using (var scope = Db.CreateTransaction())
             {
-                _npc = npc;
-            }
-
-            public void Visit(Player player)
-            {
-                if (_npc.Behavior.Type != NpcBehaviorType.Aggressive)
-                    return;
-
-                if (player.HasTeleportSicknessEffect)
-                    return;
-
-                if (_npc.ThreatManager.Hostiles.Any(h => h.unit.Eid == player.Eid))
-                    return;
-
-                if (!_npc.IsInAggroRange(player))
-                    return;
-
-                var threat = Threat.BODY_PULL + FastRandom.NextDouble(0, 5);
-                _npc.AddThreat(player, new Threat(ThreatType.Bodypull, threat));
-            }
-
-            public void Visit(AreaBomb bomb)
-            {
-                if (!_npc.IsInAggroRange(bomb))
-                    return;
-
-                // csak akkor ha van is mivel tamadni
-                if (!_npc.ActiveModules.Any(m => m is WeaponModule))
-                    return;
-
-                // ha valaki mar foglalkozik a bombaval akkor ne csinaljon semmit
-
-                var g = _npc._group;
-                if (g != null && g.Members.Any(m => m.ThreatManager.Contains(bomb)))
-                    return;
-
-                var threat = Threat.BODY_PULL;
-                if (_npc.ThreatManager.IsThreatened)
+                if (BossInfo?.IsLootSplit ?? false)
                 {
-                    var h = _npc.ThreatManager.GetMostHatedHostile();
-                    if (h != null)
-                        threat = h.Threat*100;
+                    List<Player> participants = new List<Player>();
+                    participants = ThreatManager.Hostiles.Select(x => zone.ToPlayerOrGetOwnerPlayer(x.Unit)).ToList();
+
+                    if (participants.Count > 0)
+                    {
+                        ISplittableLootGenerator splitLooter = new SplittableLootGenerator(LootGenerator);
+                        List<ILootGenerator> lootGenerators = splitLooter.GetGenerators(participants.Count);
+
+                        for (var i = 0; i < participants.Count; i++)
+                        {
+                            LootContainer.Create()
+                                .SetOwner(participants[i])
+                                .AddLoot(lootGenerators[i])
+                                .BuildAndAddToZone(zone, participants[i].CurrentPosition);
+                        }
+                    }
+                }
+                else
+                {
+                    LootContainer.Create().SetOwner(tagger).AddLoot(LootGenerator).BuildAndAddToZone(zone, CurrentPosition);
                 }
 
-                _npc.AddThreat(bomb, new Threat(ThreatType.Bodypull, threat + FastRandom.NextDouble(0, 5)));
+                var killerPlayer = zone.ToPlayerOrGetOwnerPlayer(killer);
+
+                if (GetMissionGuid() != Guid.Empty)
+                {
+                    Logger.DebugInfo("   >>>> NPC is mission related.");
+
+                    SearchForMissionOwnerAndSubmitKill(zone, killer);
+                }
+                else
+                {
+                    Logger.DebugInfo("   >>>> independent NPC.");
+
+                    if (killerPlayer != null)
+                    {
+                        EnqueueKill(killerPlayer, killer);
+                    }
+                }
+
+                if (EP > 0)
+                {
+                    var awardedPlayers = new List<Unit>();
+
+                    foreach (var hostile in ThreatManager.Hostiles.Where(x => x.Unit is Player))
+                    {
+                        var playerUnit = hostile.Unit;
+                        var hostilePlayer = zone.ToPlayerOrGetOwnerPlayer(playerUnit);
+
+                        hostilePlayer?.Character.AddExtensionPointsBoostAndLog(EpForActivityType.Npc, EP);
+                        awardedPlayers.Add(playerUnit);
+                    }
+
+                    PseudoThreatManager.AwardPseudoThreats(awardedPlayers, zone, EP);
+                }
+
+                scope.Complete();
             }
         }
 
-        public override bool IsWalkable(Vector2 position)
+        /// <summary>
+        /// This occurs when aoe kills the npc. 
+        /// Background task that searches for the related missionguid and sumbits the kill for that specific player
+        /// </summary>
+        private void SearchForMissionOwnerAndSubmitKill(IZone zone, Unit killerUnit)
         {
-            return Zone.IsWalkableForNpc((int)position.X, (int)position.Y, Slope);
+            var missionGuid = GetMissionGuid();
+            var missionOwner = MissionHelper.FindMissionOwnerByGuid(missionGuid);
+            var missionOwnerPlayer = zone.GetPlayer(missionOwner);
+
+            if (missionOwnerPlayer == null)
+            {
+                var info = new Dictionary<string, object>
+                {
+                    {k.characterID, missionOwner.Id},
+                    {k.guid, missionGuid.ToString()},
+                    {k.type, MissionTargetType.kill_definition},
+                    {k.definition, ED.Definition},
+                    {k.increase ,1},
+                    {k.zoneID, zone.Id},
+                    {k.position, killerUnit.CurrentPosition},
+                };
+
+                if (killerUnit is Player killerPlayer && killerPlayer.Character.Id != missionOwner.Id)
+                {
+                    info[k.assistingCharacterID] = killerPlayer.Character.Id;
+                }
+
+                Task.Run(() =>
+                {
+                    MissionHelper.MissionProcessor.NpcGotKilledInAway(missionOwner, missionGuid, info);
+                });
+
+                return;
+            }
+
+            EnqueueKill(missionOwnerPlayer, killerUnit);
         }
 
-        public override bool IsWalkable(Position position)
+        private void EnqueueKill(Player missionOwnerPlayer, Unit killerUnit)
         {
-            return Zone.IsWalkableForNpc((int)position.X, (int)position.Y, Slope);
-        }
+            var eventSourcePlayer = missionOwnerPlayer;
 
-        public override bool IsWalkable(int x, int y)
-        {
-            return Zone.IsWalkableForNpc(x, y, Slope);
-        }
+            if (killerUnit is Player killerPlayer && !killerPlayer.Equals(missionOwnerPlayer))
+            {
+                eventSourcePlayer = killerPlayer;
+            }
 
+            Logger.DebugInfo($"   >>>> EventSource: botName:{eventSourcePlayer.Name} o:{eventSourcePlayer.Owner} characterId:{eventSourcePlayer.Character.Id} MissionOwner: botName:{missionOwnerPlayer.Name} o:{missionOwnerPlayer.Owner} characterId:{missionOwnerPlayer.Character.Id}");
+
+            missionOwnerPlayer.MissionHandler.EnqueueMissionEventInfoLocally(new KillEventInfo(eventSourcePlayer, this, CurrentPosition));
+        }
     }
 }

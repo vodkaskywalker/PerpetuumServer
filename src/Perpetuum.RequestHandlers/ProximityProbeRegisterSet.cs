@@ -29,7 +29,7 @@ namespace Perpetuum.RequestHandlers
 
                 playersToRegister.Length.ThrowIfEqual(0, ErrorCodes.WTFErrorMedicalAttentionSuggested);
 
-                var probe = _unitHelper.GetUnitOrThrow<ProximityProbeBase>(probeEid);
+                var probe = _unitHelper.GetUnitOrThrow<ProximityDeviceBase>(probeEid);
                 probe.HasAccess(character).ThrowIfError();
 
                 var corporation = character.GetPrivateCorporationOrThrow();

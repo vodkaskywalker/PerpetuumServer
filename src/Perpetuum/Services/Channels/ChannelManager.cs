@@ -54,6 +54,11 @@ namespace Perpetuum.Services.Channels
                 var channel = UpdateChannel(channelName, c => c.SetMember(member));
                 channel?.SendMemberOnlineStateToAll(_sessionManager, member, true);
             }
+
+            if (character.IsDocked)
+            {
+                character.GetCurrentDockingBase()?.TryJoinChannel(character);
+            }
         }
 
         private void SessionOnCharacterDeselected(ISession session, Character character)

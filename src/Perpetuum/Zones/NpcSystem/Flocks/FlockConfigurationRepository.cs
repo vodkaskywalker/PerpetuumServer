@@ -1,8 +1,9 @@
+using Perpetuum.Data;
+using Perpetuum.EntityFramework;
+using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Perpetuum.Data;
-using Perpetuum.EntityFramework;
 
 namespace Perpetuum.Zones.NpcSystem.Flocks
 {
@@ -10,7 +11,7 @@ namespace Perpetuum.Zones.NpcSystem.Flocks
     {
         private readonly NpcBossInfoBuilder _bossBuilder;
         private readonly FlockConfigurationBuilder.Factory _flockConfigurationBuilderFactory;
-        private readonly Dictionary<int,IFlockConfiguration> _flockConfigurations = new Dictionary<int, IFlockConfiguration>();
+        private readonly Dictionary<int, IFlockConfiguration> _flockConfigurations = new Dictionary<int, IFlockConfiguration>();
 
         public FlockConfigurationRepository(FlockConfigurationBuilder.Factory flockConfigurationBuilderFactory, NpcBossInfoBuilder bossBuilder)
         {
@@ -21,9 +22,11 @@ namespace Perpetuum.Zones.NpcSystem.Flocks
         public void LoadAllConfig()
         {
             var records = Db.Query().CommandText("select * from npcflock").Execute();
+
             foreach (var r in records)
             {
                 var builder = _flockConfigurationBuilderFactory();
+
                 builder.With(c =>
                 {
                     c.ID = r.GetValue<int>("id");
@@ -40,11 +43,13 @@ namespace Perpetuum.Zones.NpcSystem.Flocks
                     c.RespawnMultiplierLow = r.GetValue<double>("respawnmultiplierlow");
                     c.IsCallForHelp = r.GetValue<bool>("iscallforhelp");
                     c.Enabled = r.GetValue<bool>("enabled");
-                    c.BehaviorType = (NpcBehaviorType) r.GetValue<int>("behaviorType");
-                    c.SpecialType = (NpcSpecialType) r.GetValue<int>("npcSpecialType");
+                    c.BehaviorType = (BehaviorType)r.GetValue<int>("behaviorType");
+                    c.SpecialType = (NpcSpecialType)r.GetValue<int>("npcSpecialType");
                     c.BossInfo = _bossBuilder.GetBossInfoByFlockID(c.ID, c);
                 });
+
                 var config = builder.Build();
+
                 _flockConfigurations[config.ID] = config;
             }
         }
@@ -70,6 +75,7 @@ namespace Perpetuum.Zones.NpcSystem.Flocks
                                    (name,presenceid,flockmembercount,definition,spawnoriginX,spawnoriginY,spawnrangeMin,spawnrangeMax,respawnseconds,totalspawncount,homerange,note,respawnmultiplierlow) values 
                                    (@name,@presenceID,@flockMemberCount,@definition,@spawnOriginX,@spawnOriginY,@spawnRangeMin,@spawnRangeMax,@respawnSeconds,@totalSpawnCount,@homeRange,@note,@respawnMultiplierLow);
                                    select cast(scope_identity() as int)";
+
             var id = Db.Query().CommandText(query)
                 .SetParameter("@name", item.Name)
                 .SetParameter("@presenceID", item.PresenceID)
@@ -87,7 +93,9 @@ namespace Perpetuum.Zones.NpcSystem.Flocks
                 .ExecuteScalar<int>().ThrowIfEqual(0, ErrorCodes.SQLInsertError);
 
             if (item is FlockConfiguration fc)
+            {
                 fc.ID = id;
+            }
         }
 
         public void Update(IFlockConfiguration item)
@@ -123,14 +131,17 @@ namespace Perpetuum.Zones.NpcSystem.Flocks
                     .SetParameter("@respawnMultiplierLow", item.RespawnMultiplierLow)
                     .SetParameter("@note", item.Note)
                     .ExecuteNonQuery();
-            if ( res == 0 )
+
+            if (res == 0)
+            {
                 throw new PerpetuumException(ErrorCodes.SQLUpdateError);
+            }
         }
 
         public void Delete(IFlockConfiguration item)
         {
             Db.Query().CommandText("delete npcflock where id=@ID")
-                .SetParameter("@ID",item.ID)
+                .SetParameter("@ID", item.ID)
                 .ExecuteNonQuery().ThrowIfEqual(0, ErrorCodes.SQLDeleteError);
         }
     }

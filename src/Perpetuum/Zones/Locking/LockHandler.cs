@@ -10,6 +10,7 @@ using Perpetuum.Robots;
 using Perpetuum.Units;
 using Perpetuum.Zones.Blobs;
 using Perpetuum.Zones.Locking.Locks;
+using Perpetuum.Zones.Locking.UnitProperties;
 
 namespace Perpetuum.Zones.Locking
 {
@@ -19,32 +20,20 @@ namespace Perpetuum.Zones.Locking
         private readonly ItemProperty _lockingTime;
         private readonly ItemProperty _maxTargetingRange;
         private readonly ItemProperty _maxLockedTargets;
-        private List<Lock> _locks = new List<Lock>();
         private readonly ConcurrentQueue<Lock> _newLocks = new ConcurrentQueue<Lock>();
         private readonly ConcurrentQueue<Lock> _removedLocks = new ConcurrentQueue<Lock>();
+        private List<Lock> _locks = new List<Lock>();
         private int _dirty;
 
-        public LockHandler(Robot owner)
-        {
-            _owner = owner;
-            _lockingTime = new LockingTimeProperty(owner);
-            owner.AddProperty(_lockingTime);
-
-            _maxTargetingRange = new MaxTargetingRangeProperty(owner);
-            owner.AddProperty(_maxTargetingRange);
-
-            _maxLockedTargets = new MaxLockedTargetsProperty(owner);
-            owner.AddProperty(_maxLockedTargets);
-
-            if (owner is IBlobableUnit)
-            {
-                owner.PropertyChanged += OnOwnerPropertyChanged;
-            }
-        }
-
         public double MaxTargetingRange { get { return _maxTargetingRange.Value; } }
-        private int MaxLockedTargets { get { return (int) _maxLockedTargets.Value; } }
+
+        private int MaxLockedTargets { get { return (int)_maxLockedTargets.Value; } }
+
         public int Count { get { return _locks.Count; } }
+
+        public event LockEventHandler LockStateChanged;
+
+        public event LockEventHandler<ErrorCodes> LockError;
 
         public List<Lock> Locks
         {
@@ -56,67 +45,55 @@ namespace Perpetuum.Zones.Locking
             get { return Count < MaxLockedTargets; }
         }
 
-        private void OnOwnerPropertyChanged(Item unit, ItemProperty property)
+        public LockHandler(Robot owner)
         {
-            if (property.Field != AggregateField.blob_effect) 
-                return;
+            _owner = owner;
+            _lockingTime = new LockingTimeProperty(owner);
+            owner.AddProperty(_lockingTime);
+            _maxTargetingRange = new MaxTargetingRangeProperty(owner);
+            owner.AddProperty(_maxTargetingRange);
+            _maxLockedTargets = new MaxLockedTargetsProperty(owner);
+            owner.AddProperty(_maxLockedTargets);
 
-            _lockingTime.Update();
-            _maxTargetingRange.Update();
+            if (owner is IBlobableUnit)
+            {
+                owner.PropertyChanged += OnOwnerPropertyChanged;
+            }
         }
 
         public void AddLock(long targetEid, bool isPrimary)
         {
             var targetUnit = _owner.Zone?.GetUnit(targetEid);
+
             if (targetUnit == null)
+            {
                 return;
+            }
 
             AddLock(targetUnit,isPrimary);
         }
 
         public void AddLock(Unit target, bool isPrimary)
         {
-            AddLock(new UnitLock(_owner) { Target = target, Primary = isPrimary });
+            AddLock(new UnitLock(_owner)
+            {
+                Target = target,
+                Primary = isPrimary,
+            });
+        }
+
+        public void AddLock(Position position, bool isPrimary)
+        {
+            AddLock(new TerrainLock(_owner, position)
+            {
+                Primary = isPrimary,
+            });
         }
 
         public void AddLock(Lock newLock)
         {
             _newLocks.Enqueue(newLock);
             Interlocked.Exchange(ref _dirty, 1);
-        }
-
-        private void RemoveLock(Lock @lock)
-        {
-            _removedLocks.Enqueue(@lock);
-            Interlocked.Exchange(ref _dirty, 1);
-        }
-
-        private void ProcessRemovedLocks(IList<Lock> locks)
-        {
-            Lock removedLock;
-            while (_removedLocks.TryDequeue(out removedLock))
-            {
-                locks.Remove(removedLock);
-            }
-        }
-
-        public event LockEventHandler LockStateChanged;
-
-        private void OnLockStateChanged(Lock @lock)
-        {
-            if (@lock.State == LockState.Disabled)
-            {
-                RemoveLock(@lock);
-            }
-
-            LockStateChanged?.Invoke(@lock);
-        }
-
-        public event LockEventHandler<ErrorCodes> LockError;
-
-        private void OnLockError(Lock @lock, ErrorCodes error)
-        {
-            LockError?.Invoke(@lock, error);
         }
 
         public void Update(TimeSpan time)
@@ -140,76 +117,30 @@ namespace Perpetuum.Zones.Locking
                 @lock.Update(time);
 
                 if (!ValidateLock(@lock))
+                {
                     @lock.Cancel();
-            }
-        }
-
-        private void ProcessNewLocks(IList<Lock> locks)
-        {
-            Lock newLock;
-            while (_newLocks.TryDequeue(out newLock))
-            {
-                if (locks.Any(l => l.Equals(newLock)))
-                    continue;
-                // if you are a tooladmin then lock up anything you want.
-                // this is easier than making special bots to work with terrain.
-                if (locks.Count >= MaxLockedTargets && _owner.GetCharacter().AccessLevel != AccessLevel.toolAdmin)
-                {
-                    OnLockError(newLock,ErrorCodes.MaxLockedTargetExceed);
-                    continue;
                 }
-
-                if (!ValidateLock(newLock))
-                    continue;
-
-                if (newLock.Primary)
-                {
-                    var currentPrimaryLock = locks.FirstOrDefault(l => l.Primary);
-                    if (currentPrimaryLock != null)
-                        currentPrimaryLock.Primary = false;
-                }
-
-
-
-                locks.Add(newLock);
-
-                newLock.Changed += OnLockStateChanged;
-
-                var lockingTime = TimeSpan.Zero;
-
-                var terrainLock = newLock as TerrainLock;
-                if (terrainLock == null)
-                    lockingTime = TimeSpan.FromMilliseconds(_lockingTime.Value);
-
-                newLock.Start(lockingTime);
             }
-        }
-
-        private bool ValidateLock(Lock newLock)
-        {
-            var validator = new LockValidator(this);
-            newLock.AcceptVisitor(validator);
-
-            if (validator.Error == ErrorCodes.NoError)
-                return true;
-
-            OnLockError(newLock, validator.Error);
-            return false;
         }
 
         public void SetPrimaryLock(Lock primaryLock)
         {
             var currentPrimaryLock = GetPrimaryLock();
+
             if (currentPrimaryLock != null)
             {
                 if (currentPrimaryLock == primaryLock)
+                {
                     return;
+                }
 
                 currentPrimaryLock.Primary = false;
             }
 
             if (primaryLock != null)
+            {
                 primaryLock.Primary = true;
+            }
         }
 
         public void SetPrimaryLock(long lockId)
@@ -222,7 +153,9 @@ namespace Perpetuum.Zones.Locking
         public Lock GetLock(long lockId)
         {
             if (lockId == 0)
+            {
                 return null;
+            }
 
             return _locks.FirstOrDefault(l => l.Id == lockId);
         }
@@ -230,6 +163,7 @@ namespace Perpetuum.Zones.Locking
         public void CancelLock(long lockId)
         {
             var l = GetLock(lockId);
+
             l?.Cancel();
         }
 
@@ -247,6 +181,11 @@ namespace Perpetuum.Zones.Locking
             return _locks.FirstOrDefault(l => l.Primary);
         }
 
+        public IEnumerable<Lock> GetSecondaryLocks()
+        {
+            return _locks.Where(l => !l.Primary);
+        }
+
         public bool IsLocked(Unit unit)
         {
             return _locks.OfType<UnitLock>().Any(l => unit.Eid == l.Target.Eid);
@@ -259,9 +198,9 @@ namespace Perpetuum.Zones.Locking
         }
 
         [CanBeNull]
-        private UnitLock GetLockByEid(long unitEid)
+        public TerrainLock GetLockByPosition(Position position)
         {
-            return _locks.OfType<UnitLock>().FirstOrDefault(l => l.Target.Eid == unitEid);
+            return GetLockByPositionString(position.ToString());
         }
 
         public bool IsInLockingRange(Unit target)
@@ -274,66 +213,122 @@ namespace Perpetuum.Zones.Locking
             return _owner.CurrentPosition.IsInRangeOf3D(targetPosition, MaxTargetingRange);
         }
 
-        private class LockingTimeProperty : UnitProperty
+        private void OnOwnerPropertyChanged(Item unit, ItemProperty property)
         {
-            public LockingTimeProperty(Unit owner)
-                : base(owner, AggregateField.locking_time,
-                    AggregateField.locking_time_modifier,
-                    // effektek
-                    AggregateField.effect_sensor_booster_locking_time_modifier,
-                    AggregateField.effect_sensor_dampener_locking_time_modifier,
-                    AggregateField.effect_locking_time_modifier) { }
-
-            protected override double CalculateValue()
+            if (property.Field != AggregateField.blob_effect)
             {
-                var v = base.CalculateValue();
+                return;
+            }
 
-                var blobableUnit = owner as IBlobableUnit;
-                blobableUnit?.BlobHandler.ApplyBlobPenalty(ref v, -5);
+            _lockingTime.Update();
+            _maxTargetingRange.Update();
+        }
 
-                return v;
+        private void RemoveLock(Lock @lock)
+        {
+            _removedLocks.Enqueue(@lock);
+            Interlocked.Exchange(ref _dirty, 1);
+        }
+
+        private void ProcessRemovedLocks(IList<Lock> locks)
+        {
+            Lock removedLock;
+
+            while (_removedLocks.TryDequeue(out removedLock))
+            {
+                locks.Remove(removedLock);
             }
         }
 
-        private class MaxLockedTargetsProperty : UnitProperty
+        private void OnLockError(Lock @lock, ErrorCodes error)
         {
-            public MaxLockedTargetsProperty(Unit owner) : base(owner, AggregateField.locked_targets_max)
+            LockError?.Invoke(@lock, error);
+        }
+
+        private void OnLockStateChanged(Lock @lock)
+        {
+            if (@lock.State == LockState.Disabled)
             {
+                RemoveLock(@lock);
             }
 
-            protected override double CalculateValue()
+            LockStateChanged?.Invoke(@lock);
+        }
+
+        private bool ValidateLock(Lock newLock)
+        {
+            var validator = new LockValidator(this);
+
+            newLock.AcceptVisitor(validator);
+
+            if (validator.Error == ErrorCodes.NoError)
             {
-                var v = base.CalculateValue();
+                return true;
+            }
 
-                if (owner.GetCharacter() == Character.None)
-                    return v;
+            OnLockError(newLock, validator.Error);
 
-                var lockedTargetsMaxBonus = owner.GetPropertyModifier(AggregateField.locked_targets_max_bonus);
-                v = Math.Min(lockedTargetsMaxBonus.Value + 1, v);
+            return false;
+        }
 
-                return v;
+        private void ProcessNewLocks(IList<Lock> locks)
+        {
+            Lock newLock;
+
+            while (_newLocks.TryDequeue(out newLock))
+            {
+                if (locks.Any(l => l.Equals(newLock)))
+                {
+                    continue;
+                }
+
+                // if you are a tooladmin then lock up anything you want.
+                // this is easier than making special bots to work with terrain.
+                if (locks.Count >= MaxLockedTargets && _owner.GetCharacter().AccessLevel != AccessLevel.toolAdmin)
+                {
+                    OnLockError(newLock, ErrorCodes.MaxLockedTargetExceed);
+
+                    continue;
+                }
+
+                if (!ValidateLock(newLock))
+                    continue;
+
+                if (newLock.Primary)
+                {
+                    var currentPrimaryLock = locks.FirstOrDefault(l => l.Primary);
+
+                    if (currentPrimaryLock != null)
+                    {
+                        currentPrimaryLock.Primary = false;
+                    }
+                }
+
+                locks.Add(newLock);
+                newLock.Changed += OnLockStateChanged;
+
+                var lockingTime = TimeSpan.Zero;
+                var terrainLock = newLock as TerrainLock;
+
+                if (terrainLock == null)
+                {
+                    lockingTime = TimeSpan.FromMilliseconds(_lockingTime.Value);
+                }
+
+                newLock.Start(lockingTime);
             }
         }
 
-        private class MaxTargetingRangeProperty : UnitProperty
+        [CanBeNull]
+        private UnitLock GetLockByEid(long unitEid)
         {
-            public MaxTargetingRangeProperty(Unit owner)
-                : base(owner, AggregateField.locking_range,
-                    AggregateField.locking_range_modifier,
-                    //effektek
-                    AggregateField.effect_sensor_booster_locking_range_modifier,
-                    AggregateField.effect_sensor_dampener_locking_range_modifier,
-                    AggregateField.effect_locking_range_modifier) { }
+            return _locks.OfType<UnitLock>().FirstOrDefault(l => l.Target.Eid == unitEid);
+        }
 
-            protected override double CalculateValue()
-            {
-                var v = base.CalculateValue();
-
-                var blobableUnit = owner as IBlobableUnit;
-                blobableUnit?.BlobHandler.ApplyBlobPenalty(ref v, 0.5);
-
-                return v;
-            }
+        [CanBeNull]
+        private TerrainLock GetLockByPositionString(string positionString)
+        {
+            return _locks.OfType<TerrainLock>().FirstOrDefault(l => l.Location.ToString() == positionString);
         }
     }
 }

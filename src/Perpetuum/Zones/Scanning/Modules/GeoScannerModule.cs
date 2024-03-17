@@ -1,6 +1,7 @@
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
 using Perpetuum.Modules;
+using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Players;
 using Perpetuum.Zones.Scanning.Results;
 using Perpetuum.Zones.Scanning.Scanners;

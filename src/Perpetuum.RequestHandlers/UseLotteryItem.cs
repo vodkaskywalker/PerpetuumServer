@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Transactions;
 using Perpetuum.Accounting;
 using Perpetuum.Accounting.Characters;
 using Perpetuum.Common.Loggers.Transaction;
@@ -6,11 +11,12 @@ using Perpetuum.Data;
 using Perpetuum.EntityFramework;
 using Perpetuum.Host.Requests;
 using Perpetuum.Items;
+using Perpetuum.Players;
+using Perpetuum.RequestHandlers.Extensions;
 using Perpetuum.Robots;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Transactions;
+using Perpetuum.Services.ExtensionService;
+using Perpetuum.Services.Sparks.Teleports;
+using Perpetuum.Zones;
 
 namespace Perpetuum.RequestHandlers
 {
@@ -19,15 +25,18 @@ namespace Perpetuum.RequestHandlers
         private readonly IEntityServices entityServices;
         private readonly IAccountManager accountManager;
         private readonly IAccountRepository accountRepository;
+        private readonly SparkTeleportHelper sparkTeleportHelper;
 
         public UseLotteryItem(
             IEntityServices entityServices,
             IAccountManager accountManager,
-            IAccountRepository accountRepository)
+            IAccountRepository accountRepository,
+            SparkTeleportHelper sparkTeleportHelper)
         {
             this.entityServices = entityServices;
             this.accountManager = accountManager;
             this.accountRepository = accountRepository;
+            this.sparkTeleportHelper = sparkTeleportHelper;
         }
 
         public void HandleRequest(IRequest request)

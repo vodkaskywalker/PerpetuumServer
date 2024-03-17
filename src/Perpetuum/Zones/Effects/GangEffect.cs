@@ -1,7 +1,9 @@
-using System.Collections.Generic;
 using Perpetuum.Groups.Gangs;
 using Perpetuum.Players;
 using Perpetuum.Units;
+using Perpetuum.Zones.RemoteControl;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Perpetuum.Zones.Effects
 {
@@ -14,13 +16,20 @@ namespace Perpetuum.Zones.Effects
         {
             if (Owner != Source)
             {
-                var gang = ((Player)Owner).Gang;
-                // ha nincs mar gangben vagy a forras mar nincs gangben
+                Gang gang = Owner is Player player
+                    ? player.Gang
+                    : Owner is RemoteControlledCreature remoteControlledCreature &&
+                        remoteControlledCreature.CommandRobot is Player ownerPlayer
+                        ? ownerPlayer.Gang
+                        : null;
+
                 if (gang == null || !gang.IsMember((Player)Source))
                 {
                     OnRemoved();
+
                     return;
                 }
+
             }
 
             base.OnTick();
@@ -28,8 +37,12 @@ namespace Perpetuum.Zones.Effects
 
         protected override IEnumerable<Unit> GetTargets(IZone zone)
         {
-            var player = (Player)Owner;
-            return zone.GetGangMembers(player.Gang).WithinRange(Owner.CurrentPosition, Radius);
+            Player player = (Player)Owner;
+            IEnumerable<Player> gangMembers = zone.GetGangMembers(player.Gang);
+            IEnumerable<RemoteControlledCreature> alliedTurrets = zone.GetAlliedTurretsByPlayers(new[] { player }.Union(gangMembers));
+            IEnumerable<Unit> alliedUnits = gangMembers.Union<Unit>(alliedTurrets);
+
+            return alliedUnits.WithinRange(Owner.CurrentPosition, Radius);
         }
 
     }

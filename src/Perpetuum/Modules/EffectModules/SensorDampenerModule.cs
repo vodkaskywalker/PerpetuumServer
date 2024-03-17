@@ -1,9 +1,10 @@
 ﻿using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
+using Perpetuum.Modules.ModuleProperties;
 using Perpetuum.Units;
 using Perpetuum.Zones.Effects;
-using Perpetuum.Zones.NpcSystem;
+using Perpetuum.Zones.NpcSystem.ThreatManaging;
 
 namespace Perpetuum.Modules.EffectModules
 {
@@ -16,7 +17,6 @@ namespace Perpetuum.Modules.EffectModules
         public SensorDampenerModule() : base(true)
         {
             optimalRange.AddEffectModifier(AggregateField.effect_ew_optimal_range_modifier);
-
             _ecmStrength = new ModuleProperty(this,AggregateField.ecm_strength);
             AddProperty(_ecmStrength);
             _effectSensorDampenerLockingRangeModifier = new ModuleProperty(this, AggregateField.effect_sensor_dampener_locking_range_modifier);
@@ -28,18 +28,23 @@ namespace Perpetuum.Modules.EffectModules
         public override void AcceptVisitor(IEntityVisitor visitor)
         {
             if (!TryAcceptVisitor(this, visitor))
+            {
                 base.AcceptVisitor(visitor);
+            }
         }
 
         protected override bool CanApplyEffect(Unit target)
         {
             var targetSensorStrength = target.SensorStrength * FastRandom.NextDouble();
             var rangedEcmStrength = ModifyValueByOptimalRange(target, _ecmStrength.Value);
+
             if (targetSensorStrength < rangedEcmStrength)
             {
                 return true;
             }
+
             OnError(ErrorCodes.AccuracyCheckFailed);
+
             return false;
         }
 
@@ -50,7 +55,9 @@ namespace Perpetuum.Modules.EffectModules
 
         protected override void SetupEffect(EffectBuilder effectBuilder)
         {
-            effectBuilder.SetType(EffectType.effect_sensor_supress).SetSource(ParentRobot)
+            effectBuilder
+                .SetType(EffectType.effect_sensor_supress)
+                .SetSource(ParentRobot)
                 .WithPropertyModifier(_effectSensorDampenerLockingRangeModifier.ToPropertyModifier())
                 .WithPropertyModifier(_effectSensorDampenerLockingTimeModifier.ToPropertyModifier());
         }

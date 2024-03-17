@@ -30,7 +30,7 @@ namespace Perpetuum.Items
             var epData = accountManager.GetEPData(account, character);
 
             accountManager.FreeLockedEp(account, (int)epData[k.lockedEp]);
-            
+
             var defaultExtensions = character.GetDefaultExtensions();
 
             character.ResetAllExtensions();

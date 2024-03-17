@@ -35,14 +35,30 @@ namespace Perpetuum.Robots
             return _lockHandler.GetLockByUnit(unit);
         }
 
+        [CanBeNull]
+        public TerrainLock GetLockByPosition(Position position)
+        {
+            return _lockHandler.GetLockByPosition(position);
+        }
+
         public Lock GetPrimaryLock()
         {
             return _lockHandler.GetPrimaryLock();
         }
 
+        public IEnumerable<Lock> GetSecondaryLocks()
+        {
+            return _lockHandler.GetSecondaryLocks();
+        }
+
         public bool IsInLockingRange(Unit unit)
         {
             return _lockHandler.IsInLockingRange(unit);
+        }
+
+        public bool IsInLockingRange(Position position)
+        {
+            return _lockHandler.IsInLockingRange(position);
         }
 
         public void ResetLocks()
@@ -66,6 +82,11 @@ namespace Perpetuum.Robots
         }
 
         public void AddLock(Unit target, bool isPrimary)
+        {
+            _lockHandler.AddLock(target, isPrimary);
+        }
+
+        public void AddLock(Position target, bool isPrimary)
         {
             _lockHandler.AddLock(target, isPrimary);
         }

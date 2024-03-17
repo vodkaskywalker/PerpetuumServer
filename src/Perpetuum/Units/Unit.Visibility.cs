@@ -7,6 +7,9 @@ using Perpetuum.Log;
 using Perpetuum.Players;
 using Perpetuum.Robots;
 using Perpetuum.Zones;
+using Perpetuum.Zones.RemoteControl;
+using Perpetuum.Zones.LandMines;
+using Perpetuum.Zones.NpcSystem;
 
 namespace Perpetuum.Units
 {
@@ -44,6 +47,16 @@ namespace Perpetuum.Units
         protected internal virtual void UpdatePlayerVisibility(Player player)
         {
             // unit => player nem latjak egymast
+        }
+
+        protected internal virtual void UpdateUnitVisibility(SentryTurret turret)
+        {
+
+        }
+
+        protected internal virtual void UpdateUnitVisibility(Npc npc)
+        {
+
         }
 
         public virtual void UpdateVisibilityOf(Unit target)
@@ -98,14 +111,22 @@ namespace Perpetuum.Units
 
         protected virtual bool IsDetected(Unit target)
         {
-            var robot = target as Robot;
-            if (robot != null)
+            double range;
+            
+            if (target is LandMine)
             {
-                if (robot.IsLocked(this))
+                range = (this as Robot).MineDetectionRange;
+            } else
+            {
+                var robot = target as Robot;
+                if (robot != null && robot.IsLocked(this))
+                {
                     return true;
+                }
+
+                range = 100 / Math.Max(1, target.StealthStrength) * Math.Max(1, DetectionStrength);
             }
 
-            var range = 100 / Math.Max(1, target.StealthStrength) * Math.Max(1, DetectionStrength);
             return IsInRangeOf3D(target, range);
         }
 

@@ -27,6 +27,7 @@ using Perpetuum.Zones.Blobs;
 using Perpetuum.Zones.Decors;
 using Perpetuum.Zones.Effects.ZoneEffects;
 using Perpetuum.Zones.Environments;
+using Perpetuum.Zones.LandMines;
 using Perpetuum.Zones.NpcSystem.Presences;
 using Perpetuum.Zones.NpcSystem.SafeSpawnPoints;
 using Perpetuum.Zones.PBS;
@@ -126,7 +127,7 @@ namespace Perpetuum.Zones
             SaveUnitsToDb<PBSDockingBase>();
             SaveUnitsToDb<PBSTurret>();
             SaveUnitsToDb<PBSObject>();
-            SaveUnitsToDb<ProximityProbeBase>();
+            SaveUnitsToDb<ProximityDeviceBase>();
         }
 
         private void OnGangMemberJoined(Gang gang, Character character)

@@ -104,7 +104,7 @@ namespace Perpetuum.Zones
         public int RaceId { get; set; }
         public string Note { get; set; }
 
-        public string ListenerAddress { get; set; }
+        public string ListenerAddress { get; set; } = "127.0.0.1";
         public int ListenerPort { get; set; }
 
         public int? TimeLimitMinutes { get; set; }
