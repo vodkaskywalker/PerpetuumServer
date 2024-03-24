@@ -440,5 +440,6 @@ namespace Perpetuum.ExportedTypes
         remote_control_operational_range_modifier = 676,
         remote_control_lifetime = 677,
         remote_control_lifetime_modifier = 678,
+        electric_damage = 679,
     }
 }

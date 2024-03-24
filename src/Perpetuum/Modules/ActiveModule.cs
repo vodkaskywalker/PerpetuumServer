@@ -295,9 +295,14 @@ namespace Perpetuum.Modules
 
         protected double ModifyValueByOptimalRange(Unit target, double value)
         {
-            Debug.Assert(ParentRobot != null, "ParentRobot != null");
+            return ModifyValueByOptimalRange(ParentRobot, target, value);
+        }
 
-            double distance = ParentRobot.GetDistance(target);
+        protected double ModifyValueByOptimalRange(Unit issuer, Unit target, double value)
+        {
+            Debug.Assert(issuer != null, "issuer != null");
+
+            double distance = issuer.GetDistance(target);
 
             if (distance <= OptimalRange)
             {

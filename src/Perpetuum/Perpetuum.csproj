@@ -272,6 +272,7 @@
     <Compile Include="Modules\RemoteControlledDrillerModule.cs" />
     <Compile Include="Modules\RemoteControlledHarvesterModule.cs" />
     <Compile Include="Modules\RemoteControllerModule.cs" />
+    <Compile Include="Modules\ScorcherModule.cs" />
     <Compile Include="Network\ClientConnection.cs" />
     <Compile Include="Network\EncryptedTcpConnection.cs" />
     <Compile Include="Network\Http.cs" />

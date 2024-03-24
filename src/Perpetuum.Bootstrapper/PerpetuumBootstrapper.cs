@@ -962,6 +962,7 @@ namespace Perpetuum.Bootstrapper
             RegisterModule<CoreBoosterModule>();
             RegisterModule<SensorJammerModule>();
             RegisterModule<EnergyNeutralizerModule>();
+            RegisterModule<ScorcherModule>();
             RegisterModule<EnergyTransfererModule>();
             RegisterModule<EnergyVampireModule>();
             RegisterModule<GeoScannerModule>();
@@ -1198,6 +1199,7 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<CoreBoosterModule>(CategoryFlags.cf_core_boosters, new NamedParameter("ammoCategoryFlags", CategoryFlags.cf_core_booster_ammo));
                 ByCategoryFlags<SensorJammerModule>(CategoryFlags.cf_sensor_jammers);
                 ByCategoryFlags<EnergyNeutralizerModule>(CategoryFlags.cf_energy_neutralizers);
+                ByCategoryFlags<ScorcherModule>(CategoryFlags.cf_scorchers);
                 ByCategoryFlags<EnergyTransfererModule>(CategoryFlags.cf_energy_transferers);
                 ByCategoryFlags<EnergyVampireModule>(CategoryFlags.cf_energy_vampires);
                 ByCategoryFlags<DrillerModule>(CategoryFlags.cf_drillers, new NamedParameter("ammoCategoryFlags", CategoryFlags.cf_mining_ammo));
