@@ -686,6 +686,12 @@ namespace Perpetuum.Bootstrapper
             _ = _builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_armor_max);
             _ = _builder.RegisterType<GangEffect>().Keyed<Effect>(EffectType.effect_aura_gang_shield_absorbtion_ratio);
 
+            // NOX effects
+
+            _ = _builder.RegisterType<NoxEffect>().Keyed<Effect>(EffectType.nox_effect_repair_negation);
+            _ = _builder.RegisterType<NoxEffect>().Keyed<Effect>(EffectType.nox_effect_shield_negation);
+            _ = _builder.RegisterType<NoxEffect>().Keyed<Effect>(EffectType.nox_effect_teleport_negation);
+
             // intrusion effects
 
             _ = _builder.RegisterType<CorporationEffect>().Keyed<Effect>(EffectType.effect_intrusion_geoscan_lvl1);
@@ -985,6 +991,7 @@ namespace Perpetuum.Bootstrapper
             RegisterEffectModule<StealthModule>();
             RegisterEffectModule<DetectionModule>();
             RegisterEffectModule<GangModule>();
+            RegisterEffectModule<NoxModule>();
             RegisterEffectModule<ShieldGeneratorModule>();
             RegisterEffectModule<MineDetectorModule>();
 
@@ -1252,6 +1259,9 @@ namespace Perpetuum.Bootstrapper
                 ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_ewar, new NamedParameter("effectType", EffectType.effect_aura_gang_ewar_optimal), new NamedParameter("effectModifier", AggregateField.effect_ew_optimal_range_modifier));
                 ByCategoryFlags<GangModule>(CategoryFlags.cf_gang_assist_fast_extracting, new NamedParameter("effectType", EffectType.effect_aura_gang_fast_extraction), new NamedParameter("effectModifier", AggregateField.effect_gathering_cycle_time_modifier));
 
+                ByCategoryFlags<NoxModule>(CategoryFlags.cf_nox_shield_negators, new NamedParameter("effectType", EffectType.nox_effect_shield_negation), new NamedParameter("effectModifier", AggregateField.nox_shield_absorbtion_modifier));
+                ByCategoryFlags<NoxModule>(CategoryFlags.cf_nox_repair_negators, new NamedParameter("effectType", EffectType.nox_effect_repair_negation), new NamedParameter("effectModifier", AggregateField.nox_repair_amount_modifier));
+                ByCategoryFlags<NoxModule>(CategoryFlags.cf_nox_teleport_negators, new NamedParameter("effectType", EffectType.nox_effect_teleport_negation), new NamedParameter("effectModifier", AggregateField.nox_teleport_negation));
 
                 ByCategoryFlags<SystemContainer>(CategoryFlags.cf_logical_storage);
                 ByCategoryFlags<Item>(CategoryFlags.cf_mission_items);

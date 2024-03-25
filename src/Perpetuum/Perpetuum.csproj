@@ -269,6 +269,7 @@
     <Compile Include="Modules\ModuleProperties\ModuleProperty.cs" />
     <Compile Include="Modules\ModuleProperties\OptimalRangeProperty.cs" />
     <Compile Include="Modules\ModulePropertyModifiersReader.cs" />
+    <Compile Include="Modules\NoxModule.cs" />
     <Compile Include="Modules\RemoteControlledDrillerModule.cs" />
     <Compile Include="Modules\RemoteControlledHarvesterModule.cs" />
     <Compile Include="Modules\RemoteControllerModule.cs" />
@@ -663,6 +664,7 @@
     <Compile Include="Zones\CombatLogs\CombatLogSaver.cs" />
     <Compile Include="Zones\CombatLogs\CombatSummary.cs" />
     <Compile Include="Zones\CombatLogs\ICombatLogSaver.cs" />
+    <Compile Include="Zones\Effects\NoxEffect.cs" />
     <Compile Include="Zones\Effects\ZoneEffects\IZoneEffectHandler.cs" />
     <Compile Include="Zones\Effects\ZoneEffects\ZoneEffect.cs" />
     <Compile Include="Zones\Effects\ZoneEffects\ZoneEffectHandler.cs" />

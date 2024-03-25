@@ -123,5 +123,8 @@ namespace Perpetuum.ExportedTypes
         effect_gamma_tc = 120,
         effect_mine_detector = 121,
         effect_tellesis = 122,
+        nox_effect_shield_negation = 123,
+        nox_effect_repair_negation = 124,
+        nox_effect_teleport_negation = 125,
     }
 }

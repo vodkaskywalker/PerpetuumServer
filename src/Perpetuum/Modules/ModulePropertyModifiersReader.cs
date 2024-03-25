@@ -3,7 +3,6 @@ using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 
 namespace Perpetuum.Modules
 {
@@ -19,7 +18,6 @@ namespace Perpetuum.Modules
 
         public void Init()
         {
-            Thread.Sleep(10000);
             var records = Db.Query().CommandText("select categoryflags,basefield,modifierfield from modulepropertymodifiers")
                 .Execute()
                 .Select(r => new

@@ -441,5 +441,11 @@ namespace Perpetuum.ExportedTypes
         remote_control_lifetime = 677,
         remote_control_lifetime_modifier = 678,
         electric_damage = 679,
+        nox_effect_enhancer_radius_modifier = 683,
+        nox_shield_absorbtion_modifier = 684,
+        nox_shield_absorbtion_modifier_enhancer = 685,
+        nox_repair_amount_modifier = 687,
+        nox_repair_amount_modifier_enhancer = 688,
+        nox_teleport_negation = 689,
     }
 }

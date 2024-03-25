@@ -8,6 +8,7 @@ using Perpetuum.Units;
 using Perpetuum.Zones;
 using Perpetuum.Zones.Beams;
 using Perpetuum.Zones.Locking.Locks;
+using Perpetuum.Zones.NpcSystem;
 using Perpetuum.Zones.NpcSystem.ThreatManaging;
 using System;
 using System.Collections.Generic;
@@ -98,7 +99,9 @@ namespace Perpetuum.Modules
                 .GetUnitsWithinRange2D(target.CurrentPosition, OptimalRange)
                 .OfType<Robot>()
                 .Except(targets)
-                .Where(x => x.Owner != Owner && Zone.IsInLineOfSight(target.CurrentPosition, x, false).hit)
+                .Where(x =>
+                    x != ParentRobot && Zone.IsInLineOfSight(target.CurrentPosition, x, false).hit &&
+                    (!(ParentRobot is Npc) || x.IsPlayer()))
                 .GetNearestUnit(target.CurrentPosition);
             if (unit != null)
             {

@@ -295,6 +295,10 @@ namespace Perpetuum.ExportedTypes
         cf_ew_resist = 0x0000000000010A0F,
         cf_lock_breaker = 0x0000000000020A0F,
         cf_overcharged_armor_resist = 0x0000000000030A0F,
+        cf_nox_modules = 0x0000000000000B0F,
+        cf_nox_shield_negators = 0x0000000000010B0F,
+        cf_nox_repair_negators = 0x0000000000020B0F,
+        cf_nox_teleport_negators = 0x0000000000030B0F,
 
         cf_material = 0x0000000000000014,
         cf_raw_material = 0x0000000000000114,
