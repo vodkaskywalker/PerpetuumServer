@@ -1,9 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Drawing;
-using Perpetuum.Data;
+﻿using Perpetuum.Data;
 using Perpetuum.EntityFramework;
 using Perpetuum.ExportedTypes;
 using Perpetuum.Zones.Terrains.Materials.Plants;
+using System.Collections.Generic;
+using System.Drawing;
 
 namespace Perpetuum.Zones
 {
@@ -17,7 +17,7 @@ namespace Perpetuum.Zones
         private readonly GlobalConfiguration _globalConfiguration;
         private readonly PlantRuleLoader _plantRuleLoader;
 
-        public ZoneConfigurationReader(GlobalConfiguration globalConfiguration,PlantRuleLoader plantRuleLoader)
+        public ZoneConfigurationReader(GlobalConfiguration globalConfiguration, PlantRuleLoader plantRuleLoader)
         {
             _globalConfiguration = globalConfiguration;
             _plantRuleLoader = plantRuleLoader;
@@ -25,23 +25,23 @@ namespace Perpetuum.Zones
 
         public IEnumerable<ZoneConfiguration> GetAll()
         {
-            var records = Db.Query().CommandText("select * from zones where enabled = 1").Execute();
+            List<System.Data.IDataRecord> records = Db.Query().CommandText("select * from zones where enabled = 1").Execute();
 
-            var result = new List<ZoneConfiguration>();
+            List<ZoneConfiguration> result = new List<ZoneConfiguration>();
 
-            var port = _globalConfiguration.ListenerPort + 1;
+            int port = _globalConfiguration.ListenerPort + 1;
 
-           
 
-            foreach (var record in records)
+
+            foreach (System.Data.IDataRecord record in records)
             {
-                var x = record.GetValue<int>("x");
-                var y = record.GetValue<int>("y");
-                var w = record.GetValue<int>("width");
-                var h = record.GetValue<int>("height");
-                var id = record.GetValue<int>("id");
+                int x = record.GetValue<int>("x");
+                int y = record.GetValue<int>("y");
+                int w = record.GetValue<int>("width");
+                int h = record.GetValue<int>("height");
+                int id = record.GetValue<int>("id");
 
-                var config = new ZoneConfiguration
+                ZoneConfiguration config = new ZoneConfiguration
                 {
                     Id = id,
                     WorldPosition = new Point(x, y),
@@ -64,7 +64,8 @@ namespace Perpetuum.Zones
                     Note = record.GetValue<string>("note"),
 
                     TimeLimitMinutes = record.GetValue<int?>("timeLimitMinutes"),
-                    PBSTechLimit = record.GetValue<int?>("pbsTechLimit") ?? 0
+                    PBSTechLimit = record.GetValue<int?>("pbsTechLimit") ?? 0,
+                    PlantsGrowthTimerOverrideMin = record.GetValue<int?>("PlantsGrowthTimerOverrideMin"),
                 };
 
                 config.PlantRules = _plantRuleLoader.LoadPlantRulesWithOverrides(config.plantRuleSetId);
@@ -86,7 +87,7 @@ namespace Perpetuum.Zones
             {2, DefinitionNames.PUBLIC_TELEPORT_COLUMN_NUIMQOL},
             {3, DefinitionNames.PUBLIC_TELEPORT_COLUMN_THELODICA}
         };
-        
+
         public int plantRuleSetId;
 
         public int Id { get; set; }
@@ -109,6 +110,8 @@ namespace Perpetuum.Zones
 
         public int? TimeLimitMinutes { get; set; }
         public int PBSTechLimit { get; set; }
+
+        public int? PlantsGrowthTimerOverrideMin { get; set; }
 
         public ZoneType Type { get; set; }
 
@@ -148,7 +151,7 @@ namespace Perpetuum.Zones
         {
             get
             {
-                var name = _raceIDToTeleport.GetOrDefault(RaceId, DefinitionNames.PUBLIC_TELEPORT_COLUMN_PELISTAL);
+                string name = _raceIDToTeleport.GetOrDefault(RaceId, DefinitionNames.PUBLIC_TELEPORT_COLUMN_PELISTAL);
                 return EntityDefault.GetByName(name);
             }
         }
@@ -166,10 +169,10 @@ namespace Perpetuum.Zones
 
         public bool IsAlpha => Protected;
 
-        public bool IsBeta => (!Protected && !Terraformable);
+        public bool IsBeta => !Protected && !Terraformable;
 
         public bool IsGamma => Terraformable;
     }
 }
 
-    
+

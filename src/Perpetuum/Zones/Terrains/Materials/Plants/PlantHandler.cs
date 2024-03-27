@@ -1,10 +1,10 @@
+using Perpetuum.Log;
+using Perpetuum.Threading.Process;
+using Perpetuum.Timers;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Perpetuum.Log;
-using Perpetuum.Threading.Process;
-using Perpetuum.Timers;
 
 namespace Perpetuum.Zones.Terrains.Materials.Plants
 {
@@ -13,7 +13,7 @@ namespace Perpetuum.Zones.Terrains.Materials.Plants
         TimeSpan RenewSpeed { set; }
         Area WorkArea { set; }
         PlantScannerMode ScannerMode { set; }
-        IDictionary<string,object> GetInfoDictionary();
+        IDictionary<string, object> GetInfoDictionary();
     }
 
     public class PlantHandler : IPlantHandler
@@ -45,12 +45,13 @@ namespace Perpetuum.Zones.Terrains.Materials.Plants
         {
             _zone = zone;
             _areaAmount = zone.Size.Width / AREA_SIZE; //the amount of areas
-            var _total_area = (zone.Size.Width / (float)AREA_SIZE) * (zone.Size.Height / (float)AREA_SIZE);
-            var refreshRate = TimeSpan.FromHours(FULL_PLANT_REGEN_PASS / _total_area);
+            float _total_area = zone.Size.Width / (float)AREA_SIZE * (zone.Size.Height / (float)AREA_SIZE);
+            TimeSpan refreshRate = zone.Configuration.PlantsGrowthTimerOverrideMin.HasValue
+                ? TimeSpan.FromMinutes(zone.Configuration.PlantsGrowthTimerOverrideMin.Value)
+                : TimeSpan.FromHours(FULL_PLANT_REGEN_PASS / _total_area);
             _plantsTimer = new IntervalTimer(refreshRate);
             _natureSleepAmount = refreshRate;
             WorkArea = zone.Size.ToArea();
-
             ScannerMode = PlantScannerMode.Scanner;
             ResetState();
         }
@@ -67,17 +68,21 @@ namespace Perpetuum.Zones.Terrains.Materials.Plants
 
         public void Update(TimeSpan time)
         {
-            _plantsTimer.Update(time);
+            _ = _plantsTimer.Update(time);
 
-            if (!_plantsTimer.Passed) 
+            if (!_plantsTimer.Passed)
+            {
                 return;
+            }
 
             _plantsTimer.Reset();
 
-            if ( Interlocked.CompareExchange(ref _isInProcess,1,0) == 1)
+            if (Interlocked.CompareExchange(ref _isInProcess, 1, 0) == 1)
+            {
                 return;
+            }
 
-            Task.Run(() => ProcessPlants()).ContinueWith(t =>
+            _ = Task.Run(() => ProcessPlants()).ContinueWith(t =>
             {
                 _isInProcess = 0;
                 _stopSignal = false;
@@ -121,7 +126,11 @@ namespace Perpetuum.Zones.Terrains.Materials.Plants
             //do full map in one round            
             while (!_zoneFinished)
             {
-                if (_stopSignal) return;
+                if (_stopSignal)
+                {
+                    return;
+                }
+
                 ScanZone();
             }
 
@@ -135,12 +144,12 @@ namespace Perpetuum.Zones.Terrains.Materials.Plants
             {
                 if (_stopSignal)
                 {
-                    Logger.Info("Planthandler STOP SIGNAL received. zone:"+ _zone.Id);
+                    Logger.Info("Planthandler STOP SIGNAL received. zone:" + _zone.Id);
                     return;
                 }
 
-                var area = GetNewArea();
-#if (DEBUG)
+                Area area = GetNewArea();
+#if DEBUG
                 if (ScannerMode == PlantScannerMode.Scanner && area.X1 == 0 && area.Y1 == 0)
                 {
                     Logger.Info("plant scan starts on zone:" + _zone.Id);
@@ -163,7 +172,7 @@ namespace Perpetuum.Zones.Terrains.Materials.Plants
                 //do full map in one round            
                 while (!_zoneFinished)
                 {
-                    var area = GetNewArea();
+                    Area area = GetNewArea();
                     _zone.UpdateNatureCube(area, cube => cube.CorrectOnly());
                 }
             }
@@ -214,7 +223,7 @@ namespace Perpetuum.Zones.Terrains.Materials.Plants
 
         public TimeSpan RenewSpeed
         {
-            set { _plantsTimer = new IntervalTimer(value); }
+            set => _plantsTimer = new IntervalTimer(value);
         }
 
         private void ResetState()
@@ -230,13 +239,15 @@ namespace Perpetuum.Zones.Terrains.Materials.Plants
         {
             set
             {
-                if ( _scannerMode == value )
+                if (_scannerMode == value)
+                {
                     return;
+                }
 
-                var preValue = _scannerMode;
+                PlantScannerMode preValue = _scannerMode;
                 _scannerMode = value;
 
-                Logger.Info("Plant scanner mode is set " + preValue + " -> " + _scannerMode +" on " + _zone.Id);
+                Logger.Info("Plant scanner mode is set " + preValue + " -> " + _scannerMode + " on " + _zone.Id);
 
                 ResetState();
 
@@ -274,13 +285,13 @@ namespace Perpetuum.Zones.Terrains.Materials.Plants
                 _zoneFinished = false;
             }
 
-            get { return _scannerMode; }
+            get => _scannerMode;
 
         }
 
         public IDictionary<string, object> GetInfoDictionary()
         {
-            var result = new Dictionary<string, object>
+            Dictionary<string, object> result = new Dictionary<string, object>
             {
                 {k.mode,_scannerMode.ToString()},
                 {k.area, WorkArea},

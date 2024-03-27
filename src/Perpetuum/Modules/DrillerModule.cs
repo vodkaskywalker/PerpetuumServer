@@ -204,8 +204,10 @@ namespace Perpetuum.Modules
                 return;
             }
 
-            bool containsEnablerEffect = ParentRobot.EffectHandler.ContainsEffect(EffectCategory.effcat_pbs_mining_tower_effect);
-
+            bool containsEnablerEffect = ParentRobot.EffectHandler.ContainsEffect(EffectCategory.effcat_pbs_mining_tower_effect) ||
+                (ParentRobot is RemoteControlledCreature rcu &&
+                    rcu.CommandRobot is Player player &&
+                    player.EffectHandler.ContainsEffect(EffectCategory.effcat_pbs_mining_tower_effect));
             containsEnablerEffect.ThrowIfFalse(ErrorCodes.MiningEnablerEffectRequired);
         }
     }
