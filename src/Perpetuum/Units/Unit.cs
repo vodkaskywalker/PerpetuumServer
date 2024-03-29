@@ -8,6 +8,7 @@ using Perpetuum.Modules;
 using Perpetuum.Modules.Weapons;
 using Perpetuum.Players;
 using Perpetuum.Robots;
+using Perpetuum.Services.RiftSystem;
 using Perpetuum.Timers;
 using Perpetuum.Zones;
 using Perpetuum.Zones.Beams;
@@ -22,6 +23,7 @@ using Perpetuum.Zones.PBS;
 using Perpetuum.Zones.PBS.DockingBases;
 using Perpetuum.Zones.PBS.Turrets;
 using Perpetuum.Zones.RemoteControl;
+using Perpetuum.Zones.Teleporting;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -46,15 +48,17 @@ namespace Perpetuum.Units
 
         protected override double CalculateValue()
         {
-            var speedMax = _owner.GetPropertyModifier(AggregateField.speed_max);
-            var speedMaxMod = _owner.GetPropertyModifier(AggregateField.speed_max_modifier);
+            ItemPropertyModifier speedMax = _owner.GetPropertyModifier(AggregateField.speed_max);
+            ItemPropertyModifier speedMaxMod = _owner.GetPropertyModifier(AggregateField.speed_max_modifier);
             speedMaxMod.Modify(ref speedMax);
 
             _owner.ApplyEffectPropertyModifiers(AggregateField.effect_speed_max_modifier, ref speedMax);
             _owner.ApplyEffectPropertyModifiers(AggregateField.effect_massivness_speed_max_modifier, ref speedMax);
 
             if (_owner.ActualMass > 0)
+            {
                 speedMax.Multiply(_owner.Mass / _owner.ActualMass);
+            }
 
             _owner.ApplyEffectPropertyModifiers(AggregateField.effect_speed_highway_modifier, ref speedMax);
             return speedMax.Value;
@@ -86,9 +90,6 @@ namespace Perpetuum.Units
         private ICoreRecharger _coreRecharger = CoreRecharger.None;
 
         private readonly DamageProcessor _damageProcessor;
-
-        private readonly OptionalPropertyCollection _optionalProperties = new OptionalPropertyCollection();
-
         private readonly object _killSync = new object();
 
         private Position _currentPosition;
@@ -126,11 +127,11 @@ namespace Perpetuum.Units
         {
             _damageProcessor = new DamageProcessor(this) { DamageTaken = OnDamageTaken };
 
-            var effectHandler = new EffectHandler(this);
+            EffectHandler effectHandler = new EffectHandler(this);
             effectHandler.EffectChanged += OnEffectChanged;
             EffectHandler = effectHandler;
 
-            _optionalProperties.PropertyChanged += property =>
+            OptionalProperties.PropertyChanged += property =>
             {
                 UpdateTypes |= UnitUpdateTypes.OptionalProperty;
             };
@@ -150,23 +151,22 @@ namespace Perpetuum.Units
 
         public Guid GetMissionGuid()
         {
-            var p = (ReadOnlyOptionalProperty<Guid>)_optionalProperties.Get(UnitDataType.MissionGuid);
+            ReadOnlyOptionalProperty<Guid> p = (ReadOnlyOptionalProperty<Guid>)OptionalProperties.Get(UnitDataType.MissionGuid);
             return p?.Value ?? Guid.Empty;
         }
 
         public int GetMissionDisplayOrder()
         {
-            var p = (ReadOnlyOptionalProperty<int>)_optionalProperties.Get(UnitDataType.MissionDisplayOrder);
-            if (p == null)
-                return -1;
-
-            return p.Value;
+            ReadOnlyOptionalProperty<int> p = (ReadOnlyOptionalProperty<int>)OptionalProperties.Get(UnitDataType.MissionDisplayOrder);
+            return p == null ? -1 : p.Value;
         }
 
         public override void AcceptVisitor(IEntityVisitor visitor)
         {
             if (!TryAcceptVisitor(this, visitor))
+            {
                 base.AcceptVisitor(visitor);
+            }
         }
 
         private IZone _zone;
@@ -176,7 +176,7 @@ namespace Perpetuum.Units
 
         public bool InZone => Zone != null;
 
-        public OptionalPropertyCollection OptionalProperties => _optionalProperties;
+        public OptionalPropertyCollection OptionalProperties { get; } = new OptionalPropertyCollection();
 
         public EffectHandler EffectHandler { get; private set; }
 
@@ -188,7 +188,9 @@ namespace Perpetuum.Units
             set
             {
                 if (Math.Abs(_currentSpeed - value) < double.Epsilon)
+                {
                     return;
+                }
 
                 _currentSpeed = value;
                 UpdateTypes |= UnitUpdateTypes.Speed;
@@ -201,7 +203,9 @@ namespace Perpetuum.Units
             set
             {
                 if (Math.Abs(_direction - value) < double.Epsilon)
+                {
                     return;
+                }
 
                 _direction = value;
                 UpdateTypes |= UnitUpdateTypes.Direction;
@@ -214,7 +218,9 @@ namespace Perpetuum.Units
             set
             {
                 if (Math.Abs(_orientation - value) < double.Epsilon)
+                {
                     return;
+                }
 
                 _orientation = value;
                 UpdateTypes |= UnitUpdateTypes.Orientation;
@@ -225,21 +231,9 @@ namespace Perpetuum.Units
 
         public virtual bool IsLockable => !ED.AttributeFlags.NonLockable && !States.Dead && !States.Unlockable;
 
-        public virtual ErrorCodes IsAttackable
-        {
-            get
-            {
-                if (!ED.AttributeFlags.NonAttackable && !States.Dead)
-                    return ErrorCodes.NoError;
+        public virtual ErrorCodes IsAttackable => !ED.AttributeFlags.NonAttackable && !States.Dead ? ErrorCodes.NoError : ErrorCodes.TargetIsNonAttackable;
 
-                return ErrorCodes.TargetIsNonAttackable;
-            }
-        }
-
-        public bool IsInvulnerable
-        {
-            get { return ED.AttributeFlags.Invulnerable || EffectHandler.ContainsEffect(EffectType.effect_invulnerable); }
-        }
+        public bool IsInvulnerable => ED.AttributeFlags.Invulnerable || EffectHandler.ContainsEffect(EffectType.effect_invulnerable);
 
 
         public bool HasShieldEffect => EffectHandler.ContainsEffect(EffectType.effect_shield);
@@ -252,39 +246,37 @@ namespace Perpetuum.Units
 
         public bool HasNoTeleportWhilePVP => EffectHandler.Effects.Any(e => e.PropertyModifiers.Any(p => p.Field == AggregateField.pvp_no_teleport));
 
-        public Position WorldPosition
-        {
-            get { return Zone?.ToWorldPosition(CurrentPosition) ?? CurrentPosition; }
-        }
+        public Position WorldPosition => Zone?.ToWorldPosition(CurrentPosition) ?? CurrentPosition;
 
-        public Position PositionWithHeight
-        {
-            get { return CurrentPosition.AddToZ(Height); }
-        }
+        public Position PositionWithHeight => CurrentPosition.AddToZ(Height);
 
         public Position CurrentPosition
         {
-            get { return _currentPosition; }
+            get => _currentPosition;
             set
             {
-                var lastPosition = _currentPosition;
+                Position lastPosition = _currentPosition;
 
                 _currentPosition = Zone.FixZ(value);
 
                 UpdateTypes |= UnitUpdateTypes.Position;
 
                 if (!lastPosition.IsTileChange(_currentPosition))
+                {
                     return;
+                }
 
                 UpdateTypes |= UnitUpdateTypes.TileChanged;
 
                 OnTileChanged();
 
-                var lastCellCoord = lastPosition.ToCellCoord();
-                var currentCellCoord = _currentPosition.ToCellCoord();
+                CellCoord lastCellCoord = lastPosition.ToCellCoord();
+                CellCoord currentCellCoord = _currentPosition.ToCellCoord();
 
                 if (lastCellCoord == currentCellCoord)
+                {
                     return;
+                }
 
                 OnCellChanged(lastCellCoord, currentCellCoord);
             }
@@ -301,7 +293,9 @@ namespace Perpetuum.Units
         public void Update(TimeSpan time)
         {
             if (!InZone || States.Dead)
+            {
                 return;
+            }
 
             OnUpdate(time);
         }
@@ -316,7 +310,7 @@ namespace Perpetuum.Units
 
             UnitUpdatedEventArgs e = null;
 
-            _broadcastTimer.Update(time);
+            _ = _broadcastTimer.Update(time);
 
             if (_broadcastTimer.Passed)
             {
@@ -328,28 +322,32 @@ namespace Perpetuum.Units
 
                     if ((UpdateTypes & UnitUpdateTypes.Unit) > 0)
                     {
-                        var packetBuilder = new UnitUpdatePacketBuilder(this);
+                        UnitUpdatePacketBuilder packetBuilder = new UnitUpdatePacketBuilder(this);
                         OnBroadcastPacket(packetBuilder.ToProxy());
                     }
 
                     UpdateTypes = UnitUpdateTypes.None;
                 }
 
-                var changedProperties = GetChangedProperties();
+                ImmutableHashSet<ItemProperty> changedProperties = GetChangedProperties();
                 if (changedProperties != ImmutableHashSet<ItemProperty>.Empty)
                 {
                     if (e == null)
+                    {
                         e = new UnitUpdatedEventArgs();
+                    }
 
                     e.UpdatedProperties = changedProperties;
 
-                    var builder = new UnitPropertiesUpdatePacketBuilder(this, changedProperties);
+                    UnitPropertiesUpdatePacketBuilder builder = new UnitPropertiesUpdatePacketBuilder(this, changedProperties);
                     OnBroadcastPacket(builder.ToProxy());
                 }
             }
 
             if (e == null)
+            {
                 return;
+            }
 
             OnUpdated(e);
         }
@@ -366,10 +364,10 @@ namespace Perpetuum.Units
         {
             EffectChanged?.Invoke(this, effect, apply);
 
-            var canBroadcast = effect.Display;
+            bool canBroadcast = effect.Display;
             if (canBroadcast)
             {
-                var packetBuilder = new EffectPacketBuilder(effect, apply);
+                EffectPacketBuilder packetBuilder = new EffectPacketBuilder(effect, apply);
                 OnBroadcastPacket(packetBuilder.ToProxy());
             }
         }
@@ -389,7 +387,9 @@ namespace Perpetuum.Units
             zone.AddUnit(this);
 
             if (enterBeamBuilder != null)
+            {
                 zone.CreateBeam(enterBeamBuilder);
+            }
 
             EnterPacketBuilder = UnitEnterPacketBuilder.Create(this, enterType);
             zone.UpdateUnitRelations(this);
@@ -438,14 +438,16 @@ namespace Perpetuum.Units
         {
             DamageTaken?.Invoke(this, source, e);
 
-            var packet = new CombatLogPacket(CombatLogType.Damage, this, source);
+            CombatLogPacket packet = new CombatLogPacket(CombatLogType.Damage, this, source);
             packet.AppendByte((byte)(e.IsCritical ? 1 : 0));
             packet.AppendDouble(e.TotalDamage);
             packet.AppendDouble(e.TotalKers);
             packet.Send(this, source);
 
             if (!(e.TotalDamage >= 0.0))
+            {
                 return;
+            }
 
             Armor -= e.TotalDamage;
 
@@ -482,15 +484,19 @@ namespace Perpetuum.Units
 
         protected virtual void DoExplosion()
         {
-            var zone = Zone;
+            IZone zone = Zone;
             if (zone == null)
+            {
                 return;
+            }
 
             if (zone.Configuration.Protected)
+            {
                 return;
+            }
 
-            var damageBuilder = GetExplosionDamageBuilder();
-            Task.Delay(FastRandom.NextInt(0, 3000)).ContinueWith(t => zone.DoAoeDamage(damageBuilder));
+            IDamageBuilder damageBuilder = GetExplosionDamageBuilder();
+            _ = Task.Delay(FastRandom.NextInt(0, 3000)).ContinueWith(t => zone.DoAoeDamage(damageBuilder));
         }
 
         /// <summary>
@@ -502,29 +508,33 @@ namespace Perpetuum.Units
         private double SigRadiusToExplosionRadius(double x)
         {
             x = x.Clamp(3.0, 40.0);
-            return (-3.336453 + 1.617863 * x - 0.09721877 * (x * x) + 0.002064723 * (x * x * x)).Clamp(1.0, 30.0);
+            return (-3.336453 + (1.617863 * x) - (0.09721877 * (x * x)) + (0.002064723 * (x * x * x))).Clamp(1.0, 30.0);
         }
 
         private IDamageBuilder GetExplosionDamageBuilder()
         {
-            var radius = SigRadiusToExplosionRadius(SignatureRadius);
-            var damageBuilder = DamageInfo.Builder.WithAttacker(this)
+            double radius = SigRadiusToExplosionRadius(SignatureRadius);
+            IDamageBuilder damageBuilder = DamageInfo.Builder.WithAttacker(this)
                                           .WithOptimalRange(1)
                                           .WithFalloff(radius)
                                           .WithExplosionRadius(radius);
 
-            var armorMaxValue = ArmorMax;
+            double armorMaxValue = ArmorMax;
 
             if (armorMaxValue.IsZero())
+            {
                 armorMaxValue = 1.0;
+            }
 
-            var coreMax = CoreMax;
+            double coreMax = CoreMax;
 
             if (coreMax.IsZero())
+            {
                 coreMax = 1.0;
+            }
 
-            var damage = (Math.Sin(Core.Ratio(coreMax) * Math.PI) + 1) * (armorMaxValue * 0.1);
-            damageBuilder.WithAllDamageTypes(damage);
+            double damage = (Math.Sin(Core.Ratio(coreMax) * Math.PI) + 1) * (armorMaxValue * 0.1);
+            _ = damageBuilder.WithAllDamageTypes(damage);
             return damageBuilder;
         }
 
@@ -562,23 +572,29 @@ namespace Perpetuum.Units
         public void Kill(Unit killer = null)
         {
             if (!Monitor.TryEnter(_killSync))
+            {
                 return;
+            }
 
             try
             {
-                var detector = new KillDetectorHelper();
+                KillDetectorHelper detector = new KillDetectorHelper();
 
                 AcceptVisitor(detector);
 
                 if (!detector.CanBeKilledResult)
+                {
                     return;
+                }
 
                 if (States.Dead || !InZone)
+                {
                     return;
+                }
 
                 if (killer != null)
                 {
-                    var killingBlowPacket = new CombatLogPacket(CombatLogType.KillingBlow, this, killer);
+                    CombatLogPacket killingBlowPacket = new CombatLogPacket(CombatLogType.KillingBlow, this, killer);
                     killingBlowPacket.Send(this, killer);
 
                     OnCombatEvent(killer, new KillingBlowEventArgs());
@@ -631,17 +647,19 @@ namespace Perpetuum.Units
 
         public override Dictionary<string, object> ToDictionary()
         {
-            var result = base.ToDictionary();
+            Dictionary<string, object> result = base.ToDictionary();
 
             if (!InZone)
+            {
                 return result;
+            }
 
             result.Add(k.px, CurrentPosition.X);
             result.Add(k.py, CurrentPosition.Y);
             result.Add(k.pz, CurrentPosition.Z);
             result.Add(k.orientation, (byte)(_orientation * 255));
 
-            var standingControlled = this as IStandingController;
+            IStandingController standingControlled = this as IStandingController;
             standingControlled?.AddStandingInfoToDictonary(result);
 
             return result;
@@ -676,7 +694,7 @@ namespace Perpetuum.Units
 
         public double GetResistByDamageType(DamageType damageType)
         {
-            var resist = 0.0;
+            double resist = 0.0;
 
             switch (damageType)
             {
@@ -686,14 +704,14 @@ namespace Perpetuum.Units
                 case DamageType.Explosive: { resist = _resistExplosive.Value; break; }
             }
 
-            resist /= (resist + 100);
+            resist /= resist + 100;
             return resist;
         }
 
         public EffectBuilder NewEffectBuilder()
         {
-            var builder = EffectBuilderFactory();
-            builder.WithOwner(this);
+            EffectBuilder builder = EffectBuilderFactory();
+            _ = builder.WithOwner(this);
             return builder;
         }
 
@@ -709,10 +727,10 @@ namespace Perpetuum.Units
 
         public void ApplyPvPEffect(TimeSpan duration)
         {
-            var effect = EffectHandler.GetEffectsByType(EffectType.effect_pvp).FirstOrDefault();
-            var token = effect?.Token ?? EffectToken.NewToken();
-            var builder = NewEffectBuilder();
-            builder.SetType(EffectType.effect_pvp).WithDuration(duration).WithToken(token);
+            Effect effect = EffectHandler.GetEffectsByType(EffectType.effect_pvp).FirstOrDefault();
+            EffectToken token = effect?.Token ?? EffectToken.NewToken();
+            EffectBuilder builder = NewEffectBuilder();
+            _ = builder.SetType(EffectType.effect_pvp).WithDuration(duration).WithToken(token);
             ApplyEffect(builder);
         }
 
@@ -733,7 +751,7 @@ namespace Perpetuum.Units
 
         public virtual IDictionary<string, object> GetDebugInfo()
         {
-            var info = new Dictionary<string, object>
+            Dictionary<string, object> info = new Dictionary<string, object>
             {
                 {k.eid, Eid},
                 {k.definitionName, ED.Name},
@@ -743,13 +761,13 @@ namespace Perpetuum.Units
             };
 
 
-            var counter = 0;
-            foreach (var effect in EffectHandler.Effects)
+            int counter = 0;
+            foreach (Effect effect in EffectHandler.Effects)
             {
                 info.Add("e" + counter++, effect.Type.ToString());
             }
 
-            var standingControlled = this as IStandingController;
+            IStandingController standingControlled = this as IStandingController;
             standingControlled?.AddStandingInfoToDictonary(info);
 
             return info;
@@ -757,7 +775,7 @@ namespace Perpetuum.Units
 
         public void ApplyEffectPropertyModifiers(AggregateField modifierField, ref ItemPropertyModifier modifier)
         {
-            foreach (var effect in EffectHandler.Effects)
+            foreach (Effect effect in EffectHandler.Effects)
             {
                 effect.ApplyTo(ref modifier, modifierField);
             }
@@ -776,10 +794,10 @@ namespace Perpetuum.Units
 
             public Packet Build()
             {
-                var packet = new Packet(ZoneCommand.EnterUnit);
+                Packet packet = new Packet(ZoneCommand.EnterUnit);
 
                 packet.AppendLong(_unit.Eid);
-                var character = _unit.GetCharacter();
+                Accounting.Characters.Character character = _unit.GetCharacter();
                 packet.AppendInt(character.Id);
 
                 packet.AppendPosition(_unit.CurrentPosition);
@@ -787,7 +805,7 @@ namespace Perpetuum.Units
                 packet.AppendByte((byte)(_unit.Orientation * byte.MaxValue));
                 packet.AppendByte((byte)(_unit.Direction * byte.MaxValue));
 
-                var desc = GetDescription(_unit);
+                byte[] desc = GetDescription(_unit);
                 packet.AppendByteArray(desc);
                 packet.AppendByte((byte)_enterType);
                 _unit.States.AppendToPacket(packet);
@@ -796,14 +814,13 @@ namespace Perpetuum.Units
                 packet.AppendDouble(_unit._speedMax.Value);
                 packet.AppendLong(_unit.Owner);
 
-                var robot = _unit as Robot;
-                if (robot == null)
+                if (!(_unit is Robot robot))
                 {
                     packet.AppendByte(0);
                 }
                 else
                 {
-                    var primaryLock = robot.GetPrimaryLock();
+                    Zones.Locking.Locks.Lock primaryLock = robot.GetPrimaryLock();
                     if (primaryLock != null)
                     {
                         packet.AppendByte(1);
@@ -816,10 +833,10 @@ namespace Perpetuum.Units
                 }
 
                 // effektek
-                var effects = _unit.EffectHandler.Effects.ToArray();
+                Effect[] effects = _unit.EffectHandler.Effects.ToArray();
                 packet.AppendInt(effects.Length);
 
-                foreach (var effect in effects)
+                foreach (Effect effect in effects)
                 {
                     effect.AppendToStream(packet);
                 }
@@ -830,14 +847,13 @@ namespace Perpetuum.Units
 
             private static byte[] GetDescription(Unit unit)
             {
-                using (var stream = new MemoryStream())
+                using (MemoryStream stream = new MemoryStream())
                 {
-                    using (var bw = new BinaryWriter(stream))
+                    using (BinaryWriter bw = new BinaryWriter(stream))
                     {
                         bw.Write(unit.Definition);
 
-                        var robot = unit as Robot;
-                        if (robot != null)
+                        if (unit is Robot robot)
                         {
                             WriteRobotComponent(bw, robot.GetRobotComponent<RobotHead>());
                             WriteRobotComponent(bw, robot.GetRobotComponent<RobotChassis>());
@@ -865,16 +881,16 @@ namespace Perpetuum.Units
                 bw.Write(component.Definition);
                 bw.Write((byte)component.MaxSlots);
 
-                for (var i = 0; i < component.MaxSlots; i++)
+                for (int i = 0; i < component.MaxSlots; i++)
                 {
-                    var module = component.GetModule(i + 1);
+                    Module module = component.GetModule(i + 1);
                     WriteModule(bw, module);
                 }
             }
 
             private static void WriteModule(BinaryWriter bw, Module module)
             {
-                var moduleDefinition = module?.Definition ?? 0;
+                int moduleDefinition = module?.Definition ?? 0;
                 bw.Write(moduleDefinition);
             }
 
@@ -893,29 +909,17 @@ namespace Perpetuum.Units
                 _unit = unit;
             }
 
-            private ZoneExitType ExitType
-            {
-                get
-                {
-                    if (_unit.States.Dead)
-                        return ZoneExitType.Died;
-
-                    if (_unit.States.Dock)
-                        return ZoneExitType.Docked;
-
-                    if (_unit.States.Teleport)
-                        return ZoneExitType.Teleport;
-
-                    if (_unit.States.LocalTeleport)
-                        return ZoneExitType.LocalTeleport;
-
-                    return ZoneExitType.LeftGrid;
-                }
-            }
+            private ZoneExitType ExitType => _unit.States.Dead
+                        ? ZoneExitType.Died
+                        : _unit.States.Dock
+                        ? ZoneExitType.Docked
+                        : _unit.States.Teleport
+                        ? ZoneExitType.Teleport
+                        : _unit.States.LocalTeleport ? ZoneExitType.LocalTeleport : ZoneExitType.LeftGrid;
 
             public Packet Build()
             {
-                var packet = new Packet(ZoneCommand.ExitUnit);
+                Packet packet = new Packet(ZoneCommand.ExitUnit);
                 packet.AppendLong(_unit.Eid);
                 packet.AppendByte((byte)ExitType);
                 return packet;
@@ -943,6 +947,21 @@ namespace Perpetuum.Units
 
         internal virtual bool IsHostile(CombatDrone drone) { return false; }
 
+        internal virtual bool IsHostile(Rift rift)
+        {
+            return false;
+        }
+
+        internal virtual bool IsHostile(Portal portal)
+        {
+            return false;
+        }
+
+        internal virtual bool IsHostile(MobileTeleport teleport)
+        {
+            return false;
+        }
+
         public void StopMoving()
         {
             CurrentSpeed = 0;
@@ -950,11 +969,8 @@ namespace Perpetuum.Units
 
         public IEnumerable<T> GetUnitsWithinRange<T>(double distance) where T : Unit
         {
-            var zone = Zone;
-            if (zone == null)
-                return Enumerable.Empty<T>();
-
-            return zone.Units.OfType<T>().WithinRange(CurrentPosition, distance);
+            IZone zone = Zone;
+            return zone == null ? Enumerable.Empty<T>() : zone.Units.OfType<T>().WithinRange(CurrentPosition, distance);
         }
 
         protected override void OnPropertyChanged(ItemProperty property)
@@ -968,96 +984,54 @@ namespace Perpetuum.Units
             }
         }
 
-        public double ArmorPercentage
-        {
-            get { return Armor.Ratio(ArmorMax); }
-        }
+        public double ArmorPercentage => Armor.Ratio(ArmorMax);
 
-        public double ArmorMax
-        {
-            get { return _armorMax.Value; }
-        }
+        public double ArmorMax => _armorMax.Value;
 
         public double Armor
         {
-            get { return _armor.Value; }
-            set { _armor.SetValue(value); }
+            get => _armor.Value;
+            set => _armor.SetValue(value);
         }
 
-        public double ActualMass
-        {
-            get { return _actualMass.Value; }
-        }
+        public double ActualMass => _actualMass.Value;
 
-        public double CorePercentage
-        {
-            get { return Core.Ratio(CoreMax); }
-        }
+        public double CorePercentage => Core.Ratio(CoreMax);
 
-        public double CoreMax
-        {
-            get { return _coreMax.Value; }
-        }
+        public double CoreMax => _coreMax.Value;
 
         public double Core
         {
-            get { return _core.Value; }
-            set { _core.SetValue(value); }
+            get => _core.Value;
+            set => _core.SetValue(value);
         }
 
-        public double CriticalHitChance
-        {
-            get { return _criticalHitChance.Value; }
-        }
+        public double CriticalHitChance => _criticalHitChance.Value;
 
-        public double SignatureRadius
-        {
-            get { return _signatureRadius.Value; }
-        }
+        public double SignatureRadius => _signatureRadius.Value;
 
-        public double SensorStrength
-        {
-            get { return _sensorStrength.Value; }
-        }
+        public double SensorStrength => _sensorStrength.Value;
 
-        public double DetectionStrength
-        {
-            get { return _detectionStrength.Value; }
-        }
+        public double DetectionStrength => _detectionStrength.Value;
 
-        public double StealthStrength
-        {
-            get { return _stealthStrength.Value; }
-        }
+        public double StealthStrength => _stealthStrength.Value;
 
-        public double Massiveness
-        {
-            get { return _massiveness.Value; }
-        }
+        public double Massiveness => _massiveness.Value;
 
-        public double ReactorRadiation
-        {
-            get { return _reactorRadiation.Value; }
-        }
+        public double ReactorRadiation => _reactorRadiation.Value;
 
-        public double Slope
-        {
-            get { return _slope.Value; }
-        }
+        public double Slope => _slope.Value;
 
         public double Speed
         {
             get
             {
-                var speedMax = _speedMax.Value;
+                double speedMax = _speedMax.Value;
                 return speedMax * _currentSpeed;
             }
         }
 
-        public double MaxSpeed
-        {
-            get { return _speedMax.Value; }
-        }
+        public double MaxSpeed => _speedMax.Value;
 
         public TimeSpan CoreRechargeTime => TimeSpan.FromSeconds(_coreRechargeTime.Value);
 
@@ -1086,7 +1060,10 @@ namespace Perpetuum.Units
             _core.PropertyChanged += property =>
             {
                 if (property.Value > 1.0)
+                {
                     return;
+                }
+
                 EffectHandler.RemoveEffectsByCategory(EffectCategory.effcat_zero_core_drop);
             };
             AddProperty(_core);
@@ -1163,11 +1140,11 @@ namespace Perpetuum.Units
 
             protected override double CalculateValue()
             {
-                var armor = owner.ArmorMax;
+                double armor = owner.ArmorMax;
 
                 if (owner.DynamicProperties.Contains(k.armor))
                 {
-                    var armorPercentage = owner.DynamicProperties.GetOrAdd<double>(k.armor);
+                    double armorPercentage = owner.DynamicProperties.GetOrAdd<double>(k.armor);
                     armor = CalculateArmorByPercentage(armorPercentage);
                 }
 
@@ -1184,7 +1161,7 @@ namespace Perpetuum.Units
                     return;
                 }
 
-                var armorMax = owner.ArmorMax;
+                double armorMax = owner.ArmorMax;
                 if (newValue >= armorMax)
                 {
                     newValue = armorMax;
@@ -1194,19 +1171,21 @@ namespace Perpetuum.Units
             private double CalculateArmorByPercentage(double percent)
             {
                 if (double.IsNaN(percent))
+                {
                     percent = 0.0;
+                }
 
                 // 0.0 - 1.0
                 percent = percent.Clamp();
 
-                var armorMax = owner.ArmorMax;
+                double armorMax = owner.ArmorMax;
 
                 if (double.IsNaN(armorMax))
                 {
                     armorMax = 0.0;
                 }
 
-                var val = armorMax * percent;
+                double val = armorMax * percent;
                 return val;
             }
 
@@ -1218,7 +1197,7 @@ namespace Perpetuum.Units
 
             protected override double CalculateValue()
             {
-                var currentCore = owner.CoreMax;
+                double currentCore = owner.CoreMax;
 
                 if (owner.DynamicProperties.Contains(k.currentCore))
                 {
@@ -1242,8 +1221,8 @@ namespace Perpetuum.Units
 
             protected override double CalculateValue()
             {
-                var mass = owner.Mass;
-                var massMod = owner.GetPropertyModifier(AggregateField.mass_modifier);
+                double mass = owner.Mass;
+                ItemPropertyModifier massMod = owner.GetPropertyModifier(AggregateField.mass_modifier);
                 massMod.Modify(ref mass);
 
                 if (owner is Robot robot)
@@ -1264,9 +1243,9 @@ namespace Perpetuum.Units
 
             protected override double CalculateValue()
             {
-                var v = base.CalculateValue();
+                double v = base.CalculateValue();
 
-                var blobableUnit = owner as IBlobableUnit;
+                IBlobableUnit blobableUnit = owner as IBlobableUnit;
                 blobableUnit?.BlobHandler.ApplyBlobPenalty(ref v, 0.75);
 
                 return v;
@@ -1282,9 +1261,9 @@ namespace Perpetuum.Units
 
             protected override double CalculateValue()
             {
-                var v = base.CalculateValue();
+                double v = base.CalculateValue();
 
-                var blobableUnit = owner as IBlobableUnit;
+                IBlobableUnit blobableUnit = owner as IBlobableUnit;
                 blobableUnit?.BlobHandler.ApplyBlobPenalty(ref v, 0.5);
 
                 return v;

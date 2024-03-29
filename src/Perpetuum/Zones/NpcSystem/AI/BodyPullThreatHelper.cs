@@ -1,11 +1,13 @@
 ﻿using Perpetuum.EntityFramework;
 using Perpetuum.Modules.Weapons;
 using Perpetuum.Players;
+using Perpetuum.Services.RiftSystem;
 using Perpetuum.Units;
 using Perpetuum.Zones.Eggs;
 using Perpetuum.Zones.NpcSystem.AI.Behaviors;
 using Perpetuum.Zones.NpcSystem.ThreatManaging;
 using Perpetuum.Zones.RemoteControl;
+using Perpetuum.Zones.Teleporting;
 using System.Linq;
 
 namespace Perpetuum.Zones.NpcSystem.AI
@@ -15,7 +17,8 @@ namespace Perpetuum.Zones.NpcSystem.AI
         IEntityVisitor<AreaBomb>,
         IEntityVisitor<Npc>,
         IEntityVisitor<SentryTurret>,
-        IEntityVisitor<CombatDrone>
+        IEntityVisitor<CombatDrone>,
+        IEntityVisitor<Portal>
     {
         private readonly SmartCreature smartCreature;
 
@@ -98,61 +101,30 @@ namespace Perpetuum.Zones.NpcSystem.AI
 
         public void Visit(Npc npc)
         {
-            if (smartCreature.Behavior.Type != BehaviorType.RemoteControlledTurret &&
-                smartCreature.Behavior.Type != BehaviorType.RemoteControlledDrone)
-            {
-                return;
-            }
-
-            if (!smartCreature.ActiveModules.Any(m => m is WeaponModule))
-            {
-                return;
-            }
-
-            if (smartCreature.ThreatManager.Hostiles.Any(h => h.Unit.Eid == npc.Eid))
-            {
-                return;
-            }
-
-            if (!smartCreature.IsInAggroRange(npc))
-            {
-                return;
-            }
-
-            double threat = Threat.BODY_PULL + FastRandom.NextDouble(0, 5);
-
-            smartCreature.AddThreat(npc, new Threat(ThreatType.Bodypull, threat));
+            ProcessRcuThreats(npc);
         }
 
         public void Visit(SentryTurret sentryTurret)
         {
-            if (smartCreature.Behavior.Type != BehaviorType.RemoteControlledTurret &&
-                smartCreature.Behavior.Type != BehaviorType.RemoteControlledDrone)
-            {
-                return;
-            }
-
-            if (!smartCreature.ActiveModules.Any(m => m is WeaponModule))
-            {
-                return;
-            }
-
-            if (smartCreature.ThreatManager.Hostiles.Any(h => h.Unit.Eid == sentryTurret.Eid))
-            {
-                return;
-            }
-
-            if (!smartCreature.IsInAggroRange(sentryTurret))
-            {
-                return;
-            }
-
-            double threat = Threat.BODY_PULL + FastRandom.NextDouble(0, 5);
-
-            smartCreature.AddThreat(sentryTurret, new Threat(ThreatType.Bodypull, threat));
+            ProcessRcuThreats(sentryTurret);
         }
 
         public void Visit(CombatDrone combatDrone)
+        {
+            ProcessRcuThreats(combatDrone);
+        }
+
+        public void Visit(Portal portal)
+        {
+            ProcessRcuThreats(portal);
+        }
+
+        public void Visit(MobileTeleport teleport)
+        {
+            ProcessRcuThreats(teleport);
+        }
+
+        private void ProcessRcuThreats(Unit unit)
         {
             if (smartCreature.Behavior.Type != BehaviorType.RemoteControlledTurret &&
                 smartCreature.Behavior.Type != BehaviorType.RemoteControlledDrone)
@@ -165,19 +137,19 @@ namespace Perpetuum.Zones.NpcSystem.AI
                 return;
             }
 
-            if (smartCreature.ThreatManager.Hostiles.Any(h => h.Unit.Eid == combatDrone.Eid))
+            if (smartCreature.ThreatManager.Hostiles.Any(h => h.Unit.Eid == unit.Eid))
             {
                 return;
             }
 
-            if (!smartCreature.IsInAggroRange(combatDrone))
+            if (!smartCreature.IsInAggroRange(unit))
             {
                 return;
             }
 
             double threat = Threat.BODY_PULL + FastRandom.NextDouble(0, 5);
 
-            smartCreature.AddThreat(combatDrone, new Threat(ThreatType.Bodypull, threat));
+            smartCreature.AddThreat(unit, new Threat(ThreatType.Bodypull, threat));
         }
     }
 }

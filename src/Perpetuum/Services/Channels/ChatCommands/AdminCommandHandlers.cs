@@ -42,17 +42,19 @@ namespace Perpetuum.Services.Channels.ChatCommands
         private static void ZoneSetTilesControl(AdminCommandData data, TerrainControlFlags flag)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
-            bool.TryParse(data.Command.Args[0], out bool adddelete);
-            bool.TryParse(data.Command.Args[1], out bool keeplock);
+            _ = bool.TryParse(data.Command.Args[0], out bool adddelete);
+            _ = bool.TryParse(data.Command.Args[1], out bool keeplock);
 
-            var character = data.Request.Session.Character;
-            var zone = data.Request.Session.ZoneMgr.GetZone((int)character.ZoneId);
-            var player = zone.GetPlayer(character.ActiveRobotEid);
+            Character character = data.Request.Session.Character;
+            IZone zone = data.Request.Session.ZoneMgr.GetZone((int)character.ZoneId);
+            Players.Player player = zone.GetPlayer(character.ActiveRobotEid);
             zone.IsLayerEditLocked.ThrowIfTrue(ErrorCodes.TileTerraformProtected);
 
-            var lockedtiles = player.GetLocks();
+            List<Lock> lockedtiles = player.GetLocks();
 
             using (new TerrainUpdateMonitor(zone))
             {
@@ -73,13 +75,15 @@ namespace Perpetuum.Services.Channels.ChatCommands
         private static void LockOrUnlockZoneLayers(AdminCommandData data, bool toLock)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
             bool err = false;
-            var zoneId = -1;
+            int zoneId = -1;
             if (data.Command.Args.IsNullOrEmpty())
             {
-                var character = data.Request.Session.Character;
+                Character character = data.Request.Session.Character;
                 zoneId = character.ZoneId ?? -1;
             }
             else if (data.Command.Args.Length >= 1)
@@ -94,7 +98,7 @@ namespace Perpetuum.Services.Channels.ChatCommands
                 throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
             }
             CheckZoneId(data, zoneId);
-            var zone = data.Request.Session.ZoneMgr.GetZone(zoneId);
+            IZone zone = data.Request.Session.ZoneMgr.GetZone(zoneId);
             zone.IsLayerEditLocked = toLock;
             SendMessageToAll(data, $"All layers on zone {zoneId} {(toLock ? "LOCKED" : "UNLOCKED")}!");
         }
@@ -137,8 +141,7 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void Shutdown(AdminCommandData data)
         {
             DateTime shutdownin = DateTime.Now;
-            int minutes = 1;
-            if (!int.TryParse(data.Command.Args[1], out minutes))
+            if (!int.TryParse(data.Command.Args[1], out int minutes))
             {
                 throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
             }
@@ -182,7 +185,7 @@ namespace Perpetuum.Services.Channels.ChatCommands
             int minSessionBound = 1;
             int maxSessionBound = 10000;
             CheckRequiredArgLength(data, 1);
-            if (!int.TryParse(data.Command.Args[0], out var maxPlayerSessions))
+            if (!int.TryParse(data.Command.Args[0], out int maxPlayerSessions))
             {
                 throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
             }
@@ -191,7 +194,7 @@ namespace Perpetuum.Services.Channels.ChatCommands
                 SendMessageToAll(data, $"maxPlayerSessions {maxPlayerSessions} is outside of accepted range [{minSessionBound},{maxSessionBound}]");
                 throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
             }
-            var dictionary = new Dictionary<string, object>() { { k.amount, maxPlayerSessions } };
+            Dictionary<string, object> dictionary = new Dictionary<string, object>() { { k.amount, maxPlayerSessions } };
             string cmd = string.Format("{0}:relay:{1}", Commands.SetMaxUserCount.Text, GenxyConverter.Serialize(dictionary));
             HandleLocalRequest(data, cmd);
         }
@@ -212,7 +215,10 @@ namespace Perpetuum.Services.Channels.ChatCommands
             catch (Exception ex)
             {
                 if (ex is FormatException || ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
 
@@ -247,14 +253,17 @@ namespace Perpetuum.Services.Channels.ChatCommands
             catch (Exception ex)
             {
                 if (ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
 
             CheckZoneId(data, zoneId);
 
             // get the target character's session.
-            var charactersession = data.SessionManager.GetByCharacter(characterId);
+            Sessions.ISession charactersession = data.SessionManager.GetByCharacter(characterId);
 
             if (charactersession.Character.ZoneId == null)
             {
@@ -263,7 +272,7 @@ namespace Perpetuum.Services.Channels.ChatCommands
             }
 
             // get destination zone.
-            var zone = data.Request.Session.ZoneMgr.GetZone(zoneId);
+            IZone zone = data.Request.Session.ZoneMgr.GetZone(zoneId);
 
             if (charactersession.Character.ZoneId == null)
             {
@@ -275,24 +284,22 @@ namespace Perpetuum.Services.Channels.ChatCommands
             TeleportToAnotherZone tp = new TeleportToAnotherZone(zone);
 
             // we need the player (robot, etc) to teleport on the origin zone
-            var player = data.Request.Session.ZoneMgr.GetZone((int)charactersession.Character.ZoneId).GetPlayer(charactersession.Character.ActiveRobotEid);
+            Players.Player player = data.Request.Session.ZoneMgr.GetZone((int)charactersession.Character.ZoneId).GetPlayer(charactersession.Character.ActiveRobotEid);
             //var player = zone.GetPlayer(charactersession.Character.Eid);
 
             // set the position.
             tp.TargetPosition = new Position(x, y);
 
             // do it.
-            tp.DoTeleportAsync(player);
-            tp = null;
-
+            _ = tp.DoTeleportAsync(player);
             SendMessageToAll(data, string.Format("Moved Character {0}-{1} to Zone {2} @ {3},{4}", characterId, charactersession.Character.Nick, zone.Id, x, y));
         }
         [ChatCommand("GiveItem")]
         public static void GiveItem(AdminCommandData data)
         {
             CheckRequiredArgLength(data, 2);
-            int.TryParse(data.Command.Args[0], out int definition);
-            int.TryParse(data.Command.Args[1], out int qty);
+            _ = int.TryParse(data.Command.Args[0], out int definition);
+            _ = int.TryParse(data.Command.Args[1], out int qty);
 
             Dictionary<string, object> dictionary = new Dictionary<string, object>()
                 {
@@ -307,11 +314,11 @@ namespace Perpetuum.Services.Channels.ChatCommands
         [ChatCommand("GetLockedTileProperties")]
         public static void GetLockedTileProperties(AdminCommandData data)
         {
-            var character = data.Request.Session.Character;
-            var zone = data.Request.Session.ZoneMgr.GetZone((int)character.ZoneId);
-            var player = zone.GetPlayer(character.ActiveRobotEid);
+            Character character = data.Request.Session.Character;
+            IZone zone = data.Request.Session.ZoneMgr.GetZone((int)character.ZoneId);
+            Players.Player player = zone.GetPlayer(character.ActiveRobotEid);
 
-            var lockedtile = player.GetPrimaryLock();
+            Lock lockedtile = player.GetPrimaryLock();
 
             TerrainControlInfo ti = zone.Terrain.Controls.GetValue((lockedtile as TerrainLock).Location);
 
@@ -360,11 +367,11 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void SetVisibility(AdminCommandData data)
         {
             CheckRequiredArgLength(data, 1);
-            bool.TryParse(data.Command.Args[0], out bool visiblestate);
+            _ = bool.TryParse(data.Command.Args[0], out bool visiblestate);
 
-            var character = data.Request.Session.Character;
-            var zone = data.Request.Session.ZoneMgr.GetZone((int)character.ZoneId);
-            var player = zone.GetPlayer(character.ActiveRobotEid);
+            Character character = data.Request.Session.Character;
+            IZone zone = data.Request.Session.ZoneMgr.GetZone((int)character.ZoneId);
+            Players.Player player = zone.GetPlayer(character.ActiveRobotEid);
 
             player.HasGMStealth = !visiblestate;
 
@@ -373,13 +380,13 @@ namespace Perpetuum.Services.Channels.ChatCommands
         [ChatCommand("ZoneDrawStatMap")]
         public static void ZoneDrawStatMap(AdminCommandData data)
         {
-            var zoneId = data.Sender.ZoneId ?? -1;
+            int zoneId = data.Sender.ZoneId ?? -1;
             if (data.Command.Args.Length < 1)
             {
                 SendMessageToAll(data, $"Missing 'type' arg");
                 throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
             }
-            var type = data.Command.Args[0];
+            string type = data.Command.Args[0];
             if (data.Command.Args.Length > 1)
             {
                 if (!int.TryParse(data.Command.Args[1], out zoneId))
@@ -389,7 +396,7 @@ namespace Perpetuum.Services.Channels.ChatCommands
                 }
             }
             CheckZoneId(data, zoneId);
-            var dictionary = new Dictionary<string, object>() { { k.type, type } };
+            Dictionary<string, object> dictionary = new Dictionary<string, object>() { { k.type, type } };
             string cmd = string.Format("zoneDrawStatMap:zone_{0}:{1}", zoneId, GenxyConverter.Serialize(dictionary));
             SendMessageToAll(data, $"Draw map command accepted: {dictionary.ToDebugString()} \r\nDrawing... ");
             HandleLocalRequest(data, cmd);
@@ -398,7 +405,7 @@ namespace Perpetuum.Services.Channels.ChatCommands
         [ChatCommand("ListAllPlayersInZone")]
         public static void ListAllPlayersInZone(AdminCommandData data)
         {
-            int.TryParse(data.Command.Args[0], out int zoneid);
+            _ = int.TryParse(data.Command.Args[0], out int zoneid);
             CheckZoneId(data, zoneid);
 
             SendMessageToAll(data, string.Format("Players On Zone {0}", zoneid));
@@ -420,9 +427,9 @@ namespace Perpetuum.Services.Channels.ChatCommands
         [ChatCommand("AddToChannel")]
         public static void AddToChannel(AdminCommandData data)
         {
-            int.TryParse(data.Command.Args[0], out int characterid);
+            _ = int.TryParse(data.Command.Args[0], out int characterid);
 
-            var c = data.SessionManager.GetByCharacter(characterid);
+            Sessions.ISession c = data.SessionManager.GetByCharacter(characterid);
 
             data.ChannelManager.JoinChannel(data.Channel.Name, c.Character, ChannelMemberRole.Operator, string.Empty);
 
@@ -431,9 +438,9 @@ namespace Perpetuum.Services.Channels.ChatCommands
         [ChatCommand("RemoveFromChannel")]
         public static void RemoveFromChannel(AdminCommandData data)
         {
-            int.TryParse(data.Command.Args[0], out int characterid);
+            _ = int.TryParse(data.Command.Args[0], out int characterid);
 
-            var c = data.SessionManager.GetByCharacter(characterid);
+            Sessions.ISession c = data.SessionManager.GetByCharacter(characterid);
 
             data.ChannelManager.LeaveChannel(data.Channel.Name, c.Character);
 
@@ -444,7 +451,7 @@ namespace Perpetuum.Services.Channels.ChatCommands
         {
             foreach (IZone z in data.Request.Session.ZoneMgr.Zones)
             {
-                var rift = z.Units.OfType<Rift>();
+                IEnumerable<Rift> rift = z.Units.OfType<Rift>();
                 foreach (Rift r in rift)
                 {
                     SendMessageToAll(data, string.Format("Rift - Zone: {0}, Position: ({1})", r.Zone, r.CurrentPosition));
@@ -467,12 +474,15 @@ namespace Perpetuum.Services.Channels.ChatCommands
             catch (Exception ex)
             {
                 if (ex is FormatException || ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
 
             //TODO does this work if the character doesnt have a session?
-            var characterSession = data.SessionManager.GetByCharacter(characterId);
+            Sessions.ISession characterSession = data.SessionManager.GetByCharacter(characterId);
             characterSession.Character.IsOffensiveNick = isOffensive;
 
             SendMessageToAll(data, string.Format("Player with nick {0} is offensive:{1}", characterSession.Character.Nick, characterSession.Character.IsOffensiveNick));
@@ -487,7 +497,7 @@ namespace Perpetuum.Services.Channels.ChatCommands
             CheckRequiredArgLength(data, 3);
 
             Corporation.IsNameOrNickTaken(desiredCorpName, desiredCorpNick).ThrowIfTrue(ErrorCodes.NameTaken);
-            var corp = Corporation.GetByName(currentCorpName);
+            Corporation corp = Corporation.GetByName(currentCorpName);
             corp.SetName(desiredCorpName, desiredCorpNick);
 
             SendMessageToAll(data, string.Format("Corp with nick {0} changed to: {1} [{2}]", currentCorpName, desiredCorpName, desiredCorpNick));
@@ -504,7 +514,10 @@ namespace Perpetuum.Services.Channels.ChatCommands
             catch (Exception ex)
             {
                 if (ex is FormatException || ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
 
@@ -533,7 +546,10 @@ namespace Perpetuum.Services.Channels.ChatCommands
             catch (Exception ex)
             {
                 if (ex is FormatException || ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
 
@@ -550,21 +566,19 @@ namespace Perpetuum.Services.Channels.ChatCommands
         [ChatCommand("ListRelics")]
         public static void ListRelics(AdminCommandData data)
         {
-            bool err = false;
-
-            var character = data.Request.Session.Character;
+            Character character = data.Request.Session.Character;
             IZone zone = null;
 
             if (data.Command.Args.Length == 1)
             {
-                err = !int.TryParse(data.Command.Args[0], out int zoneCommand);
+                bool err = !int.TryParse(data.Command.Args[0], out int zoneCommand);
                 if (err)
                 {
                     SendMessageToAll(data, "Bad args");
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
                 }
-                var zoneid = zoneCommand;
-                zone = data.Request.Session.ZoneMgr.GetZone((int)zoneid);
+                int zoneid = zoneCommand;
+                zone = data.Request.Session.ZoneMgr.GetZone(zoneid);
             }
             else if (character.ZoneId != null)
             {
@@ -577,14 +591,14 @@ namespace Perpetuum.Services.Channels.ChatCommands
                 throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
             }
 
-            Dictionary<string, object> dictionary = new Dictionary<string, object>()
+            _ = new Dictionary<string, object>()
                 {
                     {"zoneid", zone.Id }
                 };
             if (zone.RelicManager != null)
             {
-                var relicDictList = zone.RelicManager.GetRelicListDictionary();
-                foreach (var dict in relicDictList)
+                List<Dictionary<string, object>> relicDictList = zone.RelicManager.GetRelicListDictionary();
+                foreach (Dictionary<string, object> dict in relicDictList)
                 {
                     SendMessageToAll(data, dict.ToDebugString());
                 }
@@ -603,7 +617,7 @@ namespace Perpetuum.Services.Channels.ChatCommands
                 throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
             }
 
-            var zoneId = data.Sender.ZoneId ?? -1;
+            int zoneId = data.Sender.ZoneId ?? -1;
             int weatherInt;
             int seconds;
             try
@@ -611,26 +625,31 @@ namespace Perpetuum.Services.Channels.ChatCommands
                 weatherInt = int.Parse(data.Command.Args[0]);
                 seconds = int.Parse(data.Command.Args[1]);
                 if (data.Command.Args.Length > 2)
+                {
                     zoneId = int.Parse(data.Command.Args[2]);
+                }
             }
             catch (Exception ex)
             {
                 if (ex is FormatException || ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
 
             CheckZoneId(data, zoneId);
-            var zone = data.Request.Session.ZoneMgr.GetZone(zoneId);
-            var current = zone.Weather.GetCurrentWeather();
-            var weather = new WeatherInfo(current.Next, weatherInt.Min(255), TimeSpan.FromSeconds(seconds));
+            IZone zone = data.Request.Session.ZoneMgr.GetZone(zoneId);
+            WeatherInfo current = zone.Weather.GetCurrentWeather();
+            WeatherInfo weather = new WeatherInfo(current.Next, weatherInt.Min(255), TimeSpan.FromSeconds(seconds));
             zone.Weather.SetCurrentWeather(weather);
-            SendMessageToAll(data, $"Weather set {zone.Weather.GetCurrentWeather().ToString()}");
+            SendMessageToAll(data, $"Weather set {zone.Weather.GetCurrentWeather()}");
         }
         [ChatCommand("GetWeather")]
         public static void GetWeather(AdminCommandData data)
         {
-            var zoneId = data.Sender.ZoneId ?? -1;
+            int zoneId = data.Sender.ZoneId ?? -1;
             bool err = false;
             if (!data.Command.Args.IsNullOrEmpty())
             {
@@ -642,8 +661,8 @@ namespace Perpetuum.Services.Channels.ChatCommands
                 throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
             }
             CheckZoneId(data, zoneId);
-            var zone = data.Request.Session.ZoneMgr.GetZone(zoneId);
-            SendMessageToAll(data, $"Weather set {zone.Weather.GetCurrentWeather().ToString()}");
+            IZone zone = data.Request.Session.ZoneMgr.GetZone(zoneId);
+            SendMessageToAll(data, $"Weather set {zone.Weather.GetCurrentWeather()}");
         }
         #endregion
         #region DevCommands
@@ -651,7 +670,9 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneCleanObstacleBlocking(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
             string cmd = string.Format("zoneCleanObstacleBlocking:zone_{0}:null", data.Sender.ZoneId);
             HandleLocalRequest(data, cmd);
@@ -660,10 +681,10 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneDrawBlockingByEid(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
-
-            bool err = false;
-            err = !Int64.TryParse(data.Command.Args[0], out Int64 eid);
+            }
+            bool err = !long.TryParse(data.Command.Args[0], out long eid);
 
             if (err)
             {
@@ -682,10 +703,11 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneRemoveObjectByEid(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
-            bool err = false;
-            err = !Int64.TryParse(data.Command.Args[0], out Int64 eid);
+            _ = !long.TryParse(data.Command.Args[0], out long eid);
 
             Dictionary<string, object> dictionary = new Dictionary<string, object>()
                 {
@@ -699,7 +721,9 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneCreateIsland(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
             int zoneId = data.Sender.ZoneId ?? -1;
             int lvl;
@@ -707,17 +731,22 @@ namespace Perpetuum.Services.Channels.ChatCommands
             {
                 lvl = int.Parse(data.Command.Args[0]);
                 if (data.Command.Args.Length > 1)
+                {
                     zoneId = int.Parse(data.Command.Args[1]);
+                }
             }
             catch (Exception ex)
             {
                 if (ex is FormatException || ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
             CheckZoneId(data, zoneId);
 
-            var dictionary = new Dictionary<string, object>() { { k.low, lvl } };
+            Dictionary<string, object> dictionary = new Dictionary<string, object>() { { k.low, lvl } };
 
             string cmd = string.Format("zoneCreateIsland:zone_{0}:{1}", zoneId, GenxyConverter.Serialize(dictionary));
             SendMessageToAll(data, $"zoneCreateIsland accepted: {dictionary.ToDebugString()} \r\nplease wait... ");
@@ -728,27 +757,36 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneCreateTerraformLimit(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
-            int zoneId = data.Sender.ZoneId ?? -1;
+            _ = data.Sender.ZoneId ?? -1;
             int radius = 0;
             string mode;
+            int zoneId;
             try
             {
                 mode = data.Command.Args[0];
                 if (mode != "clear")
+                {
                     radius = int.Parse(data.Command.Args[1]);
+                }
+
                 zoneId = int.Parse(data.Command.Args[2]);
             }
             catch (Exception ex)
             {
                 if (ex is FormatException || ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
             CheckZoneId(data, zoneId);
 
-            var dictionary = new Dictionary<string, object>()
+            Dictionary<string, object> dictionary = new Dictionary<string, object>()
                 {
                     { k.distance, radius },
                     { k.mode,  mode }
@@ -763,14 +801,17 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneSetLayerWithBitMap(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
-            int zoneId = data.Sender.ZoneId ?? -1;
+            _ = data.Sender.ZoneId ?? -1;
             string fileName;
             int flagValue;
+            int zoneId;
             try
             {
-                var flagName = data.Command.Args[0];
+                string flagName = data.Command.Args[0];
                 fileName = data.Command.Args[1];
                 flagValue = (int)EnumHelper.GetEnumFromName<TerrainControlFlags>(flagName);
                 zoneId = int.Parse(data.Command.Args[2]);
@@ -778,12 +819,15 @@ namespace Perpetuum.Services.Channels.ChatCommands
             catch (Exception ex)
             {
                 if (ex is FormatException || ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
             CheckZoneId(data, zoneId);
 
-            var dictionary = new Dictionary<string, object>()
+            Dictionary<string, object> dictionary = new Dictionary<string, object>()
                 {
                     { k.file, fileName },
                     { k.flags, flagValue }
@@ -798,7 +842,9 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZonePlaceWall(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
             string cmd = string.Format("zonePlaceWall:zone_{0}:null", data.Sender.ZoneId);
             HandleLocalRequest(data, cmd);
@@ -807,7 +853,9 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneClearWalls(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
             string cmd = string.Format("zoneClearWalls:zone_{0}:null", data.Sender.ZoneId);
             HandleLocalRequest(data, cmd);
@@ -816,7 +864,9 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneAddDecor(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
             int? zoneId = data.Sender.ZoneId;
             int definition;
@@ -833,7 +883,10 @@ namespace Perpetuum.Services.Channels.ChatCommands
             try
             {
                 if (zoneId == null)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 definition = int.Parse(data.Command.Args[0]);
                 x = int.Parse(data.Command.Args[1]);
                 y = int.Parse(data.Command.Args[2]);
@@ -848,7 +901,10 @@ namespace Perpetuum.Services.Channels.ChatCommands
             catch (Exception ex)
             {
                 if (ex is FormatException || ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
 
@@ -877,14 +933,15 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneAddDecorToLockedTile(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
-            var character = data.Request.Session.Character;
-            var zone = data.Request.Session.ZoneMgr.GetZone((int)character.ZoneId);
-            var player = zone.GetPlayer(character.ActiveRobotEid);
+            Character character = data.Request.Session.Character;
+            IZone zone = data.Request.Session.ZoneMgr.GetZone((int)character.ZoneId);
+            Players.Player player = zone.GetPlayer(character.ActiveRobotEid);
 
-            var terrainLock = player.GetPrimaryLock() as TerrainLock;
-            if (terrainLock == null)
+            if (!(player.GetPrimaryLock() is TerrainLock terrainLock))
             {
                 return;
             }
@@ -904,7 +961,10 @@ namespace Perpetuum.Services.Channels.ChatCommands
             catch (Exception ex)
             {
                 if (ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
 
@@ -929,10 +989,11 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneDeleteDecor(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
-            bool err = false;
-            err = !int.TryParse(data.Command.Args[0], out int idno);
+            _ = !int.TryParse(data.Command.Args[0], out int idno);
 
             Dictionary<string, object> dictionary = new Dictionary<string, object>()
                 {
@@ -946,7 +1007,9 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneClearLayer(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
             string layerName;
             int zoneId = data.Sender.ZoneId ?? -1;
@@ -954,31 +1017,37 @@ namespace Perpetuum.Services.Channels.ChatCommands
             {
                 layerName = data.Command.Args[0];
                 if (data.Command.Args.Length > 1)
+                {
                     zoneId = int.Parse(data.Command.Args[1]);
+                }
             }
             catch (Exception ex)
             {
                 SendMessageToAll(data, "Bad args");
                 if (ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
 
             CheckZoneId(data, zoneId);
 
-            var dictionary = new Dictionary<string, object>() { { k.layerName, layerName } };
-            var cmd = string.Format("{0}:zone_{1}:{2}", Commands.ZoneClearLayer.Text, zoneId, GenxyConverter.Serialize(dictionary));
+            Dictionary<string, object> dictionary = new Dictionary<string, object>() { { k.layerName, layerName } };
+            string cmd = string.Format("{0}:zone_{1}:{2}", Commands.ZoneClearLayer.Text, zoneId, GenxyConverter.Serialize(dictionary));
             HandleLocalRequest(data, cmd);
             SendMessageToAll(data, $"{Commands.ZoneClearLayer.Text} executed on {zoneId} for layer: {layerName}");
         }
         [ChatCommand("ZoneSetPlantSpeed")]
         public static void ZoneSetPlantSpeed(AdminCommandData data)
         {
-            if (!IsDevModeEnabled(data))
+            if (!IsDevModeEnabled(data) && data.Sender.AccessLevel == AccessLevel.normal)
+            {
                 return;
+            }
 
-            bool err = false;
-            err = !int.TryParse(data.Command.Args[0], out int speed);
+            _ = !int.TryParse(data.Command.Args[0], out int speed);
 
             Dictionary<string, object> dictionary = new Dictionary<string, object>()
                 {
@@ -991,8 +1060,10 @@ namespace Perpetuum.Services.Channels.ChatCommands
         [ChatCommand("ZoneSetPlantMode")]
         public static void ZoneSetPlantMode(AdminCommandData data)
         {
-            if (!IsDevModeEnabled(data))
+            if (!IsDevModeEnabled(data) && data.Sender.AccessLevel == AccessLevel.normal)
+            {
                 return;
+            }
 
             Dictionary<string, object> dictionary = new Dictionary<string, object>()
                 {
@@ -1006,9 +1077,11 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneRestoreOriginalGamma(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
-            var dictionary = new Dictionary<string, object>()
+            _ = new Dictionary<string, object>()
                 {
                     { "mode", data.Command.Args[0] }
                 };
@@ -1020,13 +1093,15 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneDrawBlockingByDefinition(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
             int zoneId = data.Sender.ZoneId ?? -1;
             int[] defs;
             try
             {
-                var list = new List<int>();
+                List<int> list = new List<int>();
                 zoneId = int.Parse(data.Command.Args[0]);
                 defs = list.AddMany(data.Command.Args.Skip(1).Select(s => int.Parse(s))).ToArray();
             }
@@ -1034,12 +1109,15 @@ namespace Perpetuum.Services.Channels.ChatCommands
             {
                 SendMessageToAll(data, "Bad args");
                 if (ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
             CheckZoneId(data, zoneId);
 
-            var dictionary = new Dictionary<string, object>()
+            Dictionary<string, object> dictionary = new Dictionary<string, object>()
                 {
                     { k.definition, defs }
                 };
@@ -1051,13 +1129,15 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneAddBlockingToLockedTiles(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
-            var character = data.Request.Session.Character;
-            var zone = data.Request.Session.ZoneMgr.GetZone((int)character.ZoneId);
-            var player = zone.GetPlayer(character.ActiveRobotEid);
+            Character character = data.Request.Session.Character;
+            IZone zone = data.Request.Session.ZoneMgr.GetZone((int)character.ZoneId);
+            Players.Player player = zone.GetPlayer(character.ActiveRobotEid);
             zone.IsLayerEditLocked.ThrowIfTrue(ErrorCodes.TileTerraformProtected);
-            var lockedtiles = player.GetLocks();
+            List<Lock> lockedtiles = player.GetLocks();
 
             using (new TerrainUpdateMonitor(zone))
             {
@@ -1075,13 +1155,15 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneRemoveBlockingToLockedTiles(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
-            var character = data.Request.Session.Character;
-            var zone = data.Request.Session.ZoneMgr.GetZone((int)character.ZoneId);
-            var player = zone.GetPlayer(character.ActiveRobotEid);
+            Character character = data.Request.Session.Character;
+            IZone zone = data.Request.Session.ZoneMgr.GetZone((int)character.ZoneId);
+            Players.Player player = zone.GetPlayer(character.ActiveRobotEid);
             zone.IsLayerEditLocked.ThrowIfTrue(ErrorCodes.TileTerraformProtected);
-            var lockedtiles = player.GetLocks();
+            List<Lock> lockedtiles = player.GetLocks();
 
             using (new TerrainUpdateMonitor(zone))
             {
@@ -1099,7 +1181,9 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneLockDecor(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
             int id;
             int locked;
@@ -1112,7 +1196,10 @@ namespace Perpetuum.Services.Channels.ChatCommands
             catch (Exception ex)
             {
                 if (ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
 
@@ -1184,13 +1271,14 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void SaveLayers(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
-            bool err = false;
-            var dictionary = new Dictionary<string, object>();
+            Dictionary<string, object> dictionary = new Dictionary<string, object>();
             if (data.Command.Args.Length == 1)
             {
-                err = !int.TryParse(data.Command.Args[0], out int zoneId);
+                bool err = !int.TryParse(data.Command.Args[0], out int zoneId);
                 if (err)
                 {
                     SendMessageToAll(data, "Bad args");
@@ -1198,7 +1286,7 @@ namespace Perpetuum.Services.Channels.ChatCommands
                 }
                 dictionary.Add(k.zoneID, zoneId);
             }
-            var cmd = string.Format("{0}:relay:{1}", Commands.ZoneSaveLayer.Text, GenxyConverter.Serialize(dictionary));
+            string cmd = string.Format("{0}:relay:{1}", Commands.ZoneSaveLayer.Text, GenxyConverter.Serialize(dictionary));
             SendMessageToAll(data, $"SaveLayers command accepted: {dictionary.ToDebugString()} \r\nSaving... ");
             HandleLocalRequest(data, cmd);
             SendMessageToAll(data, $"Layer(s) Saved! ");
@@ -1207,24 +1295,25 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneIslandBlock(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
-            bool err = false;
-            var dictionary = new Dictionary<string, object>();
+            Dictionary<string, object> dictionary = new Dictionary<string, object>();
             if (data.Command.Args.Length != 1)
             {
                 SendMessageToAll(data, "Missing or too many args");
                 throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
             }
 
-            err = !int.TryParse(data.Command.Args[0], out int low);
+            bool err = !int.TryParse(data.Command.Args[0], out int low);
             if (err)
             {
                 SendMessageToAll(data, "Bad args");
                 throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
             }
             dictionary.Add(k.low, low);
-            var cmd = string.Format("{0}:zone_{1}:{2}", Commands.ZoneCreateIsland.Text, data.Sender.ZoneId, GenxyConverter.Serialize(dictionary));
+            string cmd = string.Format("{0}:zone_{1}:{2}", Commands.ZoneCreateIsland.Text, data.Sender.ZoneId, GenxyConverter.Serialize(dictionary));
             SendMessageToAll(data, $"Islandblocking command accepted: {dictionary.ToDebugString()} \r\nBlocking... ");
             HandleLocalRequest(data, cmd);
             SendMessageToAll(data, $"Zone water level blocked! ");
@@ -1233,12 +1322,14 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneCreateGarden(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
             int x;
             int y;
 
-            var dictionary = new Dictionary<string, object>();
+            Dictionary<string, object> dictionary = new Dictionary<string, object>();
             if (data.Command.Args.Length != 2)
             {
                 SendMessageToAll(data, "Missing or too many args");
@@ -1254,13 +1345,16 @@ namespace Perpetuum.Services.Channels.ChatCommands
             {
                 SendMessageToAll(data, "Bad args");
                 if (ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
 
             dictionary.Add(k.x, x);
             dictionary.Add(k.y, y);
-            var cmd = string.Format("{0}:zone_{1}:{2}", Commands.ZoneCreateGarden.Text, data.Sender.ZoneId, GenxyConverter.Serialize(dictionary));
+            string cmd = string.Format("{0}:zone_{1}:{2}", Commands.ZoneCreateGarden.Text, data.Sender.ZoneId, GenxyConverter.Serialize(dictionary));
             SendMessageToAll(data, $"Garden command accepted: {dictionary.ToDebugString()} \r\nPlanting... ");
             HandleLocalRequest(data, cmd);
             SendMessageToAll(data, $"Garden Created! ");
@@ -1269,11 +1363,13 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneClearGroundType(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
             bool err = false;
 
-            var zoneId = data.Sender.ZoneId ?? -1;
+            int zoneId = data.Sender.ZoneId ?? -1;
             if (data.Command.Args.Length > 0)
             {
                 err = !int.TryParse(data.Command.Args[0], out zoneId);
@@ -1284,8 +1380,8 @@ namespace Perpetuum.Services.Channels.ChatCommands
                 throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
             }
             CheckZoneId(data, zoneId);
-            var dictionary = new Dictionary<string, object>() { { k.layerName, k.groundType } };
-            var cmd = string.Format("{0}:zone_{1}:{2}", Commands.ZoneClearLayer.Text, zoneId, GenxyConverter.Serialize(dictionary));
+            Dictionary<string, object> dictionary = new Dictionary<string, object>() { { k.layerName, k.groundType } };
+            string cmd = string.Format("{0}:zone_{1}:{2}", Commands.ZoneClearLayer.Text, zoneId, GenxyConverter.Serialize(dictionary));
             SendMessageToAll(data, $"Sending: {cmd}");
             HandleLocalRequest(data, cmd);
             SendMessageToAll(data, $"Command completed");
@@ -1294,7 +1390,9 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneCopyGroundType(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
             CheckRequiredArgLength(data, 2);
             int sourceZone;
@@ -1308,7 +1406,10 @@ namespace Perpetuum.Services.Channels.ChatCommands
             {
                 SendMessageToAll(data, "Bad args");
                 if (ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
             if (sourceZone == targetZone)
@@ -1318,8 +1419,8 @@ namespace Perpetuum.Services.Channels.ChatCommands
             }
             CheckZoneId(data, sourceZone);
             CheckZoneId(data, targetZone);
-            var dictionary = new Dictionary<string, object>() { { k.source, sourceZone }, { k.target, targetZone } };
-            var cmd = string.Format("{0}:relay:{1}", Commands.ZoneCopyGroundType.Text, GenxyConverter.Serialize(dictionary));
+            Dictionary<string, object> dictionary = new Dictionary<string, object>() { { k.source, sourceZone }, { k.target, targetZone } };
+            string cmd = string.Format("{0}:relay:{1}", Commands.ZoneCopyGroundType.Text, GenxyConverter.Serialize(dictionary));
             SendMessageToAll(data, $"Sending: {cmd}");
             HandleLocalRequest(data, cmd);
             SendMessageToAll(data, $"Command completed");
@@ -1328,7 +1429,9 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneRandomFillGroundType(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
             int radius = 200;
             int iterations = 10;
@@ -1356,11 +1459,11 @@ namespace Perpetuum.Services.Channels.ChatCommands
             }
 
             CheckZoneId(data, zoneId);
-            var dictionary = new Dictionary<string, object>(){
+            Dictionary<string, object> dictionary = new Dictionary<string, object>(){
                     { k.size, radius },
                     { k.numberOfRuns, iterations }
                 };
-            var cmd = string.Format("{0}:zone_{1}:{2}", Commands.ZoneFillGroundTypeRandom.Text, zoneId, GenxyConverter.Serialize(dictionary));
+            string cmd = string.Format("{0}:zone_{1}:{2}", Commands.ZoneFillGroundTypeRandom.Text, zoneId, GenxyConverter.Serialize(dictionary));
             SendMessageToAll(data, $"Sending: {cmd}");
             HandleLocalRequest(data, cmd);
             SendMessageToAll(data, $"Command completed");
@@ -1369,25 +1472,32 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void ZoneUpdateSlope(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
             int zoneId = data.Sender.ZoneId ?? -1;
 
             try
             {
                 if (data.Command.Args.Length > 0)
+                {
                     zoneId = int.Parse(data.Command.Args[0]);
+                }
             }
             catch (Exception ex)
             {
                 SendMessageToAll(data, "Bad args");
                 if (ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
 
             CheckZoneId(data, zoneId);
-            var cmd = string.Format("{0}:zone_{1}:null", Commands.ZoneSmooth.Text, zoneId);
+            string cmd = string.Format("{0}:zone_{1}:null", Commands.ZoneSmooth.Text, zoneId);
             SendMessageToAll(data, $"Sending: {cmd}");
             HandleLocalRequest(data, cmd);
             SendMessageToAll(data, $"Command completed");
@@ -1406,14 +1516,16 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void TestMissions(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
-            int.TryParse(data.Command.Args[0], out int charID);
-            int.TryParse(data.Command.Args[1], out int zoneID);
-            int.TryParse(data.Command.Args[2], out int level);
-            int.TryParse(data.Command.Args[3], out int numAttempts);
-            int.TryParse(data.Command.Args[4], out int displayFlag);
-            int.TryParse(data.Command.Args[5], out int singleFlag);
+            _ = int.TryParse(data.Command.Args[0], out int charID);
+            _ = int.TryParse(data.Command.Args[1], out int zoneID);
+            _ = int.TryParse(data.Command.Args[2], out int level);
+            _ = int.TryParse(data.Command.Args[3], out int numAttempts);
+            _ = int.TryParse(data.Command.Args[4], out int displayFlag);
+            _ = int.TryParse(data.Command.Args[5], out int singleFlag);
             Dictionary<string, object> dictionary = new Dictionary<string, object>()
                 {
                     { k.characterID, charID },
@@ -1432,13 +1544,14 @@ namespace Perpetuum.Services.Channels.ChatCommands
         public static void SpawnRelic(AdminCommandData data)
         {
             if (!IsDevModeEnabled(data))
+            {
                 return;
+            }
 
-            var character = data.Request.Session.Character;
-            var zone = data.Request.Session.ZoneMgr.GetZone((int)character.ZoneId);
-            var player = zone.GetPlayer(character.ActiveRobotEid);
+            Character character = data.Request.Session.Character;
+            IZone zone = data.Request.Session.ZoneMgr.GetZone((int)character.ZoneId);
+            Players.Player player = zone.GetPlayer(character.ActiveRobotEid);
 
-            var terrainLock = player.GetPrimaryLock() as TerrainLock;
 
             int x, y, zoneid;
 
@@ -1456,11 +1569,14 @@ namespace Perpetuum.Services.Channels.ChatCommands
             {
                 SendMessageToAll(data, "Bad args");
                 if (ex is ArgumentNullException)
+                {
                     throw PerpetuumException.Create(ErrorCodes.RequiredArgumentIsNotSpecified);
+                }
+
                 throw;
             }
 
-            if (terrainLock == null)
+            if (!(player.GetPrimaryLock() is TerrainLock terrainLock))
             {
                 if (data.Command.Args.Length != 3)
                 {
@@ -1470,7 +1586,7 @@ namespace Perpetuum.Services.Channels.ChatCommands
                 x = xCommand;
                 y = yCommand;
                 zoneid = zoneCommand;
-                zone = data.Request.Session.ZoneMgr.GetZone((int)zoneid);
+                zone = data.Request.Session.ZoneMgr.GetZone(zoneid);
                 if (zone == null)
                 {
                     SendMessageToAll(data, "Bad zone id!");
