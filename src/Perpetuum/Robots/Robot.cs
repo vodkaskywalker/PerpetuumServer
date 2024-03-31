@@ -172,7 +172,16 @@ namespace Perpetuum.Robots
 
         public void StopAllModules()
         {
-            foreach (ActiveModule module in ActiveModules)
+            StopAllModules(new Type[0]);
+        }
+
+        public void StopAllModules(Type[] except)
+        {
+            ActiveModule[] activeModules = ActiveModules
+                .Where(x => !except.Contains(x.GetType()))
+                .ToArray();
+
+            foreach (ActiveModule module in activeModules)
             {
                 module.State.SwitchTo(ModuleStateType.Idle);
             }

@@ -10,6 +10,7 @@ using Perpetuum.Zones.Beams;
 using Perpetuum.Zones.Locking.Locks;
 using Perpetuum.Zones.NpcSystem;
 using Perpetuum.Zones.NpcSystem.ThreatManaging;
+using Perpetuum.Zones.RemoteControl;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -101,7 +102,7 @@ namespace Perpetuum.Modules
                 .Except(targets)
                 .Where(x =>
                     x != ParentRobot && Zone.IsInLineOfSight(target.CurrentPosition, x, false).hit &&
-                    (!(ParentRobot is Npc) || x.IsPlayer()))
+                    (!(ParentRobot is Npc) || x.IsPlayer() || (x is RemoteControlledCreature)))
                 .GetNearestUnit(target.CurrentPosition);
             if (unit != null)
             {

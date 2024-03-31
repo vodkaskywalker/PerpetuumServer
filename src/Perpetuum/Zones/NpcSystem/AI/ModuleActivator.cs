@@ -29,7 +29,8 @@ namespace Perpetuum.Zones.NpcSystem.AI
         IEntityVisitor<RemoteControlledHarvesterModule>,
         IEntityVisitor<RemoteControllerModule>,
         IEntityVisitor<ScorcherModule>,
-        IEntityVisitor<NoxModule>
+        IEntityVisitor<NoxModule>,
+        IEntityVisitor<EnergyTransfererModule>
     {
         private const double ENERGY_INJECTOR_THRESHOLD = 0.65;
         private const double ARMOR_REPAIR_THRESHOLD = 0.95;
@@ -439,6 +440,33 @@ namespace Perpetuum.Zones.NpcSystem.AI
             {
                 module.State.SwitchTo(ModuleStateType.AutoRepeat);
             }
+        }
+
+        public void Visit(EnergyTransfererModule module)
+        {
+            UnitLock lockTarget = ((Creature)module.ParentRobot).SelectOptimalLockTargetFor(module);
+
+            if (lockTarget == null || lockTarget.Target.HasShieldEffect)
+            {
+                return;
+            }
+
+            Units.IUnitVisibility visibility = module.ParentRobot.GetVisibility(lockTarget.Target);
+
+            if (visibility == null)
+            {
+                return;
+            }
+
+            LOSResult r = visibility.GetLineOfSight(false);
+
+            if (r != null && r.hit)
+            {
+                return;
+            }
+
+            module.Lock = lockTarget;
+            module.State.SwitchTo(ModuleStateType.Oneshot);
         }
 
         private void TryActiveModule(LOSResult result, UnitLock primaryLock)
