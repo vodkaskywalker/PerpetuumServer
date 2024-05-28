@@ -101,7 +101,8 @@ namespace Perpetuum.Modules
                 .OfType<Robot>()
                 .Except(targets)
                 .Where(x =>
-                    x != ParentRobot && Zone.IsInLineOfSight(target.CurrentPosition, x, false).hit &&
+                    x != ParentRobot &&
+                    target.GetVisibility(x).GetLineOfSight(false).hit &&
                     (!(ParentRobot is Npc) || x.IsPlayer() || (x is RemoteControlledCreature)))
                 .GetNearestUnit(target.CurrentPosition);
             if (unit != null)
