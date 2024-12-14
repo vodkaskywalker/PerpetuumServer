@@ -7,11 +7,14 @@ using Perpetuum.ExportedTypes;
 using Perpetuum.Items;
 using Perpetuum.Items.Templates;
 using Perpetuum.Modules;
+using Perpetuum.Players;
 using Perpetuum.Services.ExtensionService;
 using Perpetuum.Services.Insurance;
+using Perpetuum.Timers;
 using Perpetuum.Units;
 using Perpetuum.Zones;
 using Perpetuum.Zones.DamageProcessors;
+using Perpetuum.Zones.Effects;
 using Perpetuum.Zones.Locking;
 using Perpetuum.Zones.Locking.Locks;
 using System;
@@ -20,25 +23,40 @@ using System.Linq;
 
 namespace Perpetuum.Robots
 {
-    public abstract partial class Robot : Unit
+    public abstract partial class Robot : Unit, IUsableItem
     {
-        private Lazy<IEnumerable<Module>> _modules;
-        private Lazy<IEnumerable<ActiveModule>> _activeModules;
-        private Lazy<IEnumerable<Item>> _components;
-        private Lazy<IEnumerable<RobotComponent>> _robotComponents;
+        private Lazy<IEnumerable<Module>> modules;
+        private Lazy<IEnumerable<ActiveModule>> activeModules;
+        private Lazy<IEnumerable<Item>> components;
+        private Lazy<IEnumerable<RobotComponent>> robotComponents;
+        private readonly TimeSpan overheatCooldownPeriod = TimeSpan.FromMilliseconds(1650);
+        private readonly IntervalTimer overheatCooldownTimer;
+
+        protected Robot()
+        {
+            InitLockHander();
+            InitProperties();
+            OverheatHandler = new OverheatHandler(this);
+            overheatCooldownTimer = new IntervalTimer(overheatCooldownPeriod);
+        }
+
+        public OverheatHandler OverheatHandler { get; private set; }
 
         public RobotHelper RobotHelper { protected get; set; }
+
         public InsuranceHelper InsuranceHelper { protected get; set; }
 
         public RobotTemplate Template { get; set; }
 
         public bool IsSelected => RobotHelper.IsSelected(this);
 
+        public bool IsBlessed => EffectHandler.ContainsEffect(EffectType.effect_gods_bless);
+
         public override double Health => IsRepackaged
-                    ? base.Health
-                    : ArmorMax > 0.0 && Armor > 0.0
-                    ? Armor.Ratio(ArmorMax) * 100
-                    : base.Health;
+            ? base.Health
+            : ArmorMax > 0.0 && Armor > 0.0
+                ? Armor.Ratio(ArmorMax) * 100
+                : base.Health;
 
         public override double Mass => RobotComponents.Sum(c => c.Mass);
 
@@ -65,13 +83,13 @@ namespace Perpetuum.Robots
 
         protected IEnumerable<ExtensionBonus> ExtensionBonuses => RobotComponents.SelectMany(component => component.ExtensionBonuses);
 
-        public IEnumerable<Module> Modules => _modules.Value;
+        public IEnumerable<Module> Modules => modules.Value;
 
-        public IEnumerable<ActiveModule> ActiveModules => _activeModules.Value;
+        public IEnumerable<ActiveModule> ActiveModules => activeModules.Value;
 
-        public IEnumerable<Item> Components => _components.Value;
+        public IEnumerable<Item> Components => components.Value;
 
-        public IEnumerable<RobotComponent> RobotComponents => _robotComponents.Value;
+        public IEnumerable<RobotComponent> RobotComponents => robotComponents.Value;
 
         public override double Volume
         {
@@ -83,7 +101,6 @@ namespace Perpetuum.Robots
                 }
 
                 double volume = RobotComponents.Sum(c => c.Volume);
-
                 volume *= Quantity;
 
                 return volume;
@@ -92,10 +109,25 @@ namespace Perpetuum.Robots
 
         public bool IsTrashed => Trashcan.IsItemTrashed(this);
 
-        protected Robot()
+        private void ResetTimer()
         {
-            InitLockHander();
-            InitProperties();
+            overheatCooldownTimer.Interval = overheatCooldownPeriod;
+        }
+
+        public void IncreaseOverheat(EffectType effectType)
+        {
+            if (EffectHandler.ContainsEffect(effectType))
+            {
+                OverheatHandler.Increase();
+            }
+        }
+
+        public void IncreaseOverheatByValue(EffectType effectType, long value)
+        {
+            if (EffectHandler.ContainsEffect(effectType))
+            {
+                OverheatHandler.Increase(value);
+            }
         }
 
         public override void Initialize()
@@ -139,7 +171,7 @@ namespace Perpetuum.Robots
         {
             IDictionary<string, object> info = base.GetDebugInfo();
 
-            info.Add("locksCount", _lockHandler.Count);
+            info.Add("locksCount", lockHandler.Count);
 
             return info;
         }
@@ -206,21 +238,18 @@ namespace Perpetuum.Robots
             }
 
             RobotInventory container = GetContainer();
-
             container?.RelocateItems(character, character, container.GetItems(), targetContainer);
         }
 
         public override Dictionary<string, object> ToDictionary()
         {
             Dictionary<string, object> dictionary = base.ToDictionary();
-
             foreach (RobotComponent component in RobotComponents)
             {
                 dictionary.Add(component.ComponentName, component.ToDictionary());
             }
 
             RobotInventory container = GetContainer();
-
             if (container != null)
             {
                 dictionary.Add(k.container, container.ToDictionary());
@@ -308,9 +337,7 @@ namespace Perpetuum.Robots
 
         protected virtual void OnLockStateChanged(Lock @lock)
         {
-            States.LockSomething = _lockHandler.Count > 0;
-
-
+            States.LockSomething = lockHandler.Count > 0;
             if (@lock is UnitLock unitLock)
             {
                 UpdateTypes |= UnitUpdateTypes.Lock;
@@ -326,12 +353,20 @@ namespace Perpetuum.Robots
         {
             base.OnUpdate(time);
 
-            _lockHandler.Update(time);
+            lockHandler.Update(time);
 
             foreach (RobotComponent robotComponent in RobotComponents)
             {
                 robotComponent.Update(time);
             }
+
+            if (overheatCooldownTimer.Passed)
+            {
+                OverheatHandler.Decrease();
+                ResetTimer();
+            }
+
+            overheatCooldownTimer.Update(time);
         }
 
         protected internal override double ComputeHeight()
@@ -360,7 +395,7 @@ namespace Perpetuum.Robots
 
         protected override bool IsDetected(Unit target)
         {
-            return _lockHandler.IsLocked(target) || base.IsDetected(target);
+            return lockHandler.IsLocked(target) || base.IsDetected(target);
         }
 
         protected override void OnBeforeRemovedFromZone(IZone zone)
@@ -377,16 +412,21 @@ namespace Perpetuum.Robots
 
         private void InitComponents()
         {
-            _components = new Lazy<IEnumerable<Item>>(() => Children.OfType<Item>().ToArray());
-            _robotComponents = new Lazy<IEnumerable<RobotComponent>>(() => Components.OfType<RobotComponent>().ToArray());
-            _modules = new Lazy<IEnumerable<Module>>(() => RobotComponents.SelectMany(c => c.Modules).ToArray());
-            _activeModules = new Lazy<IEnumerable<ActiveModule>>(() => Modules.OfType<ActiveModule>().ToArray());
+            components = new Lazy<IEnumerable<Item>>(() => Children.OfType<Item>().ToArray());
+            robotComponents = new Lazy<IEnumerable<RobotComponent>>(() => Components.OfType<RobotComponent>().ToArray());
+            modules = new Lazy<IEnumerable<Module>>(() => RobotComponents.SelectMany(c => c.Modules).ToArray());
+            activeModules = new Lazy<IEnumerable<ActiveModule>>(() => Modules.OfType<ActiveModule>().ToArray());
         }
 
         protected override void OnEnterZone(IZone zone, ZoneEnterType enterType)
         {
             base.OnEnterZone(zone, enterType);
             CamouflageUpdate();
+        }
+
+        public void UseItem(Player player)
+        {
+            throw new NotImplementedException();
         }
     }
 }

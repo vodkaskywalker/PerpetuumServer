@@ -116,6 +116,7 @@ namespace Perpetuum.ExportedTypes
         cf_pelistal_combat_drones_units = 0x000000000102120A,
         cf_nuimqol_combat_drones_units = 0x000000000202120A,
         cf_thelodica_combat_drones_units = 0x000000000302120A,
+        cf_deep_mining_ammo = 0x000000000000130A,
 
         cf_attack_drones_units = 0x000000000003120A,
         cf_assault_drones_units = 0x000000000004120A,
@@ -142,6 +143,7 @@ namespace Perpetuum.ExportedTypes
         cf_explosive_armor_hardeners = 0x000000000304010F,
         cf_thermal_armor_hardeners = 0x000000000404010F,
         cf_resistance_plating = 0x000000000504010F,
+        cf_adaptive_alloys = 0x000000000604010F,
         cf_lightweight_frame = 0x000000000005010F,
         cf_armor_repair_upgrades = 0x000000000006010F,
         cf_shield_equipment = 0x000000000000020F,
@@ -218,6 +220,7 @@ namespace Perpetuum.ExportedTypes
         cf_drillers = 0x000000000001060F,
         cf_small_drillers = 0x000000000101060F,
         cf_medium_drillers = 0x000000000201060F,
+        cf_large_drillers = 0x000000000301060F,
         cf_medium_drillers_old = 0x000000000002060F,
         cf_industrial_turret_drillers = 0x000000000003060F,
         cf_mining_upgrades = 0x000000000004060F,
@@ -309,6 +312,9 @@ namespace Perpetuum.ExportedTypes
         cf_nox_shield_negators = 0x0000000000010B0F,
         cf_nox_repair_negators = 0x0000000000020B0F,
         cf_nox_teleport_negators = 0x0000000000030B0F,
+        cf_robot_enhancements = 0x0000000000000C0F,
+        cf_dreadnought_modules = 0x0000000000010C0F,
+        cf_excavator_modules = 0x0000000000020C0F,
 
         cf_material = 0x0000000000000014,
         cf_raw_material = 0x0000000000000114,
@@ -407,6 +413,7 @@ namespace Perpetuum.ExportedTypes
         cf_mission_calibration_programs = 0x0000000000060416,
         cf_pbs_calibration_programs = 0x0000000000070416,
         cf_random_calibration_programs = 0x0000000000080416,
+        cf_robot_enhancements_calibration_programs = 0x0000000000090416,
 
         cf_logical_storage = 0x0000000000000017,
 
