@@ -12,5 +12,7 @@
         NpcReinforce,
         Environmental,
         PortalSpawn,
+        NpcSapAttackers,
+        DiscordIntegration,
     }
 }
